@@ -4,7 +4,7 @@
 		"tree_oak": {
 			"name": "Oak Tree",
 			"texture": "res://assets/props/tree_oak.png",
-			"origin": [56, 116],
+			"origin": [86, 167],
 			"footprint": [[0, 0]],
 			"blocks_movement": true,
 			"blocks_sight": true,
@@ -13,7 +13,7 @@
 		"tree_pine": {
 			"name": "Pine Tree",
 			"texture": "res://assets/props/tree_pine.png",
-			"origin": [44, 126],
+			"origin": [69, 180],
 			"footprint": [[0, 0]],
 			"blocks_movement": true,
 			"blocks_sight": true,
@@ -22,7 +22,7 @@
 		"bush": {
 			"name": "Bramble",
 			"texture": "res://assets/props/bush.png",
-			"origin": [32, 40],
+			"origin": [45, 55],
 			"footprint": [[0, 0]],
 			"blocks_movement": false,
 			"move_cost": 2.0,
@@ -32,7 +32,7 @@
 		"rock": {
 			"name": "Boulder",
 			"texture": "res://assets/props/rock.png",
-			"origin": [31, 38],
+			"origin": [37, 39],
 			"footprint": [[0, 0]],
 			"blocks_movement": true,
 			"blocks_sight": false,
@@ -41,7 +41,7 @@
 		"sign": {
 			"name": "Signpost",
 			"texture": "res://assets/props/sign.png",
-			"origin": [24, 62],
+			"origin": [30, 61],
 			"footprint": [[0, 0]],
 			"blocks_movement": true,
 			"blocks_sight": false,
@@ -51,7 +51,7 @@
 		"well": {
 			"name": "Village Well",
 			"texture": "res://assets/props/well.png",
-			"origin": [40, 72],
+			"origin": [53, 95],
 			"footprint": [[0, 0]],
 			"blocks_movement": true,
 			"blocks_sight": false,
@@ -60,9 +60,9 @@
 		"house_small": {
 			"name": "Cottage",
 			"texture": "res://assets/props/house_small.png",
-			"origin": [234, 418],
+			"origin": [242, 416],
 			"footprint_rect": [8, 6],
-			"door_pixel": [322, 414],
+			"door_pixel": [278, 414],
 			"blocks_movement": true,
 			"blocks_sight": true,
 			"minimap_color": "#9a4231"
@@ -70,9 +70,9 @@
 		"house_large": {
 			"name": "Inn",
 			"texture": "res://assets/props/house_large.png",
-			"origin": [344, 588],
+			"origin": [361, 561],
 			"footprint_rect": [12, 8],
-			"door_pixel": [344, 584],
+			"door_pixel": [361, 559],
 			"blocks_movement": true,
 			"blocks_sight": true,
 			"minimap_color": "#4b5d73"
@@ -80,7 +80,7 @@
 		"bridge_wood": {
 			"name": "Footbridge",
 			"texture": "res://assets/props/bridge_wood.png",
-			"origin": [232, 108],
+			"origin": [235, 119],
 			"footprint_rect": [8, 2],
 			"layer": "ground",
 			"blocks_movement": false,

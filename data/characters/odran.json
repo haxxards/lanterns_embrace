@@ -80,7 +80,11 @@
 	],
 	"art": {
 		"portrait": "res://assets/portraits/odran.png",
-		"sprite": "res://assets/characters/cleric.png"
+		"sprite": "res://assets/characters/cleric.png",
+		"sprite_origin": [
+			18,
+			48
+		]
 	},
 	"bio": "A dwarven priest of the dawn who tends the sick at the old temple."
 }

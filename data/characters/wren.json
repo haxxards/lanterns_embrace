@@ -74,7 +74,11 @@
 	],
 	"art": {
 		"portrait": "res://assets/portraits/wren.png",
-		"sprite": "res://assets/characters/rogue.png"
+		"sprite": "res://assets/characters/rogue.png",
+		"sprite_origin": [
+			14,
+			40
+		]
 	},
 	"bio": "A quick-fingered halfling who swears every lock is merely a suggestion."
 }

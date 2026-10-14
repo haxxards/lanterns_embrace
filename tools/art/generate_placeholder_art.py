@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Generates the placeholder art used by Lantern's Embrace.
+"""2D placeholder art: the party portraits (and legacy flat art).
 
-Every PNG written here is a stand-in. Replace any file with real art (same
-path, or point the data JSON at a new path) and the game picks it up. Sizes
-and pivot points are listed in docs/ASSETS.md.
+Terrain, props and character sprites are pre-rendered in Blender by
+tools/art/blender/render_all.py; this script now only writes portraits unless
+asked for the old flat versions with --only. Every PNG is a stand-in: replace
+any file with real art (same path, or point the data JSON at a new path) and
+the game picks it up. Sizes and pivot points are listed in docs/ASSETS.md.
 
 Requires Pillow and numpy:   pip install pillow numpy
 Usage:
@@ -1112,7 +1114,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--only", nargs="*", choices=["terrain", "props", "characters", "portraits"])
     args = ap.parse_args()
-    groups = set(args.only or ["terrain", "props", "characters", "portraits"])
+    # Terrain, props and characters are now pre-rendered in Blender
+    # (tools/art/blender/render_all.py); by default this script only makes the
+    # 2D portraits. The old 2D versions are still available with --only.
+    groups = set(args.only or ["portraits"])
 
     if "terrain" in groups:
         for name, fn in TERRAIN.items():

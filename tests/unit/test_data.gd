@@ -27,10 +27,24 @@ func test_buildings_are_as_big_outside_as_their_footprint() -> void:
 	for p: PropDef in Data.props.values():
 		if not p.is_rect() or p.layer != PropDef.LAYER_ENTITIES:
 			continue
-		var tex_w := p.texture.get_size().x
+		# Measure the solid building only: rendered shadows are semi-transparent.
+		var img := p.texture.get_image()
+		img.decompress()
+		var min_x := img.get_width()
+		var max_x := -1
+		for x in img.get_width():
+			for y in range(0, img.get_height(), 2):
+				if img.get_pixel(x, y).a > 0.97:
+					min_x = mini(min_x, x)
+					max_x = maxi(max_x, x)
+					break
+		var solid_w := max_x - min_x + 1
 		var foot_w := p.footprint_rect.x * hex_w
-		check(absf(tex_w - foot_w) <= hex_w * 0.6,
-				"%s sprite width %d matches its %d-hex footprint (%d px)" % [p.id, tex_w, p.footprint_rect.x, foot_w])
+		# Walls match the footprint; roof eaves may overhang by up to a hex in total.
+		check(solid_w >= foot_w - hex_w * 0.6 and solid_w <= foot_w + hex_w,
+				"%s building width %d px matches its %d-hex footprint (%d px)" % [p.id, solid_w, p.footprint_rect.x, foot_w])
+		# The origin (front-wall centre) must sit in the middle of the building.
+		check(absf(p.origin.x - (min_x + max_x) * 0.5) <= hex_w * 0.5, "%s origin is centred" % p.id)
 		check(p.has_door, "%s has a door" % p.id)
 
 

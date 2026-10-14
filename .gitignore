@@ -8,3 +8,6 @@
 # Python
 __pycache__/
 *.pyc
+
+# Art pipeline virtualenv (Blender as a Python module)
+.venv-art/

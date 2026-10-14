@@ -13,8 +13,11 @@ characters or trademarked names are used.
 
 ## Art
 
-All images in `assets/` are placeholders generated for this project by
-`tools/art/generate_placeholder_art.py`. No third-party art is included.
+All images in `assets/` were generated for this project: terrain, props and character
+sprites are procedural 3D scenes rendered with [Blender](https://www.blender.org) (GPL;
+the rendered images are not covered by Blender's licence) via `tools/art/blender/`, and
+the portraits come from `tools/art/generate_placeholder_art.py`. No third-party art or
+textures are included.
 
 ## Engine
 

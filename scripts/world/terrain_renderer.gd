@@ -10,7 +10,8 @@ extends Node2D
 
 const SHADER := preload("res://scripts/world/terrain_blend.gdshader")
 const MAX_SLOTS := 12
-const TEXTURE_SIZE := 256
+## Terrain textures are resampled to this size; 1 texel = 1 world pixel.
+const TEXTURE_SIZE := 512
 
 var bounds := Rect2()
 ## Terrains that share a texture share a slot (e.g. bridge deck over water).
