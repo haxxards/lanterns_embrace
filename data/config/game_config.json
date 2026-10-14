@@ -7,7 +7,15 @@
 	"hex_radius": 32,
 	"feet_per_hex": 5,
 	"explore_move_speed": 165,
-	"show_grid_default": true,
+	"show_grid_default": false,
+
+	"terrain_blend": {
+		"splat_px": 12,
+		"blur_passes": 2,
+		"warp": 0.45,
+		"edge_noise": 0.5,
+		"edge_sharpness": 4.0
+	},
 
 	"camera": {
 		"pan_speed": 900,

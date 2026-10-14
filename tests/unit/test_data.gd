@@ -15,8 +15,32 @@ func test_prop_definitions() -> void:
 	check(Data.props.size() > 0, "props loaded")
 	for p: PropDef in Data.props.values():
 		check(p.texture != Data.missing_texture(), "texture for %s exists (%s)" % [p.id, p.texture_path])
-		check(not p.footprint.is_empty(), "%s has a footprint" % p.id)
-	check_eq(Data.props["house_small"].footprint.size(), 7, "house_small radius-1 footprint")
+		check(p.is_rect() or not p.footprint.is_empty(), "%s has a footprint" % p.id)
+	check_eq(Data.props["house_small"].cells_at(Vector2i(3, 4)).size(), 48, "cottage covers 8 x 6 hexes")
+	check_eq(Data.props["house_large"].cells_at(Vector2i(3, 5)).size(), 96, "inn covers 12 x 8 hexes")
+
+
+func test_buildings_are_as_big_outside_as_their_footprint() -> void:
+	# The sprite must cover the footprint (which is also the interior size),
+	# give or take the half-hex stagger of odd rows and the eaves.
+	var hex_w := Hex.SQRT3 * GameConfig.hex_radius
+	for p: PropDef in Data.props.values():
+		if not p.is_rect() or p.layer != PropDef.LAYER_ENTITIES:
+			continue
+		var tex_w := p.texture.get_size().x
+		var foot_w := p.footprint_rect.x * hex_w
+		check(absf(tex_w - foot_w) <= hex_w * 0.6,
+				"%s sprite width %d matches its %d-hex footprint (%d px)" % [p.id, tex_w, p.footprint_rect.x, foot_w])
+		check(p.has_door, "%s has a door" % p.id)
+
+
+func test_door_hex_is_on_the_front_row() -> void:
+	var def: PropDef = Data.props["house_small"]
+	for at in [Vector2i(10, 10), Vector2i(10, 11)]:  # both row parities
+		var cells := def.cells_at(at)
+		var door: Variant = PropDef.door_hex(def, cells, Hex.offset_to_axial(at), GameConfig.hex_radius)
+		check(door != null, "door found")
+		check_eq(Hex.axial_to_offset(door).y, at.y + def.footprint_rect.y - 1, "door on the bottom row")
 
 
 func test_character_sheets_valid() -> void:
@@ -44,9 +68,8 @@ func test_sample_map_is_sound() -> void:
 			g.set_terrain(Hex.offset_to_axial(Vector2i(c, r)), m.terrain[r * m.width + c])
 	var footprint_owner := {}
 	for pl in m.placements:
-		for off in pl.def.footprint:
-			var cell: Vector2i = pl.anchor + off
-			check(g.in_bounds(cell), "%s at %s stays on the map" % [pl.def.id, pl.anchor])
+		for cell in pl.cells:
+			check(g.in_bounds(cell), "%s at %s stays on the map" % [pl.def.id, pl.cell])
 			if pl.def.blocks_movement:
 				check(not footprint_owner.has(cell), "%s overlaps another prop at %s" % [pl.def.id, cell])
 				footprint_owner[cell] = pl
@@ -56,13 +79,12 @@ func test_sample_map_is_sound() -> void:
 	for pl in m.placements:
 		if pl.def.interaction.is_empty() and not pl.def.has_door:
 			continue
-		var cells: Array[Vector2i] = []
-		for off in pl.def.footprint:
-			cells.append(pl.anchor + off)
-		var target: Vector2i = pl.anchor + pl.def.door if pl.def.has_door else pl.anchor
+		var target: Vector2i = pl.anchor
+		if pl.def.has_door:
+			target = PropDef.door_hex(pl.def, pl.cells, pl.anchor, GameConfig.hex_radius)
 		var reachable := false
 		for n in Hex.neighbors(target):
-			if not cells.has(n) and g.is_reachable(m.party_spawn, n):
+			if not pl.cells.has(n) and g.is_reachable(m.party_spawn, n):
 				reachable = true
 				break
-		check(reachable, "%s at %s can be reached from spawn" % [pl.def.id, Hex.axial_to_offset(pl.anchor)])
+		check(reachable, "%s at %s can be reached from spawn" % [pl.def.id, pl.cell])

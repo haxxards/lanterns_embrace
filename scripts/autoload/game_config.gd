@@ -14,7 +14,14 @@ var character_dirs: PackedStringArray = PackedStringArray(["res://data/character
 var hex_radius: float = 32.0
 var feet_per_hex: int = 5
 var explore_move_speed: float = 165.0
-var show_grid_default: bool = true
+var show_grid_default: bool = false
+
+## Terrain blending (see terrain_blend.gdshader).
+var terrain_splat_px: float = 12.0
+var terrain_splat_blur: int = 2
+var terrain_warp: float = 0.45
+var terrain_edge_noise: float = 0.5
+var terrain_edge_sharpness: float = 4.0
 
 var camera_pan_speed: float = 900.0
 var camera_edge_pan: bool = true
@@ -43,6 +50,13 @@ func load_config(path: String) -> void:
 	feet_per_hex = int(cfg.get("feet_per_hex", feet_per_hex))
 	explore_move_speed = float(cfg.get("explore_move_speed", explore_move_speed))
 	show_grid_default = bool(cfg.get("show_grid_default", show_grid_default))
+
+	var blend: Dictionary = cfg.get("terrain_blend", {})
+	terrain_splat_px = maxf(2.0, float(blend.get("splat_px", terrain_splat_px)))
+	terrain_splat_blur = maxi(0, int(blend.get("blur_passes", terrain_splat_blur)))
+	terrain_warp = float(blend.get("warp", terrain_warp))
+	terrain_edge_noise = float(blend.get("edge_noise", terrain_edge_noise))
+	terrain_edge_sharpness = float(blend.get("edge_sharpness", terrain_edge_sharpness))
 
 	var cam: Dictionary = cfg.get("camera", {})
 	camera_pan_speed = float(cam.get("pan_speed", camera_pan_speed))

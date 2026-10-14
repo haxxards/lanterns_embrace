@@ -18,6 +18,7 @@ var props: Array[Prop] = []
 var props_by_hex: Dictionary = {}  # Vector2i -> Prop
 
 var terrain: TerrainRenderer
+var ground_props: Node2D
 var grid_lines: GridLines
 var cursor: CursorOverlay
 var entities: Node2D
@@ -42,14 +43,18 @@ func _ready() -> void:
 	terrain.name = "Terrain"
 	terrain.z_index = -10
 	add_child(terrain)
+	ground_props = Node2D.new()
+	ground_props.name = "GroundProps"
+	ground_props.z_index = -9
+	add_child(ground_props)
 	grid_lines = GridLines.new()
 	grid_lines.name = "GridLines"
-	grid_lines.z_index = -9
+	grid_lines.z_index = -8
 	grid_lines.visible = GameConfig.show_grid_default
 	add_child(grid_lines)
 	cursor = CursorOverlay.new()
 	cursor.name = "Cursor"
-	cursor.z_index = -8
+	cursor.z_index = -7
 	add_child(cursor)
 	entities = Node2D.new()
 	entities.name = "Entities"
@@ -122,7 +127,10 @@ func _spawn_prop(placement: MapData.Placement) -> void:
 			push_warning("Prop %s overlaps %s" % [prop.name, props_by_hex[cell].name])
 		grid.add_prop_cell(cell, placement.def)
 		props_by_hex[cell] = prop
-	entities.add_child(prop)
+	if placement.def.layer == PropDef.LAYER_GROUND:
+		ground_props.add_child(prop)
+	else:
+		entities.add_child(prop)
 	props.append(prop)
 
 
@@ -316,6 +324,7 @@ func _refresh_hover(force: bool = false) -> void:
 		elif not walkable:
 			cursor_shape = Input.CURSOR_FORBIDDEN
 	else:
-		cursor.hover_color = CursorOverlay.HOVER_OK
+		# Nothing selected: no movement option, so no hex highlight.
+		cursor.hover_hex = null
 	Input.set_default_cursor_shape(cursor_shape)
 	Events.hover_info_changed.emit(info)

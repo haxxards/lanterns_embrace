@@ -42,6 +42,18 @@ func _ax(col: int, row: int) -> Vector2i:
 	return Hex.offset_to_axial(Vector2i(col, row))
 
 
+## Nearest hex to [col, row] that is walkable with walkable neighbours, so tests
+## don't depend on exactly where the map's trees and rocks are.
+func _open(col: int, row: int) -> Vector2i:
+	for h in Hex.spiral(_ax(col, row), 6):
+		var ok := world.grid.is_walkable(h)
+		for n in Hex.neighbors(h):
+			ok = ok and world.grid.is_walkable(n)
+		if ok:
+			return h
+	return _ax(col, row)
+
+
 ## Steps every member until nobody is walking. Returns false on timeout.
 func _walk_until_idle(max_seconds: float = 40.0) -> bool:
 	var t := 0.0
@@ -85,7 +97,7 @@ func test_party_spawns_selected_on_distinct_hexes() -> void:
 
 
 func test_group_move_fans_out_around_target() -> void:
-	var target := _ax(14, 26)
+	var target := _open(14, 36)
 	check(world.grid.is_walkable(target), "test target is walkable")
 	check(world.party.move_selected_to(target), "order accepted")
 	check(_walk_until_idle(), "party arrives")
@@ -122,9 +134,10 @@ func test_single_member_moves_alone() -> void:
 	var others := {}
 	for m in party.members:
 		others[m] = m.hex
-	party.move_selected_to(_ax(10, 24))
+	var target := _open(10, 34)
+	party.move_selected_to(target)
 	check(_walk_until_idle(), "arrives")
-	check_eq(party.members[1].hex, _ax(10, 24), "selected member moved")
+	check_eq(party.members[1].hex, target, "selected member moved")
 	for m in party.members:
 		if m != party.members[1]:
 			check_eq(m.hex, others[m], "%s stayed put" % m.sheet.display_name)
@@ -134,13 +147,14 @@ func test_redirect_mid_walk_keeps_path_contiguous() -> void:
 	var leader := world.party.leader()
 	var visited: Array[Vector2i] = [leader.hex]
 	leader.hex_entered.connect(func(_m: PartyMember, h: Vector2i) -> void: visited.append(h))
-	world.party.move_selected_to(_ax(20, 20))
+	world.party.move_selected_to(_open(20, 24))
 	for i in 20:
 		for m in world.party.members:
 			m._process(DT)
-	world.party.move_selected_to(_ax(4, 26))
+	var second := _open(6, 36)
+	world.party.move_selected_to(second)
 	check(_walk_until_idle(), "arrives after redirect")
-	check_eq(leader.hex, _ax(4, 26), "leader reached the new target")
+	check_eq(leader.hex, second, "leader reached the new target")
 	for i in range(1, visited.size()):
 		check_eq(Hex.distance(visited[i - 1], visited[i]), 1, "step %d is to a neighbour" % i)
 
@@ -190,7 +204,45 @@ func test_mouse_clicks_route_correctly() -> void:
 	check(not leader.is_moving(), "sidebar click does not move the party")
 	check_eq(world.party.selected.size(), world.party.members.size(), "sidebar click keeps selection")
 	# A click on open ground does.
-	var ground := world.grid.hex_to_world(_ax(12, 25))
+	var ground := world.grid.hex_to_world(_open(12, 35))
 	var screen := runner.get_viewport().get_canvas_transform() * ground
 	_click_screen(screen)
 	check(leader.is_moving() or leader.hex != start, "map click moves the party")
+
+
+func test_walks_end_on_hex_centres_and_stay_on_ground() -> void:
+	var leader := world.party.leader()
+	var entered: Array[Vector2i] = []
+	leader.hex_entered.connect(func(_m: PartyMember, h: Vector2i) -> void: entered.append(h))
+	world.party.move_selected_to(_open(45, 31))  # across the bridge
+	check(_walk_until_idle(), "party crosses the river")
+	for h in entered:
+		check(world.grid.is_walkable(h), "walked over walkable ground at %s" % h)
+	for m in world.party.members:
+		check(m.position.is_equal_approx(world.grid.hex_to_world(m.hex)), "%s stands on a hex centre" % m.sheet.display_name)
+	check(_distinct_hexes(), "members end on distinct hexes")
+
+
+func test_smoothed_walk_is_straighter_than_hex_steps() -> void:
+	var party := world.party
+	party.select_only(party.members[0])
+	var leader := party.leader()
+	var target := _open(5, 22)  # due north: hex steps would zig-zag
+	var hex_path := world.grid.find_path(leader.hex, target)
+	check(hex_path.size() >= 5, "target is a few hexes away")
+	var hex_len := 0.0
+	var prev := world.grid.hex_to_world(leader.hex)
+	for h in hex_path:
+		hex_len += prev.distance_to(world.grid.hex_to_world(h))
+		prev = world.grid.hex_to_world(h)
+	party.move_selected_to(target)
+	var walked := 0.0
+	var last := leader.position
+	for i in 900:
+		leader._process(DT)
+		walked += last.distance_to(leader.position)
+		last = leader.position
+		if not leader.is_moving():
+			break
+	check_eq(leader.hex, target, "arrived")
+	check(walked < hex_len - 5.0, "smoothed walk (%.0f px) shorter than hex steps (%.0f px)" % [walked, hex_len])

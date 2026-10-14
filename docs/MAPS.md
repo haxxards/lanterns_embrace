@@ -9,13 +9,14 @@ Maps are JSON files under `data/maps/`. The starting map is set by `starting_map
   "id": "millbrook_outskirts",
   "name": "Millbrook Outskirts",          // shown above the minimap
   "background_color": "#141a10",           // colour outside the map
-  "spawns": { "party": [3, 20] },          // [col, row]
+  "spawns": { "party": [4, 30] },          // [col, row]
   "terrain": [ "fffff....~~~...", ... ],   // one string per row
   "prop_legend": { "T": "tree_oak", "P": "tree_pine", "b": "bush", "o": "rock" },
   "prop_layer": [ "T  P   b       ", ... ], // optional, same grid as terrain
   "props": [                               // larger or unique props
-    { "type": "house_small", "at": [36, 16], "name": "Miller's Cottage" },
-    { "type": "sign", "at": [4, 18], "title": "Weathered Signpost", "text": "WEST ROAD\n..." }
+    { "type": "house_small", "at": [47, 21], "name": "Miller's Cottage" },  // top-left of 8x6
+    { "type": "bridge_wood", "at": [24, 30] },
+    { "type": "sign", "at": [4, 27], "title": "Weathered Signpost", "text": "WEST ROAD\n..." }
   ]
 }
 ```
@@ -46,23 +47,35 @@ Symbols come from `data/terrain/terrain.json`:
 | `,` | Dirt road | yes | 1 |
 | `:` | Riverbank sand | yes | 1 |
 | `#` | Cobblestone | yes | 1 |
-| `=` | Bridge | yes | 1 |
+| `=` | Bridge deck (drawn as water; the bridge sprite covers it) | yes | 1 |
 | `-` | Shallows | yes | 2 (difficult) |
 | `~` | Deep water | no | - |
 | `^` | Rock outcrop | no | - |
 
 Add terrain by adding an entry with a new one-character `symbol`.
 
+The hex grid is not drawn on the ground. Terrain is blended into one surface, so
+the text rows describe *what* each hex is (walkable, cost) while the edges between
+terrains come out organic. A map can use up to 12 different terrain textures. Blending is
+tuned by `terrain_blend` in `game_config.json`.
+
 ## Props
 
 Prop types live in `data/props/props.json`:
 
-- `texture` and `origin`: the image and the pixel that sits on the anchor hex centre.
+- `texture` and `origin`: the image, and the pixel that sits on the anchor hex centre
+  (for rectangular footprints, on the bottom-centre of the footprint).
 - `footprint`: axial `[dq, dr]` offsets from the anchor (axial so shapes don't change
   between odd and even rows), or `footprint_radius` for a filled hexagon.
+- `footprint_rect`: `[cols, rows]` for buildings. The map's `at` is the **top-left** cell
+  and the building covers exactly cols × rows hexes. A building's interior map (Phase 2)
+  uses the same cols × rows, so it is as large outside as inside.
+- `layer`: `"entities"` (default, y-sorted with characters) or `"ground"` (flat, under
+  characters, e.g. the bridge).
 - `blocks_movement`, `move_cost` (non-blocking props such as brambles), `blocks_sight`.
 - `interaction`: `"read"` shows the instance's `title` and `text`. More kinds come later.
-- `door`: axial offset of the entrance (used for building interiors in Phase 2).
+- `door_pixel`: where the door is drawn in the texture. The door hex is the footprint hex
+  nearest to it, and characters enter from the hexes in front of it (Phase 2).
 - `fade_when_occluding`: override the automatic see-through behaviour.
 
 The six axial directions are `[1,0]` E, `[1,-1]` NE, `[0,-1]` NW, `[-1,0]` W,

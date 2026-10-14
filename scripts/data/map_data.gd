@@ -9,7 +9,9 @@ extends RefCounted
 ## A single placed prop: definition plus per-instance data from the map file.
 class Placement:
 	var def: PropDef
-	var anchor: Vector2i  # axial
+	var cell: Vector2i            # offset [col, row] from the file ("at")
+	var anchor: Vector2i          # the same cell in axial coordinates
+	var cells: Array[Vector2i] = []  # axial hexes covered by the footprint
 	var extra: Dictionary = {}
 
 var id: String = ""
@@ -82,6 +84,8 @@ func _add_placement(props: Dictionary, type_id: String, cell: Vector2i, extra: D
 		return
 	var p := Placement.new()
 	p.def = def
+	p.cell = cell
 	p.anchor = Hex.offset_to_axial(cell)
+	p.cells = def.cells_at(cell)
 	p.extra = extra
 	placements.append(p)

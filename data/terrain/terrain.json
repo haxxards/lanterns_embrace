@@ -44,8 +44,8 @@
 			"minimap_color": "#8c877f"
 		},
 		{
-			"id": "bridge", "name": "Bridge", "symbol": "=",
-			"texture": "res://assets/terrain/bridge_planks.png",
+			"id": "bridge", "name": "Bridge deck", "symbol": "=",
+			"texture": "res://assets/terrain/water.png",
 			"walkable": true, "move_cost": 1.0, "blocks_sight": false,
 			"minimap_color": "#8a6038"
 		},

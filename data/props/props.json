@@ -6,7 +6,8 @@
 			"texture": "res://assets/props/tree_oak.png",
 			"origin": [56, 116],
 			"footprint": [[0, 0]],
-			"blocks_movement": true, "blocks_sight": true,
+			"blocks_movement": true,
+			"blocks_sight": true,
 			"minimap_color": "#2a4a20"
 		},
 		"tree_pine": {
@@ -14,7 +15,8 @@
 			"texture": "res://assets/props/tree_pine.png",
 			"origin": [44, 126],
 			"footprint": [[0, 0]],
-			"blocks_movement": true, "blocks_sight": true,
+			"blocks_movement": true,
+			"blocks_sight": true,
 			"minimap_color": "#1f3d2a"
 		},
 		"bush": {
@@ -22,7 +24,9 @@
 			"texture": "res://assets/props/bush.png",
 			"origin": [32, 40],
 			"footprint": [[0, 0]],
-			"blocks_movement": false, "move_cost": 2.0, "blocks_sight": false,
+			"blocks_movement": false,
+			"move_cost": 2.0,
+			"blocks_sight": false,
 			"minimap_color": "#3a6430"
 		},
 		"rock": {
@@ -30,7 +34,8 @@
 			"texture": "res://assets/props/rock.png",
 			"origin": [31, 38],
 			"footprint": [[0, 0]],
-			"blocks_movement": true, "blocks_sight": false,
+			"blocks_movement": true,
+			"blocks_sight": false,
 			"minimap_color": "#77767b"
 		},
 		"sign": {
@@ -38,7 +43,8 @@
 			"texture": "res://assets/props/sign.png",
 			"origin": [24, 62],
 			"footprint": [[0, 0]],
-			"blocks_movement": true, "blocks_sight": false,
+			"blocks_movement": true,
+			"blocks_sight": false,
 			"interaction": "read",
 			"minimap_color": "#c9a46a"
 		},
@@ -47,26 +53,39 @@
 			"texture": "res://assets/props/well.png",
 			"origin": [40, 72],
 			"footprint": [[0, 0]],
-			"blocks_movement": true, "blocks_sight": false,
+			"blocks_movement": true,
+			"blocks_sight": false,
 			"minimap_color": "#9a979d"
 		},
 		"house_small": {
 			"name": "Cottage",
 			"texture": "res://assets/props/house_small.png",
-			"origin": [92, 160],
-			"footprint_radius": 1,
-			"door": [0, 1],
-			"blocks_movement": true, "blocks_sight": true,
+			"origin": [234, 418],
+			"footprint_rect": [8, 6],
+			"door_pixel": [322, 414],
+			"blocks_movement": true,
+			"blocks_sight": true,
 			"minimap_color": "#9a4231"
 		},
 		"house_large": {
-			"name": "Longhouse",
+			"name": "Inn",
 			"texture": "res://assets/props/house_large.png",
-			"origin": [97, 160],
-			"footprint": [[0, 0], [1, 0], [0, -1], [1, -1], [-1, 0], [-1, 1], [0, 1], [2, 0], [2, -1], [1, 1]],
-			"door": [1, 1],
-			"blocks_movement": true, "blocks_sight": true,
+			"origin": [344, 588],
+			"footprint_rect": [12, 8],
+			"door_pixel": [344, 584],
+			"blocks_movement": true,
+			"blocks_sight": true,
 			"minimap_color": "#4b5d73"
+		},
+		"bridge_wood": {
+			"name": "Footbridge",
+			"texture": "res://assets/props/bridge_wood.png",
+			"origin": [232, 108],
+			"footprint_rect": [8, 2],
+			"layer": "ground",
+			"blocks_movement": false,
+			"blocks_sight": false,
+			"minimap_color": "#8a6038"
 		}
 	}
 }

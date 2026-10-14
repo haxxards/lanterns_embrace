@@ -502,85 +502,267 @@ def prop_well():
     return c, (40, 72)
 
 
-def prop_house(width, roof_main, roof_dark, door_x, windows, chimney_x, footprint_bottom):
-    """3/4 view timber-framed cottage. Returns (canvas, origin)."""
-    w = width
-    h = 248
-    c = Canvas(w, h)
-    wall_top, ground = 170, footprint_bottom
+# Hex geometry used to size buildings to their footprint (hex_radius = 32).
+HEX_R = 32
+HEX_W = HEX_R * math.sqrt(3)
+ROW_H = HEX_R * 1.5
+
+
+def footprint_size(cols, rows):
+    """Pixel size of a cols x rows rectangle of hexes (odd-r layout)."""
+    return cols * HEX_W, (rows - 1) * ROW_H + HEX_R * 2
+
+
+def roof_texture(c, clip, x0, y0, x1, y1, seed):
+    """Weathering speckle clipped to the roof shape."""
+    rng = np.random.default_rng(seed)
     lay = c.layer()
-    # front wall
-    c.rect(lay, 10, wall_top, w - 10, ground, rgba("#d9caa3"))
-    c.rect(lay, 10, ground - 8, w - 10, ground, rgba("#8b867d"))
-    for x in range(14, w - 14, 9):
-        c.line(lay, [(x, ground - 8), (x, ground)], rgba("#6d6961"), 0.8)
+    for _ in range(int((x1 - x0) * (y1 - y0) / 55)):
+        x, y = rng.uniform(x0, x1), rng.uniform(y0, y1)
+        col = (0, 0, 0, int(rng.uniform(20, 55))) if rng.random() < 0.6 else (255, 255, 255, int(rng.uniform(12, 30)))
+        r = rng.uniform(0.8, 2.2)
+        c.ellipse(lay, x, y, r * 1.6, r, col)
+    for _ in range(int((x1 - x0) / 30)):  # moss patches
+        x, y = rng.uniform(x0, x1), rng.uniform(y0, y1)
+        c.ellipse(lay, x, y, rng.uniform(5, 12), rng.uniform(3, 6), rgba("#4f6b35", 55))
+    c.comp(lay, clip=clip)
+
+
+def building(cols, rows, roof_main, roof_dark, wall="#d9caa3", stories=1, door_bay=None,
+             chimneys=(0.22,), dormers=0, seed=1, inn_sign=False):
+    """3/4-view timber-framed building whose ground footprint is exactly
+    cols x rows hexes, so its interior map can use the same dimensions.
+    Returns (canvas, origin, door_pixel)."""
+    ground_w, ground_h = footprint_size(cols, rows)
+    wall_h = 74 * stories
+    pad_x, pad_top, pad_bottom = 12, 40, 14
+    W = int(round(ground_w + 2 * pad_x))
+    H = int(round(ground_h + wall_h + pad_top + pad_bottom))
+    c = Canvas(W, H)
+    gx0, gx1 = pad_x, W - pad_x
+    ground_y = H - pad_bottom
+    wall_top = ground_y - wall_h
+    back_eave = pad_top
+    front_eave = wall_top + 6
+    ridge = back_eave + (front_eave - back_eave) * 0.36
     beam = rgba("#5a3d25")
-    c.rect(lay, 10, wall_top, w - 10, wall_top + 5, beam)
-    for x in [10, w - 16] + [wx + ww + 3 for wx, ww in windows]:
-        c.rect(lay, x, wall_top, x + 6, ground - 8, beam)
-    for wx, ww in windows:
-        c.rect(lay, wx - 2, 182, wx + ww + 2, 204, beam)
-        c.rect(lay, wx, 184, wx + ww, 202, rgba("#9cc2d6"))
-        c.line(lay, [(wx + ww / 2, 184), (wx + ww / 2, 202)], beam, 1.4)
-        c.line(lay, [(wx, 193), (wx + ww, 193)], beam, 1.4)
-        c.rect(lay, wx - 6, 183, wx - 2, 203, rgba("#4f6b3a"))
-        c.rect(lay, wx + ww + 2, 183, wx + ww + 6, 203, rgba("#4f6b3a"))
+    beam_dark = rgba("#46301c")
+
+    # --- ground shadow (light from the upper left)
+    sh = c.layer()
+    c.poly(sh, [(gx0 + 6, ground_y - 6), (gx1 + 8, ground_y - 6), (gx1 + 10, ground_y + 9), (gx0 + 2, ground_y + 9)],
+           (0, 0, 0, 110))
+    c.poly(sh, [(gx1 - 4, front_eave), (gx1 + 10, front_eave + 10), (gx1 + 10, ground_y + 6), (gx1 - 4, ground_y)],
+           (0, 0, 0, 70))
+    c.img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(4 * SS)))
+
+    # --- front wall
+    wall_l = c.layer()
+    c.rect(wall_l, gx0, wall_top, gx1, ground_y, rgba(wall))
+    c.comp(wall_l)
+    plaster = c.layer()
+    rng = np.random.default_rng(seed)
+    for _ in range(int((gx1 - gx0) * wall_h / 40)):
+        x, y = rng.uniform(gx0, gx1), rng.uniform(wall_top, ground_y)
+        c.ellipse(plaster, x, y, rng.uniform(1, 3), rng.uniform(0.6, 1.6), shade(wall, rng.uniform(0.85, 1.05), 70))
+    c.comp(plaster, clip=wall_l)
+    lay = c.layer()
+    found_top = ground_y - 12
+    c.rect(lay, gx0, found_top, gx1, ground_y, rgba("#857f75"))
+    x = gx0
+    i = 0
+    while x < gx1:
+        w = rng.uniform(12, 22)
+        c.rect(lay, x + 1, found_top + (1 if i % 2 else 6), min(gx1, x + w) - 1, found_top + (6 if i % 2 else 11),
+               rgba("#9a948a"))
+        x += w
+        i += 1
+    c.line(lay, [(gx0, found_top), (gx1, found_top)], rgba("#5f5a52"), 1.2)
+    # bays
+    n_bays = max(3, int(round((gx1 - gx0) / 92)))
+    bay_w = (gx1 - gx0) / n_bays
+    story_h = wall_h / stories
+    if door_bay is None:
+        door_bay = int(n_bays * 0.6)
+    door_x = gx0 + bay_w * (door_bay + 0.5)
+    c.rect(lay, gx0, wall_top, gx1, wall_top + 6, beam)
+    for st in range(1, stories):
+        y = wall_top + story_h * st
+        c.rect(lay, gx0, y - 3, gx1, y + 3, beam)
+    c.rect(lay, gx0, found_top - 5, gx1, found_top, beam_dark)
+    for b in range(n_bays + 1):
+        x = gx0 + bay_w * b
+        c.rect(lay, x - 3, wall_top, x + 3, found_top, beam)
+    for st in range(stories):
+        top = wall_top + story_h * st + 6
+        bottom = wall_top + story_h * (st + 1) - (5 if st == stories - 1 else 3)
+        if st == stories - 1:
+            bottom = found_top - 5
+        for b in range(n_bays):
+            bx0, bx1 = gx0 + bay_w * b + 3, gx0 + bay_w * (b + 1) - 3
+            cx = (bx0 + bx1) / 2
+            if st == stories - 1 and b == door_bay:
+                continue
+            ww, wh = min(30, bay_w * 0.38), min(26, (bottom - top) * 0.55)
+            wy = top + (bottom - top) * 0.42
+            # braces either side of the window
+            c.line(lay, [(bx0 + 2, bottom), (cx - ww / 2 - 6, wy - wh / 2)], beam, 2.2)
+            c.line(lay, [(bx1 - 2, bottom), (cx + ww / 2 + 6, wy - wh / 2)], beam, 2.2)
+            c.rect(lay, cx - ww / 2 - 3, wy - wh / 2 - 3, cx + ww / 2 + 3, wy + wh / 2 + 3, beam)
+            c.rect(lay, cx - ww / 2, wy - wh / 2, cx + ww / 2, wy + wh / 2, rgba("#9cc2d6"))
+            c.rect(lay, cx - ww / 2, wy - wh / 2, cx + ww / 2, wy - wh / 2 + 5, rgba("#c8e0ea", 160))
+            c.line(lay, [(cx, wy - wh / 2), (cx, wy + wh / 2)], beam, 1.6)
+            c.line(lay, [(cx - ww / 2, wy), (cx + ww / 2, wy)], beam, 1.6)
+            c.rect(lay, cx - ww / 2 - 10, wy - wh / 2 - 2, cx - ww / 2 - 3, wy + wh / 2 + 2, rgba("#4f6b3a"))
+            c.rect(lay, cx + ww / 2 + 3, wy - wh / 2 - 2, cx + ww / 2 + 10, wy + wh / 2 + 2, rgba("#4f6b3a"))
+            c.rect(lay, cx - ww / 2 - 4, wy + wh / 2 + 3, cx + ww / 2 + 4, wy + wh / 2 + 7, rgba("#6e5233"))
     # door
-    c.rect(lay, door_x - 13, 186, door_x + 13, ground - 6, rgba("#3f2a18"), radius=9)
-    c.rect(lay, door_x - 10, 189, door_x + 10, ground - 6, rgba("#6b4627"), radius=7)
-    for dx in (-4, 4):
-        c.line(lay, [(door_x + dx, 192), (door_x + dx, ground - 7)], rgba("#4f331d"), 1)
-    c.ellipse(lay, door_x + 6, 210, 1.6, 1.6, rgba("#d8c070"))
-    c.rect(lay, door_x - 15, ground - 7, door_x + 15, ground - 3, rgba("#77736b"))
-    # roof: back slope, then front slope (overhanging eaves)
-    ridge_y, back_y, eave_y = 96, 44, wall_top + 6
-    c.poly(lay, [(14, ridge_y), (w - 14, ridge_y), (w - 22, back_y), (22, back_y)], rgba(roof_dark))
-    if chimney_x is not None:
-        c.rect(lay, chimney_x, 30, chimney_x + 16, 70, rgba("#7a6e66"))
-        c.rect(lay, chimney_x - 2, 26, chimney_x + 18, 32, rgba("#5d544e"))
-        for y in (40, 50, 60):
-            c.line(lay, [(chimney_x, y), (chimney_x + 16, y)], rgba("#5d544e"), 1)
-    c.poly(lay, [(4, eave_y), (w - 4, eave_y), (w - 14, ridge_y), (14, ridge_y)], rgba(roof_main))
-    # shingle rows
-    rows = 7
-    for i in range(1, rows):
-        t = i / rows
-        y = ridge_y + (eave_y - ridge_y) * t
-        x0 = 14 + (4 - 14) * t
-        x1 = (w - 14) + ((w - 4) - (w - 14)) * t
-        c.line(lay, [(x0, y), (x1, y)], shade(roof_main, 0.72), 1.4)
-        step = 12
-        off = 0 if i % 2 else step / 2
-        x = x0 + off
-        while x < x1 - 2:
-            y_prev = ridge_y + (eave_y - ridge_y) * (i - 1) / rows
-            c.line(lay, [(x, y_prev + 1), (x, y - 1)], shade(roof_main, 0.8), 0.9)
-            x += step
-    c.poly(lay, [(4, eave_y), (w - 4, eave_y), (w - 6, eave_y - 7), (6, eave_y - 7)],
-           shade(roof_main, 1.12))
-    c.line(lay, [(14, ridge_y), (w - 14, ridge_y)], shade(roof_dark, 0.7), 3)
-    for i in range(1, 5):
-        y = back_y + (ridge_y - back_y) * i / 5
-        c.line(lay, [(22 - 8 * i / 5, y), (w - 22 + 8 * i / 5, y)], shade(roof_dark, 0.8), 1.2)
+    dh = min(58, story_h - 14)
+    c.rect(lay, door_x - 20, ground_y - dh - 8, door_x + 20, ground_y - 2, rgba("#3a2716"), radius=14)
+    c.rect(lay, door_x - 16, ground_y - dh - 4, door_x + 16, ground_y - 2, rgba("#6b4627"), radius=11)
+    for dx in (-8, 0, 8):
+        c.line(lay, [(door_x + dx, ground_y - dh), (door_x + dx, ground_y - 3)], rgba("#4f331d"), 1.2)
+    c.rect(lay, door_x - 16, ground_y - dh * 0.35, door_x + 16, ground_y - dh * 0.35 + 3, rgba("#3a2716"))
+    c.ellipse(lay, door_x + 10, ground_y - dh * 0.45, 2, 2, rgba("#d8c070"))
+    c.rect(lay, door_x - 24, ground_y - 3, door_x + 24, ground_y + 5, rgba("#8f897f"), radius=2)
+    c.line(lay, [(door_x - 24, ground_y + 1), (door_x + 24, ground_y + 1)], rgba("#6b665e"), 1)
+    if inn_sign:
+        sx = door_x + 52
+        c.line(lay, [(sx - 22, wall_top + 24), (sx + 8, wall_top + 24)], rgba("#2a2016"), 3)
+        c.line(lay, [(sx - 8, wall_top + 24), (sx - 8, wall_top + 32)], rgba("#2a2016"), 1.2)
+        c.line(lay, [(sx + 4, wall_top + 24), (sx + 4, wall_top + 32)], rgba("#2a2016"), 1.2)
+        c.rect(lay, sx - 18, wall_top + 32, sx + 14, wall_top + 58, rgba("#2f4a3a"), outline=rgba("#c9a43a"), width=1.5)
+        c.rect(lay, sx - 6, wall_top + 38, sx + 2, wall_top + 52, rgba("#f2c45a"), radius=2)
+        c.poly(lay, [(sx - 8, wall_top + 38), (sx - 2, wall_top + 34), (sx + 4, wall_top + 38)], rgba("#c9a43a"))
     c.comp(lay)
+
+    # --- roof
+    back = c.layer()
+    c.poly(back, [(gx0 + 10, back_eave), (gx1 - 10, back_eave), (gx1 - 2, ridge), (gx0 + 2, ridge)], rgba(roof_dark))
+    front = c.layer()
+    c.poly(front, [(gx0 + 2, ridge), (gx1 - 2, ridge), (gx1 + 6, front_eave), (gx0 - 6, front_eave)], rgba(roof_main))
+    roof = back.copy()
+    roof.alpha_composite(front)
+    c.comp(back)
+    rows_back = max(3, int((ridge - back_eave) / 11))
+    lines = c.layer()
+    for i in range(1, rows_back):
+        t = i / rows_back
+        y = back_eave + (ridge - back_eave) * t
+        c.line(lines, [(gx0 + 10 - 8 * t, y), (gx1 - 10 + 8 * t, y)], shade(roof_dark, 0.78), 1.2)
+    c.comp(lines, clip=back)
+    for cf in chimneys:
+        cx = gx0 + (gx1 - gx0) * cf
+        ch = c.layer()
+        c.rect(ch, cx, back_eave - 26, cx + 22, ridge - 2, rgba("#7a6e66"))
+        c.rect(ch, cx + 14, back_eave - 26, cx + 22, ridge - 2, rgba("#655a53"))
+        c.rect(ch, cx - 3, back_eave - 32, cx + 25, back_eave - 24, rgba("#5d544e"))
+        for y in np.arange(back_eave - 18, ridge - 4, 9):
+            c.line(ch, [(cx, y), (cx + 22, y)], rgba("#5d544e"), 1)
+        c.comp(ch)
+    c.comp(front)
+    rows_front = max(4, int((front_eave - ridge) / 15))
+    lines = c.layer()
+    for i in range(1, rows_front):
+        t = i / rows_front
+        y = ridge + (front_eave - ridge) * t
+        y_prev = ridge + (front_eave - ridge) * (i - 1) / rows_front
+        xa = gx0 + 2 - 8 * t
+        xb = gx1 - 2 + 8 * t
+        c.line(lines, [(xa, y), (xb, y)], shade(roof_main, 0.7), 1.5)
+        step = 17
+        x = xa + (0 if i % 2 else step / 2)
+        while x < xb - 2:
+            c.line(lines, [(x, y_prev + 1.5), (x, y - 1.5)], shade(roof_main, 0.8), 1.0)
+            x += step
+    # light falls from the top: brighter near the eave, darker under the ridge
+    grad = c.layer()
+    steps = 10
+    for i in range(steps):
+        t0 = i / steps
+        y0 = ridge + (front_eave - ridge) * t0
+        y1 = ridge + (front_eave - ridge) * (t0 + 1 / steps)
+        a = int(60 * (1 - t0))
+        c.rect(grad, gx0 - 8, y0, gx1 + 8, y1 + 1, (0, 0, 0, a))
+    c.comp(grad, clip=front)
+    c.comp(lines, clip=front)
+    roof_texture(c, roof, gx0 - 6, back_eave, gx1 + 6, front_eave, seed + 3)
+    for k in range(dormers):
+        dx = gx0 + (gx1 - gx0) * (k + 1) / (dormers + 1)
+        dy = ridge + (front_eave - ridge) * 0.25
+        d = c.layer()
+        c.rect(d, dx - 22, dy, dx + 22, dy + 34, rgba(wall))
+        c.rect(d, dx - 12, dy + 8, dx + 12, dy + 28, rgba("#9cc2d6"))
+        c.line(d, [(dx, dy + 8), (dx, dy + 28)], beam, 1.4)
+        c.poly(d, [(dx - 28, dy + 4), (dx, dy - 16), (dx + 28, dy + 4)], shade(roof_main, 0.9))
+        c.comp(d)
+    trim = c.layer()
+    c.line(trim, [(gx0 + 2, ridge), (gx1 - 2, ridge)], shade(roof_dark, 0.6), 4)
+    c.line(trim, [(gx0 + 10, back_eave), (gx0 + 2, ridge), (gx0 - 6, front_eave)], shade(roof_main, 0.6), 3)
+    c.line(trim, [(gx1 - 10, back_eave), (gx1 - 2, ridge), (gx1 + 6, front_eave)], shade(roof_main, 0.6), 3)
+    c.poly(trim, [(gx0 - 6, front_eave), (gx1 + 6, front_eave), (gx1 + 4, front_eave - 6), (gx0 - 4, front_eave - 6)],
+           shade(roof_main, 1.15))
+    c.comp(trim)
     c.outline(rgba("#1b140d"), 1.0)
-    c.shadow(w / 2 + 6, ground - 2, w / 2 - 4, 10, 90)
-    return c
+    return c, (W / 2, ground_y), (door_x, ground_y - 4)
 
 
 def prop_house_small():
-    # Footprint: anchor hex + its 6 neighbours. Origin = anchor hex centre.
-    c = prop_house(184, "#9a4231", "#6e2d22", door_x=120, windows=[(32, 22), (62, 20), (146, 20)],
-                   chimney_x=40, footprint_bottom=226)
-    return c, (92, 160)
+    # 8 x 6 hexes: the cottage interior map will use the same size.
+    return building(8, 6, "#9a4231", "#6e2d22", door_bay=3, chimneys=(0.2,), seed=11)
 
 
 def prop_house_large():
-    # Footprint: anchor + neighbours, and (1,0) + its neighbours. Origin = anchor hex centre.
-    c = prop_house(248, "#4b5d73", "#33414f", door_x=180, windows=[(28, 22), (60, 22), (100, 22),
-                                                                   (132, 22), (210, 22)],
-                   chimney_x=196, footprint_bottom=226)
-    return c, (97, 160)
+    # 12 x 8 hexes, two storeys: the inn.
+    return building(12, 8, "#4b5d73", "#33414f", stories=2, door_bay=3, chimneys=(0.15, 0.8),
+                    dormers=3, seed=21, inn_sign=True)
+
+
+def prop_bridge(cols=8):
+    """Wooden footbridge covering cols x 2 hexes, drawn flat on the ground layer."""
+    ground_w, _ = footprint_size(cols, 2)
+    pad = 10
+    W = int(round(ground_w + 2 * pad))
+    deck_h = 80
+    H = deck_h + 46
+    c = Canvas(W, H)
+    y_bot = H - 18
+    y_top = y_bot - deck_h
+    x0, x1 = pad, W - pad
+    sh = c.layer()
+    c.rect(sh, x0 + 6, y_bot - 2, x1 + 4, y_bot + 14, (0, 0, 0, 120))
+    c.img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(3 * SS)))
+    deck = c.layer()
+    c.rect(deck, x0, y_top, x1, y_bot, rgba("#6b4a2b"))
+    rng = np.random.default_rng(3)
+    x = x0
+    while x < x1:
+        w = rng.uniform(11, 15)
+        tone = rng.uniform(0.85, 1.12)
+        c.rect(deck, x + 1, y_top, min(x1, x + w) - 1, y_bot, shade("#8a6238", tone))
+        for _ in range(3):
+            gy = rng.uniform(y_top + 4, y_bot - 4)
+            c.line(deck, [(x + 2, gy), (min(x1, x + w) - 2, gy + rng.uniform(-3, 3))], shade("#8a6238", tone * 0.82), 0.8)
+        c.ellipse(deck, x + w / 2, y_top + 7, 1.2, 1.2, rgba("#2a1c10"))
+        c.ellipse(deck, x + w / 2, y_bot - 7, 1.2, 1.2, rgba("#2a1c10"))
+        x += w
+    c.comp(deck)
+    rail = c.layer()
+    for yb in (y_top, y_bot):
+        c.rect(rail, x0 - 2, yb - 5, x1 + 2, yb + 4, rgba("#4a3220"))
+        c.line(rail, [(x0 - 2, yb - 5), (x1 + 2, yb - 5)], rgba("#6e5233"), 1.2)
+    n_posts = max(3, int((x1 - x0) / 56))
+    for i in range(n_posts + 1):
+        px = x0 + (x1 - x0) * i / n_posts
+        for yb in (y_top, y_bot):
+            c.rect(rail, px - 4, yb - 22, px + 4, yb + 2, rgba("#5a3d25"))
+            c.rect(rail, px + 1, yb - 22, px + 4, yb + 2, rgba("#46301c"))
+    for yb in (y_top, y_bot):
+        c.rect(rail, x0 - 4, yb - 24, x1 + 4, yb - 18, rgba("#6b4a2b"))
+        c.line(rail, [(x0 - 4, yb - 24), (x1 + 4, yb - 24)], rgba("#8a6238"), 1.2)
+    c.comp(rail)
+    c.outline(rgba("#1b140d"), 1.0)
+    return c, (W / 2, y_bot), None
 
 
 PROPS = {
@@ -592,6 +774,7 @@ PROPS = {
     "well": prop_well,
     "house_small": prop_house_small,
     "house_large": prop_house_large,
+    "bridge_wood": prop_bridge,
 }
 
 
@@ -939,10 +1122,13 @@ def main():
             print("wrote", path.relative_to(ROOT))
     if "props" in groups:
         for name, fn in PROPS.items():
-            c, origin = fn()
+            result = fn()
+            c, origin = result[0], result[1]
+            door = result[2] if len(result) > 2 else None
             path = ASSETS / "props" / f"{name}.png"
             c.save(path)
-            print("wrote", path.relative_to(ROOT), "origin", origin)
+            extra = f" door_pixel [{door[0]:.0f}, {door[1]:.0f}]" if door else ""
+            print("wrote", path.relative_to(ROOT), f"size {c.w}x{c.h} origin [{origin[0]:.0f}, {origin[1]:.0f}]{extra}")
     if "characters" in groups:
         for name, fn in CHARACTERS.items():
             path = ASSETS / "characters" / f"{name}.png"

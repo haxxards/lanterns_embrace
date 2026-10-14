@@ -1,9 +1,12 @@
 class_name PartyMember
 extends Node2D
-## A party member's token on the map: walks hex to hex along a path.
+## A party member's token on the map, walking along a hex path.
 ##
-## `hex` is the member's logical cell. While walking it is the cell being
-## entered, so a new order issued mid-step continues smoothly from there.
+## Paths come from the hex grid, but while exploring the walk is smoothed:
+## the member heads straight for the farthest path hex it can reach in a clear
+## line (no blocked or costlier ground in between), so movement looks like
+## free walking rather than hex-to-hex zig-zags. Walks always end on a hex
+## centre. `hex` is the hex currently under the member's feet.
 
 signal arrived(member: PartyMember)
 signal hex_entered(member: PartyMember, hex: Vector2i)
@@ -20,6 +23,8 @@ var destination: Vector2i
 var path: Array[Vector2i] = []
 ## Prop to interact with on arrival, if any.
 var pending_interaction: Prop = null
+## Straight-line smoothing; turn off for strict hex-by-hex steps (combat).
+var smooth_paths: bool = true
 
 var selected: bool = false:
 	set(value):
@@ -34,6 +39,8 @@ var _grid: HexGrid
 var _sprite: Sprite2D
 var _moving: bool = false
 var _walk_time: float = 0.0
+## Path hex currently walked towards in a straight line (null = pick one).
+var _aim: Variant = null
 
 
 func setup(character: CharacterSheet, grid: HexGrid, start: Vector2i) -> void:
@@ -57,6 +64,7 @@ func place_at(h: Vector2i) -> void:
 	hex = h
 	destination = h
 	path.clear()
+	_aim = null
 	_moving = false
 	position = _grid.hex_to_world(h)
 	_sprite.position = Vector2.ZERO
@@ -66,12 +74,13 @@ func place_at(h: Vector2i) -> void:
 func follow_path(new_path: Array[Vector2i]) -> void:
 	path = new_path.duplicate()
 	destination = path.back() if not path.is_empty() else hex
+	_aim = null
 	_moving = true
 
 
+## Stops at the centre of the current hex.
 func stop() -> void:
-	path.clear()
-	destination = hex
+	follow_path([])
 
 
 func is_moving() -> bool:
@@ -89,24 +98,86 @@ func _process(delta: float) -> void:
 	_walk_time += delta
 	var budget := GameConfig.explore_move_speed * delta
 	while budget > 0.0:
-		var target := _grid.hex_to_world(hex)
-		# Difficult terrain is walked at reduced speed so the cost is visible.
-		var slow := maxf(1.0, _grid.move_cost(hex))
-		var dist := position.distance_to(target)
-		if dist * slow <= budget:
-			position = target
-			budget -= dist * slow
-			if path.is_empty():
+		if path.is_empty():
+			# Settle on the centre of the hex we ended in.
+			budget = _walk_towards(_grid.hex_to_world(hex), budget)
+			if budget >= 0.0:
 				_finish_walk()
-				break
-			hex = path.pop_front()
-			hex_entered.emit(self, hex)
-		else:
-			_face(target.x - position.x)
-			position = position.move_toward(target, budget / slow)
-			budget = 0.0
+			break
+		if _aim == null:
+			_aim = path[_farthest_clear_index()]
+		budget = _walk_towards(_grid.hex_to_world(_aim), budget)
+		if budget < 0.0:
+			break
+		# Reached the aim point: drop it and everything before it.
+		path = path.slice(path.find(_aim) + 1)
+		_aim = null
 	if _moving:
 		_sprite.position.y = -absf(sin(_walk_time * 11.0)) * 2.5
+
+
+## Moves towards `target` using up to `budget` pixels of movement. Returns the
+## budget left on arrival, or -1 if the target was not reached this frame.
+## Difficult terrain is walked at reduced speed so its cost is visible.
+func _walk_towards(target: Vector2, budget: float) -> float:
+	var slow := maxf(1.0, _grid.move_cost(hex))
+	var dist := position.distance_to(target)
+	_face(target.x - position.x)
+	if dist * slow <= budget:
+		position = target
+		_update_hex()
+		return budget - dist * slow
+	position = position.move_toward(target, budget / slow)
+	_update_hex()
+	return -1.0
+
+
+## Keeps `hex` in sync with the feet and trims path hexes already walked over.
+func _update_hex() -> void:
+	var h := _grid.world_to_hex(position)
+	if h == hex or not _grid.is_walkable(h):
+		return
+	hex = h
+	hex_entered.emit(self, hex)
+	var i := path.find(h)
+	var aim_i := path.find(_aim) if _aim != null else -1
+	if i >= 0 and (aim_i < 0 or i < aim_i):
+		path = path.slice(i + 1)
+
+
+## Index of the farthest upcoming path hex reachable in a straight, clear line.
+func _farthest_clear_index() -> int:
+	if not smooth_paths:
+		return 0
+	var best := 0
+	var max_cost := _grid.move_cost(hex)
+	for k in mini(path.size(), 12):
+		max_cost = maxf(max_cost, _grid.move_cost(path[k]))
+		if k > 0:
+			if not _segment_clear(position, _grid.hex_to_world(path[k]), max_cost):
+				break
+			best = k
+	return best
+
+
+## True if a body walking from a to b only crosses walkable ground no costlier
+## than `max_cost`, with a little clearance either side.
+func _segment_clear(a: Vector2, b: Vector2, max_cost: float) -> bool:
+	var length := a.distance_to(b)
+	if length < 1.0:
+		return true
+	var dir := (b - a) / length
+	var side := Vector2(-dir.y, dir.x) * _grid.radius * 0.3
+	var step := _grid.radius * 0.3
+	var t := 0.0
+	while t <= length:
+		var p := a + dir * t
+		for offset in [Vector2.ZERO, side, -side]:
+			var h := _grid.world_to_hex(p + offset)
+			if not _grid.is_walkable(h) or _grid.move_cost(h) > max_cost + 0.001:
+				return false
+		t += step
+	return true
 
 
 func _finish_walk() -> void:

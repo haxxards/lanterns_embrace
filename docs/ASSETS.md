@@ -29,7 +29,7 @@ are easy to spot.
 
 | Kind | Location | Size | Notes |
 |---|---|---|---|
-| Terrain | `assets/terrain/*.png` | 256×256 (any size works) | Must be **seamless**. Sampled in world space at 1 texel per pixel, so neighbouring hexes join up. |
+| Terrain | `assets/terrain/*.png` | 256×256 (other sizes are resized) | Must be **seamless**. Sampled in world space at 1 texel per pixel and blended with neighbouring terrain by `terrain_blend.gdshader`. |
 | Props | `assets/props/*.png` | any | `origin` in `props.json` is the pixel placed on the anchor hex centre. Include the ground shadow in the image. |
 | Character sprites | `assets/characters/*.png` | 48×64 | Front-facing. Feet at `(24, 58)` by default (`art.sprite_origin` to change). Flipped horizontally when walking left. Shadow and selection ring are drawn by code. |
 | Portraits | `assets/portraits/*.png` | 128×160 | Shown at 64×80 in the sidebar (cropped to fill). |
@@ -47,5 +47,11 @@ Current prop origins (pixels):
 | rock | 60×46 | 31,38 | 1 hex |
 | sign | 48×68 | 24,62 | 1 hex |
 | well | 80×92 | 40,72 | 1 hex |
-| house_small | 184×248 | 92,160 | 7 hexes (radius 1) |
-| house_large | 248×248 | 97,160 | 10 hexes |
+| house_small (cottage) | 467×432 | 234,418 | 8×6 hexes, door pixel 322,414 |
+| house_large (inn) | 689×602 | 344,588 | 12×8 hexes, door pixel 344,584 |
+| bridge_wood | 463×126 | 232,108 | 8×2 hexes, ground layer, walkable |
+
+Building art must cover its footprint: about `cols × 55.4` px wide for the default hex size
+(a test checks this). The ground line where the front wall meets the ground is the
+`origin`, and the roof extends upward in 3/4 view. `bridge_planks.png` is a spare
+plank texture kept for interior floors in Phase 2.

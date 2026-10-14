@@ -26,15 +26,21 @@ func setup(placement: MapData.Placement, grid: HexGrid) -> void:
 	def = placement.def
 	anchor = placement.anchor
 	extra = placement.extra
-	name = "%s_%d_%d" % [def.id, anchor.x, anchor.y]
-	position = grid.hex_to_world(anchor)
-	for offset in def.footprint:
-		cells.append(anchor + offset)
+	cells = placement.cells.duplicate()
+	name = "%s_%d_%d" % [def.id, placement.cell.x, placement.cell.y]
+	# Rect footprints (buildings) sit on their footprint's bottom edge, which is
+	# also their y-sort point; other props sit on their anchor hex.
+	position = PropDef.placement_point(def, cells, anchor, grid.radius)
 	_sprite = Sprite2D.new()
 	_sprite.texture = def.texture
 	_sprite.centered = false
 	_sprite.offset = -def.origin
 	add_child(_sprite)
+
+
+## Hex the entrance opens from (buildings), or null.
+func door_hex(grid: HexGrid) -> Variant:
+	return PropDef.door_hex(def, cells, anchor, grid.radius)
 
 
 func _update_modulate() -> void:
