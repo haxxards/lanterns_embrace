@@ -1,0 +1,86 @@
+{
+	"schema_version": 1,
+	"id": "odran",
+	"name": "Brother Odran",
+	"ancestry": "dwarf",
+	"class": "cleric",
+	"level": 1,
+	"xp": 0,
+	"alignment": "lawful good",
+	"abilities": {
+		"str": 14,
+		"dex": 8,
+		"con": 16,
+		"int": 10,
+		"wis": 16,
+		"cha": 11
+	},
+	"hit_points": {
+		"max": 11,
+		"current": 11
+	},
+	"hit_die": "d8",
+	"armor_class": 18,
+	"speed_ft": 25,
+	"size": "medium",
+	"proficiencies": {
+		"saving_throws": [
+			"wis",
+			"cha"
+		],
+		"skills": [
+			"medicine",
+			"religion"
+		],
+		"armor": [
+			"light",
+			"medium",
+			"heavy",
+			"shields"
+		],
+		"weapons": [
+			"simple"
+		]
+	},
+	"equipment": {
+		"main_hand": "mace",
+		"off_hand": "shield",
+		"armor": "chain_mail"
+	},
+	"inventory": [
+		{
+			"item": "holy_symbol",
+			"qty": 1
+		},
+		{
+			"item": "potion_of_healing",
+			"qty": 2
+		}
+	],
+	"gold": 12,
+	"spells": {
+		"ability": "wis",
+		"cantrips": [
+			"sacred_flame",
+			"guidance",
+			"spare_the_dying"
+		],
+		"known": [
+			"bless",
+			"cure_wounds",
+			"healing_word",
+			"guiding_bolt"
+		],
+		"slots": {
+			"1": 2
+		}
+	},
+	"features": [
+		"divine_domain"
+	],
+	"art": {
+		"portrait": "res://assets/portraits/odran.png",
+		"sprite": "res://assets/characters/cleric.png"
+	},
+	"bio": "A dwarven priest of the dawn who tends the sick at the old temple."
+}

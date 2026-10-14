@@ -1,0 +1,85 @@
+{
+	"schema_version": 1,
+	"id": "elowen",
+	"name": "Elowen Ashgrove",
+	"ancestry": "elf",
+	"class": "wizard",
+	"level": 1,
+	"xp": 0,
+	"alignment": "chaotic good",
+	"abilities": {
+		"str": 8,
+		"dex": 15,
+		"con": 13,
+		"int": 17,
+		"wis": 12,
+		"cha": 10
+	},
+	"hit_points": {
+		"max": 7,
+		"current": 7
+	},
+	"hit_die": "d6",
+	"armor_class": 12,
+	"speed_ft": 30,
+	"size": "medium",
+	"proficiencies": {
+		"saving_throws": [
+			"int",
+			"wis"
+		],
+		"skills": [
+			"arcana",
+			"history"
+		],
+		"armor": [],
+		"weapons": [
+			"dagger",
+			"dart",
+			"sling",
+			"quarterstaff",
+			"light_crossbow"
+		]
+	},
+	"equipment": {
+		"main_hand": "quarterstaff",
+		"off_hand": null,
+		"armor": null
+	},
+	"inventory": [
+		{
+			"item": "spellbook",
+			"qty": 1
+		},
+		{
+			"item": "potion_of_healing",
+			"qty": 1
+		}
+	],
+	"gold": 20,
+	"spells": {
+		"ability": "int",
+		"cantrips": [
+			"fire_bolt",
+			"light",
+			"mage_hand"
+		],
+		"known": [
+			"magic_missile",
+			"shield",
+			"sleep",
+			"burning_hands"
+		],
+		"slots": {
+			"1": 2
+		}
+	},
+	"features": [
+		"arcane_recovery"
+	],
+	"art": {
+		"portrait": "res://assets/portraits/elowen.png",
+		"sprite": "res://assets/characters/wizard.png"
+	},
+	"bio": "An elven scholar chasing rumours of a lantern that never goes out."
+}

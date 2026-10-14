@@ -1,0 +1,10 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Generated test/screenshot output
+/tests/output/
+
+# Python
+__pycache__/
+*.pyc

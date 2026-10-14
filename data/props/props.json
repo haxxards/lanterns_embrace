@@ -1,0 +1,72 @@
+{
+	"schema_version": 1,
+	"props": {
+		"tree_oak": {
+			"name": "Oak Tree",
+			"texture": "res://assets/props/tree_oak.png",
+			"origin": [56, 116],
+			"footprint": [[0, 0]],
+			"blocks_movement": true, "blocks_sight": true,
+			"minimap_color": "#2a4a20"
+		},
+		"tree_pine": {
+			"name": "Pine Tree",
+			"texture": "res://assets/props/tree_pine.png",
+			"origin": [44, 126],
+			"footprint": [[0, 0]],
+			"blocks_movement": true, "blocks_sight": true,
+			"minimap_color": "#1f3d2a"
+		},
+		"bush": {
+			"name": "Bramble",
+			"texture": "res://assets/props/bush.png",
+			"origin": [32, 40],
+			"footprint": [[0, 0]],
+			"blocks_movement": false, "move_cost": 2.0, "blocks_sight": false,
+			"minimap_color": "#3a6430"
+		},
+		"rock": {
+			"name": "Boulder",
+			"texture": "res://assets/props/rock.png",
+			"origin": [31, 38],
+			"footprint": [[0, 0]],
+			"blocks_movement": true, "blocks_sight": false,
+			"minimap_color": "#77767b"
+		},
+		"sign": {
+			"name": "Signpost",
+			"texture": "res://assets/props/sign.png",
+			"origin": [24, 62],
+			"footprint": [[0, 0]],
+			"blocks_movement": true, "blocks_sight": false,
+			"interaction": "read",
+			"minimap_color": "#c9a46a"
+		},
+		"well": {
+			"name": "Village Well",
+			"texture": "res://assets/props/well.png",
+			"origin": [40, 72],
+			"footprint": [[0, 0]],
+			"blocks_movement": true, "blocks_sight": false,
+			"minimap_color": "#9a979d"
+		},
+		"house_small": {
+			"name": "Cottage",
+			"texture": "res://assets/props/house_small.png",
+			"origin": [92, 160],
+			"footprint_radius": 1,
+			"door": [0, 1],
+			"blocks_movement": true, "blocks_sight": true,
+			"minimap_color": "#9a4231"
+		},
+		"house_large": {
+			"name": "Longhouse",
+			"texture": "res://assets/props/house_large.png",
+			"origin": [97, 160],
+			"footprint": [[0, 0], [1, 0], [0, -1], [1, -1], [-1, 0], [-1, 1], [0, 1], [2, 0], [2, -1], [1, 1]],
+			"door": [1, 1],
+			"blocks_movement": true, "blocks_sight": true,
+			"minimap_color": "#4b5d73"
+		}
+	}
+}

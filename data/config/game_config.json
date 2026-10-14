@@ -1,0 +1,21 @@
+{
+	"max_party_size": 4,
+	"starting_party": "res://data/party/starting_party.json",
+	"starting_map": "res://data/maps/millbrook_outskirts.json",
+	"character_dirs": ["res://data/characters", "user://characters"],
+
+	"hex_radius": 32,
+	"feet_per_hex": 5,
+	"explore_move_speed": 165,
+	"show_grid_default": true,
+
+	"camera": {
+		"pan_speed": 900,
+		"edge_pan": true,
+		"edge_margin": 10,
+		"zoom_min": 0.5,
+		"zoom_max": 2.0,
+		"zoom_step": 0.1,
+		"zoom_default": 1.0
+	}
+}

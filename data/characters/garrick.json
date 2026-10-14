@@ -1,0 +1,77 @@
+{
+	"schema_version": 1,
+	"id": "garrick",
+	"name": "Garrick Thorne",
+	"ancestry": "human",
+	"class": "fighter",
+	"level": 1,
+	"xp": 0,
+	"alignment": "neutral good",
+	"abilities": {
+		"str": 16,
+		"dex": 13,
+		"con": 15,
+		"int": 10,
+		"wis": 12,
+		"cha": 8
+	},
+	"hit_points": {
+		"max": 12,
+		"current": 12
+	},
+	"hit_die": "d10",
+	"armor_class": 18,
+	"speed_ft": 30,
+	"size": "medium",
+	"proficiencies": {
+		"saving_throws": [
+			"str",
+			"con"
+		],
+		"skills": [
+			"athletics",
+			"perception"
+		],
+		"armor": [
+			"light",
+			"medium",
+			"heavy",
+			"shields"
+		],
+		"weapons": [
+			"simple",
+			"martial"
+		]
+	},
+	"equipment": {
+		"main_hand": "longsword",
+		"off_hand": "shield",
+		"armor": "chain_mail"
+	},
+	"inventory": [
+		{
+			"item": "potion_of_healing",
+			"qty": 1
+		},
+		{
+			"item": "rations",
+			"qty": 3
+		}
+	],
+	"gold": 15,
+	"spells": {
+		"ability": null,
+		"cantrips": [],
+		"known": [],
+		"slots": {}
+	},
+	"features": [
+		"fighting_style_defense",
+		"second_wind"
+	],
+	"art": {
+		"portrait": "res://assets/portraits/garrick.png",
+		"sprite": "res://assets/characters/fighter.png"
+	},
+	"bio": "A former caravan guard who keeps his word and his blade sharp."
+}

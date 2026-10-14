@@ -1,0 +1,80 @@
+{
+	"schema_version": 1,
+	"id": "wren",
+	"name": "Wren Lightfoot",
+	"ancestry": "halfling",
+	"class": "rogue",
+	"level": 1,
+	"xp": 0,
+	"alignment": "chaotic neutral",
+	"abilities": {
+		"str": 8,
+		"dex": 17,
+		"con": 12,
+		"int": 13,
+		"wis": 12,
+		"cha": 14
+	},
+	"hit_points": {
+		"max": 9,
+		"current": 9
+	},
+	"hit_die": "d8",
+	"armor_class": 14,
+	"speed_ft": 25,
+	"size": "small",
+	"proficiencies": {
+		"saving_throws": [
+			"dex",
+			"int"
+		],
+		"skills": [
+			"stealth",
+			"sleight_of_hand",
+			"acrobatics",
+			"perception"
+		],
+		"armor": [
+			"light"
+		],
+		"weapons": [
+			"simple",
+			"hand_crossbow",
+			"longsword",
+			"rapier",
+			"shortsword"
+		]
+	},
+	"equipment": {
+		"main_hand": "shortsword",
+		"off_hand": "dagger",
+		"armor": "leather"
+	},
+	"inventory": [
+		{
+			"item": "thieves_tools",
+			"qty": 1
+		},
+		{
+			"item": "dagger",
+			"qty": 2
+		}
+	],
+	"gold": 25,
+	"spells": {
+		"ability": null,
+		"cantrips": [],
+		"known": [],
+		"slots": {}
+	},
+	"features": [
+		"expertise",
+		"sneak_attack",
+		"thieves_cant"
+	],
+	"art": {
+		"portrait": "res://assets/portraits/wren.png",
+		"sprite": "res://assets/characters/rogue.png"
+	},
+	"bio": "A quick-fingered halfling who swears every lock is merely a suggestion."
+}
