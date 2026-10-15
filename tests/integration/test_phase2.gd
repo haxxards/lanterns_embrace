@@ -226,3 +226,41 @@ func test_quicksave_and_quickload() -> void:
 	hud.quickload()
 	await _settle()
 	check_eq(GameState.gold, gold, "quickload restored the purse")
+
+
+func test_drop_and_pick_up_items() -> void:
+	_load("res://data/maps/millbrook_miller.json")
+	var m := world.party.members[0]
+	var sheet := m.sheet
+	hud.open_inventory()
+	check(hud._inventory.showing_ground, "with no chest open, the panel shows the ground")
+	var ground: ContainerState = hud._inventory.container
+	check(ground != null and ground.inventory.is_empty(), "nothing on the ground yet")
+	var potion := -1
+	for i in sheet.inventory.capacity():
+		if sheet.inventory.get_at(i) != null and sheet.inventory.get_at(i).id == "potion_of_healing":
+			potion = i
+	check_eq(InventoryOps.move(InventoryOps.backpack(sheet, potion), InventoryOps.container_slot(ground, 0)), "",
+			"dropped")
+	check_eq(sheet.inventory.count("potion_of_healing"), 0, "gone from the backpack")
+	var pile: Prop = world.props_by_hex.get(m.hex)
+	check(pile != null and pile.def.id == "item_pile", "a pile appears where they stand")
+	hud._inventory.close()
+	# Leave and come back: the pile is still there with the potion in it.
+	_load(GameConfig.starting_map_path, "millbrook_miller")
+	_load("res://data/maps/millbrook_miller.json")
+	pile = world.props_by_hex.get(m.hex)
+	check(pile != null and pile.container.inventory.count("potion_of_healing") == 1, "pile persists")
+	# Click it: the leader walks over and it opens like a chest; take everything.
+	world.party.select_only(world.party.members[1])
+	var had := world.party.members[1].sheet.inventory.count("potion_of_healing")
+	check(world.party.interact_with(pile), "order accepted")
+	check(_walk_until_idle(), "walks to the pile")
+	check_eq(opened.size(), 1, "the pile opens")
+	hud._inventory._take_all()
+	check_eq(world.party.members[1].sheet.inventory.count("potion_of_healing"), had + 1, "picked up")
+	check(world.props_by_hex.get(m.hex) == null or world.props_by_hex.get(m.hex).def.id != "item_pile",
+			"the empty pile disappears")
+	hud._inventory.close()
+	check(not GameState.to_dict()["maps"].get("millbrook_miller", {}).get("containers", {}).has(
+			"ground_%d_%d" % [m.hex.x, m.hex.y]), "empty piles are not saved")

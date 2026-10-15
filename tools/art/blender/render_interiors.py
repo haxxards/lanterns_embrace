@@ -399,6 +399,45 @@ def rug():
     rp.finish("rug", root)
 
 
+def bar_back():
+    """Shelves of bottles and mugs that stand behind a bar, against the back
+    wall (3x1 hexes). Part of the "bar" furnishing add-on."""
+    root = furniture_setup()
+    wood = rp.wood_material("ShelfWood", "#4a3220")
+    depth = rp.footprint_depth(1)
+    y = depth - 0.15
+    w = 3 * lib.HEX_M - 0.4
+    lib.box("Back", (w, 0.05, 2.1), (0, y + 0.2, 1.05), mat=wood, parent=root)
+    for x in (-w / 2, w / 2):
+        lib.box(f"Side{x}", (0.07, 0.42, 2.1), (x, y, 1.05), mat=wood, parent=root, bevel=0.01)
+    lib.box("Cornice", (w + 0.12, 0.5, 0.08), (0, y, 2.14), mat=wood, parent=root, bevel=0.02)
+    lib.box("Base", (w, 0.42, 0.5), (0, y, 0.25), mat=wood, parent=root, bevel=0.01)
+    bar_shelves(-w / 2 + 0.05, w / 2 - 0.05, y + 0.15, root, wood)
+    rp.finish("bar_back", root)
+
+
+def item_pile():
+    """Things dropped on the ground: a sack, a bundle and a glint of metal."""
+    root = furniture_setup()
+    sack = lib.primitive("uv_sphere", "Sack", mat=cloth("Sack", "#8a7450"), parent=root, radius=0.2,
+                         location=(-0.05, 0.05, 0.16))
+    sack.scale = (1.0, 0.9, 0.85)
+    lib.cylinder_between("Neck", (-0.05, 0.05, 0.28), (-0.03, 0.06, 0.38), 0.06, 0.04,
+                         mat=cloth("Sack2", "#7a6444"), parent=root, sides=10)
+    lib.cylinder_between("Tie", (-0.04, 0.055, 0.31), (-0.04, 0.055, 0.33), 0.065,
+                         mat=cloth("Cord", "#3a2a1a"), parent=root, sides=10)
+    roll = lib.cylinder_between("Bedroll", (0.05, -0.12, 0.08), (0.42, 0.02, 0.08), 0.08,
+                                mat=cloth("Roll", "#5a3a2a"), parent=root, sides=14)
+    roll.name = "Bedroll"
+    steel = lib.material("Steel", lib.lin("#b8bcc2"), rough=0.3, metallic=1.0)
+    lib.box("Blade", (0.5, 0.04, 0.012), (0.1, -0.22, 0.02), mat=steel, parent=root,
+            rotation=(0, 0, math.radians(-12)))
+    lib.box("Hilt", (0.03, 0.12, 0.03), (-0.17, -0.17, 0.03), mat=lib.material("Brass", lib.lin("#c99a3e"),
+                                                                              rough=0.3, metallic=1.0),
+            parent=root, rotation=(0, 0, math.radians(-12)))
+    rp.finish("item_pile", root)
+
+
 def door_exit():
     """Rush mat and a spill of daylight at an interior's door (walkable)."""
     root = furniture_setup()
@@ -424,7 +463,7 @@ ROOMS = {
     "smithy": dict(cols=8, rows=6, walls="stone", timber="#2e2218", floor="flags",
                    exit=(2.5 / 6), forge=0.72, windows=(0.25,), shelf=0.45),
     "inn_hall": dict(cols=12, rows=8, walls="plaster", timber="#3a2818", floor="planks",
-                     exit=(4.5 / 9), hearth=0.82, windows=(0.15, 0.38), bar_shelves=(0.42, 0.68)),
+                     exit=(4.5 / 9), hearth=0.82, windows=(0.15, 0.38), shelf=0.6),
 }
 
 WALL_H = 2.7
@@ -586,8 +625,14 @@ def room(name):
     path = lib.ASSETS / "interiors" / f"{name}.png"
     lib.render(path, res=res)
     origin = lib.to_pixel(cam, root.matrix_world @ Vector((0, 0, 0)), res)
+    # Back-row columns in front of the hearth or forge, which furniture should leave clear.
+    keep = set()
+    for key in ("hearth", "forge"):
+        if key in spec:
+            cx = wx(spec[key]) / w
+            keep |= {int(math.floor(cx - 0.6)), int(round(cx)), int(math.ceil(cx + 0.6)) - 1}
     BACKDROPS[name] = {"texture": f"res://assets/interiors/{name}.png", "origin": [round(origin[0]), round(origin[1])],
-                       "size": [cols, rows], "exit": [exit_col, rows - 1]}
+                       "size": [cols, rows], "exit": [exit_col, rows - 1], "keep_clear": sorted(keep)}
     print("wrote", path, res, BACKDROPS[name])
 
 
@@ -613,6 +658,8 @@ FURNITURE = {
     "anvil": [anvil],
     "rug": [rug],
     "door_exit": [door_exit],
+    "bar_back": [bar_back],
+    "item_pile": [item_pile],
 }
 
 

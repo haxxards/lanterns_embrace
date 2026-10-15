@@ -13,11 +13,14 @@ extends Node2D
 
 const DRAG_THRESHOLD := 8.0
 const NO_HEX := Vector2i(-99999, -99999)
+## Container ids of dropped-item piles: "ground_<q>_<r>".
+const PILE_PREFIX := "ground_"
 
 var map: MapData
 var grid: HexGrid
 var props: Array[Prop] = []
 var props_by_hex: Dictionary = {}  # Vector2i -> Prop
+var _pile_props: Dictionary = {}   # Vector2i -> Prop (items dropped on the ground)
 
 var terrain: TerrainRenderer
 ## Pre-rendered picture of the whole map (interiors), used instead of terrain.
@@ -105,6 +108,7 @@ func load_map(path: String, entry: String = "") -> bool:
 			grid.set_terrain(Hex.offset_to_axial(Vector2i(c, r)), map.terrain[r * map.width + c])
 	for placement in map.placements:
 		_spawn_prop(placement)
+	_spawn_saved_piles()
 	grid.rebuild_pathfinding()
 
 	var view_bounds := grid.world_bounds()
@@ -172,12 +176,13 @@ func _clear() -> void:
 		p.queue_free()
 	props.clear()
 	props_by_hex.clear()
+	_pile_props.clear()
 	_hover_prop = null
 	_hover_member = null
 	_hover_hex = NO_HEX
 
 
-func _spawn_prop(placement: MapData.Placement) -> void:
+func _spawn_prop(placement: MapData.Placement) -> Prop:
 	var prop := Prop.new()
 	prop.setup(placement, grid)
 	for cell in prop.cells:
@@ -200,6 +205,67 @@ func _spawn_prop(placement: MapData.Placement) -> void:
 	else:
 		entities.add_child(prop)
 	props.append(prop)
+	return prop
+
+
+# --- items on the ground ----------------------------------------------------------
+
+## The pile of items dropped on hex `h`, or null. With `create`, an empty pile
+## is made (it only shows on the map once something is in it). Piles are
+## ordinary containers kept in GameState, so they persist and are saved.
+func ground_pile(h: Vector2i, create: bool = false) -> ContainerState:
+	var id := _pile_id(h)
+	var state := GameState.get_container(map.id, id)
+	if state == null and create:
+		state = ContainerState.new()
+		state.inventory = Inventory.new(ContainerState.MIN_SLOTS)
+		GameState.set_container(map.id, id, state)
+	if state != null and not state.inventory.changed.is_connected(_on_pile_changed):
+		state.inventory.changed.connect(_on_pile_changed.bind(h, state))
+	return state
+
+
+func _pile_id(h: Vector2i) -> String:
+	return "%s%d_%d" % [PILE_PREFIX, h.x, h.y]
+
+
+## Shows or removes the pile's sprite as items are dropped or picked up.
+func _on_pile_changed(h: Vector2i, state: ContainerState) -> void:
+	if map == null or GameState.get_container(map.id, _pile_id(h)) != state:
+		return  # a pile from a map that is no longer loaded
+	var prop: Prop = _pile_props.get(h)
+	if state.inventory.is_empty():
+		if prop != null:
+			_pile_props.erase(h)
+			props.erase(prop)
+			if props_by_hex.get(h) == prop:
+				props_by_hex.erase(h)
+				for other in props:  # something else may stand on that hex too
+					if other.cells.has(h):
+						props_by_hex[h] = other
+			if _hover_prop == prop:
+				_hover_prop = null
+			prop.queue_free()
+	elif prop == null:
+		var pl := MapData.Placement.new()
+		pl.def = Data.props["item_pile"]
+		pl.cell = Hex.axial_to_offset(h)
+		pl.anchor = h
+		pl.cells = [h]
+		pl.extra = {"id": _pile_id(h), "name": "Items on the ground"}
+		_pile_props[h] = _spawn_prop(pl)
+
+
+## Piles dropped on this map earlier (or loaded from a save).
+func _spawn_saved_piles() -> void:
+	var saved := GameState.containers_for(map.id)
+	for id in saved:
+		if str(id).begins_with(PILE_PREFIX):
+			var parts := str(id).trim_prefix(PILE_PREFIX).split("_")
+			var h := Vector2i(int(parts[0]), int(parts[1]))
+			var state := ground_pile(h)
+			if state != null and not state.inventory.is_empty():
+				_on_pile_changed(h, state)
 
 
 # --- input -------------------------------------------------------------------------

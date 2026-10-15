@@ -112,6 +112,11 @@ func get_container(map_id: String, container_id: String) -> ContainerState:
 	return (_containers.get(map_id, {}) as Dictionary).get(container_id)
 
 
+## All containers known on a map: {container id: ContainerState}.
+func containers_for(map_id: String) -> Dictionary:
+	return _containers.get(map_id, {})
+
+
 func set_container(map_id: String, container_id: String, state: ContainerState) -> void:
 	if not _containers.has(map_id):
 		_containers[map_id] = {}
@@ -147,7 +152,10 @@ func to_dict(positions: Dictionary = {}, camera: Variant = null) -> Dictionary:
 	for map_id in _containers:
 		var c := {}
 		for cid in _containers[map_id]:
-			c[cid] = (_containers[map_id][cid] as ContainerState).to_dict()
+			var state: ContainerState = _containers[map_id][cid]
+			if str(cid).begins_with("ground_") and state.inventory.is_empty():
+				continue  # picked-up piles leave nothing behind
+			c[cid] = state.to_dict()
 		maps[map_id] = {"containers": c}
 	for map_id in _explored:
 		if not maps.has(map_id):

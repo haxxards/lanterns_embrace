@@ -12,6 +12,10 @@
 		"exit": [
 			4,
 			5
+		],
+		"keep_clear": [
+			0,
+			1
 		]
 	},
 	"inn_hall": {
@@ -27,6 +31,10 @@
 		"exit": [
 			5,
 			7
+		],
+		"keep_clear": [
+			9,
+			10
 		]
 	},
 	"cottage_stone": {
@@ -42,6 +50,10 @@
 		"exit": [
 			3,
 			5
+		],
+		"keep_clear": [
+			5,
+			6
 		]
 	},
 	"cottage_timber": {
@@ -57,6 +69,10 @@
 		"exit": [
 			5,
 			5
+		],
+		"keep_clear": [
+			1,
+			2
 		]
 	},
 	"smithy": {
@@ -72,6 +88,10 @@
 		"exit": [
 			3,
 			5
+		],
+		"keep_clear": [
+			5,
+			6
 		]
 	}
 }

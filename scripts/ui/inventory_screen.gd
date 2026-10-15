@@ -1,12 +1,14 @@
 class_name InventoryScreen
 extends PanelContainer
 ## Inventory and paper doll for one party member, plus the open container
-## (chest, drawers...) when there is one. Opened with I, the sidebar button,
-## or by opening a container. The HUD pauses the game while it is open.
+## (chest, drawers...) when there is one, or otherwise the ground at the
+## member's feet. Opened with I, the sidebar button, or by opening a
+## container. The HUD pauses the game while it is open.
 ##
 ## Mouse: drag items between slots (equip, swap, stack), drop an item on a
-## sidebar portrait to give it away, right-click (or double-click) to use a
-## potion, equip a backpack item, take off worn gear or take from a chest.
+## sidebar portrait to give it away, drag it to the ground panel to drop it,
+## right-click (or double-click) to use a potion, equip a backpack item, take
+## off worn gear or take from a chest or the ground.
 
 signal closed
 
@@ -19,6 +21,10 @@ const CONTAINER_COLUMNS := 8
 
 var sheet: CharacterSheet
 var container: ContainerState
+## Gives the pile on the ground under a character: Callable(sheet) -> ContainerState.
+var ground_provider: Callable
+## True when the bottom panel shows the ground rather than an opened container.
+var showing_ground: bool = false
 
 var _name_label: Label
 var _class_label: Label
@@ -42,10 +48,12 @@ func _ready() -> void:
 	GameState.gold_changed.connect(func(_g: int) -> void: _refresh())
 
 
-## Shows `s`'s inventory, with `c` open beside it if given.
+## Shows `s`'s inventory, with `c` open beside it if given (otherwise the ground).
 func open(s: CharacterSheet, c: ContainerState = null, title: String = "") -> void:
+	showing_ground = c == null
 	show_sheet(s)
-	set_container(c, title)
+	if c != null:
+		set_container(c, title)
 	if not visible:
 		Audio.play_sfx("ui_open")
 	visible = true
@@ -70,7 +78,15 @@ func show_sheet(s: CharacterSheet) -> void:
 	_resize_slots(_pack_grid, _pack, sheet.inventory.capacity())
 	for i in _pack.size():
 		_pack[i].ref = InventoryOps.backpack(sheet, i)
+	if showing_ground:
+		_show_ground()
 	_refresh()
+
+
+## The bottom panel shows what lies on the ground where the character stands.
+func _show_ground() -> void:
+	var pile: ContainerState = ground_provider.call(sheet) if ground_provider.is_valid() else null
+	set_container(pile, "On the ground")
 
 
 func set_container(c: ContainerState, title: String = "") -> void:
@@ -245,7 +261,7 @@ func _build() -> void:
 	_container_grid.add_theme_constant_override("v_separation", 6)
 	_container_box.add_child(_container_grid)
 
-	var hint := _label("Drag to move or equip  ·  right-click to use, equip or take  ·  drop on a portrait to give",
+	var hint := _label("Drag to move, equip or drop on the ground  ·  right-click to use, equip or take  ·  drop on a portrait to give",
 			12, UiTheme.TEXT_DIM)
 	root.add_child(hint)
 

@@ -124,7 +124,7 @@
 		"                     w B    r   r                     b          T  B  o  w         "
 	],
 	"props": [
-		{"type": "house_large", "at": [59, 15], "name": "The Lantern & Thistle", "variant": 0, "id": "millbrook_inn", "interior": "res://data/maps/millbrook_inn.json", "entry": "door"},
+		{"type": "house_large", "at": [59, 15], "name": "The Lantern & Thistle", "variant": 0, "id": "millbrook_inn", "interior": "res://data/maps/millbrook_inn.json", "entry": "door", "addons": ["bar", "tables:4"]},
 		{"type": "house_small", "at": [47, 21], "name": "Miller's Cottage", "variant": 0, "id": "millbrook_miller", "interior": "res://data/maps/millbrook_miller.json", "entry": "door"},
 		{"type": "house_small", "at": [75, 20], "name": "Reeve's House", "variant": 2, "id": "millbrook_reeve", "interior": "res://data/maps/millbrook_reeve.json", "entry": "door"},
 		{"type": "house_small", "at": [46, 40], "name": "Herbalist's Cottage", "variant": 1, "id": "millbrook_herbalist", "interior": "res://data/maps/millbrook_herbalist.json", "entry": "door"},

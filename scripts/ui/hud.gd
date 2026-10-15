@@ -203,6 +203,14 @@ func _close_all_modals() -> void:
 	_on_modal_closed()
 
 
+## The pile of dropped items under a party member (made on demand).
+func _ground_under(sheet: CharacterSheet) -> ContainerState:
+	for m in world.party.members:
+		if m.sheet == sheet:
+			return world.ground_pile(m.hex, true)
+	return null
+
+
 func _on_container_opened(container: ContainerState, title: String, opener: CharacterSheet) -> void:
 	_enter_modal()
 	_inventory.open(opener, container, title)
@@ -490,6 +498,7 @@ func _build_modals() -> void:
 	_root.add_child(center)
 	_inventory = InventoryScreen.new()
 	_inventory.name = "Inventory"
+	_inventory.ground_provider = _ground_under
 	_inventory.closed.connect(_on_modal_closed)
 	center.add_child(_inventory)
 	_menu = GameMenu.new()

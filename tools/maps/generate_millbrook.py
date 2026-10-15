@@ -128,18 +128,24 @@ def place(kind, cells, at, margin=1, allowed='.f#,:', **extra):
 DOOR_FRACTION = {("house_small", 0): 3.5 / 6, ("house_small", 1): 2.5 / 6, ("house_small", 2): 4.5 / 6,
                  ("house_large", 0): 4.5 / 9}
 
-def building(kind, at, cols, rows, variant, name, building_id):
-    """A house with an interior map (tools/maps/generate_interiors.py writes it)."""
+def building(kind, at, cols, rows, variant, name, building_id, addons=()):
+    """A house with an interior map (tools/maps/generate_interiors.py writes it).
+    `addons` are furnishing sets laid out automatically inside, e.g. "bar" or
+    "tables:3" (see ADDONS in generate_interiors.py)."""
     door_col = at[0] + int(DOOR_FRACTION[(kind, variant)] * cols)
     cells = rect_cells(at, cols, rows)
-    place(kind, cells, at, margin=2, name=name, variant=variant, id=building_id,
-          interior=f"res://data/maps/{building_id}.json", entry="door")
+    extra = dict(name=name, variant=variant, id=building_id, interior=f"res://data/maps/{building_id}.json",
+                 entry="door")
+    if addons:
+        extra["addons"] = list(addons)
+    place(kind, cells, at, margin=2, **extra)
     # keep ground in front of the door clear and paved
     dr = at[1] + rows
     paint_road([(door_col, dr), (door_col + 1, dr), (door_col, dr + 1)])
     return (door_col, dr)
 
-inn_door = building("house_large", (59, 15), 12, 8, 0, "The Lantern & Thistle", "millbrook_inn")
+inn_door = building("house_large", (59, 15), 12, 8, 0, "The Lantern & Thistle", "millbrook_inn",
+                    addons=["bar", "tables:4"])
 a_door = building("house_small", (47, 21), 8, 6, 0, "Miller's Cottage", "millbrook_miller")
 b_door = building("house_small", (75, 20), 8, 6, 2, "Reeve's House", "millbrook_reeve")
 c_door = building("house_small", (46, 40), 8, 6, 1, "Herbalist's Cottage", "millbrook_herbalist")

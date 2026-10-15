@@ -52,6 +52,9 @@ game pauses while it is open.
 - Drag items between backpack slots, equipment slots and the open container. Dropping on
   an occupied slot swaps, or tops up a stack of the same item.
 - Drop an item on a sidebar portrait to give it to that character.
+- With no chest open, the bottom panel shows **the ground** where the character stands.
+  Drag items there to drop them; a pile appears on the map. Click a pile later to open it
+  like a chest, or right-click its items to pick them up.
 - Right-click (or double-click): drink a potion or eat food, put a backpack item on, take
   worn gear off, or take an item out of the container.
 - Click a sidebar portrait, or use ◀ ▶, to see another member.
@@ -74,3 +77,7 @@ that overrides its type's interaction) holds items:
 `id` must be unique within the map: the contents live in `GameState` under the map id
 and this id, so they persist when the party leaves the map and in save games. The map
 file only provides the starting contents.
+
+Dropped items are containers too: each pile is stored as `ground_<q>_<r>` (its hex) and
+drawn with the `item_pile` prop while it holds anything. Empty piles vanish and are not
+saved. `World.ground_pile(hex, create)` returns the pile on a hex.

@@ -34,6 +34,9 @@ New to Godot, or want to know how this is put together before extending it? Star
 - **Containers:** chests, drawers, cupboards and a crate of apples, opened on the inventory
   screen with a "Take all" button. Locked ones need their key, or someone with thieves'
   tools to win a lock-picking roll. Contents are remembered.
+- **Dropping and picking up items:** the inventory's ground panel shows what lies at the
+  character's feet. Dropped items form a pile on the map that stays there (and in saves)
+  until picked up.
 - **Building interiors as separate maps**, each exactly the size of its building
   (cottages 8×6 hexes, the inn 12×8). Click a building and the party gathers at the door
   and goes in; the way out leads back to the same door. Five pre-rendered rooms (an inn, a
@@ -90,7 +93,7 @@ New to Godot, or want to know how this is put together before extending it? Star
     barrels, crates, hay, lamp posts, market stalls and a cart.
   - **Colour grade:** a subtle warm grade and vignette over the game view (`post` in
     `game_config.json`).
-- **63 automated tests**, run headless.
+- **65 automated tests**, run headless.
 
 ## Running it
 

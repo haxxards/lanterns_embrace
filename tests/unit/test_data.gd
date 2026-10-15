@@ -133,6 +133,22 @@ func _map_grid(m: MapData) -> HexGrid:
 	return g
 
 
+## The inn is furnished by the "bar" and "tables" add-ons on its house.
+func test_inn_has_a_bar_and_tables() -> void:
+	var outside := Data.load_map(GameConfig.starting_map_path)
+	var inn_addons: Array = []
+	for pl in outside.placements:
+		if pl.extra.get("id") == "millbrook_inn":
+			inn_addons = pl.extra.get("addons", [])
+	check(inn_addons.has("bar"), "the inn asks for a bar")
+	var counts := {}
+	for pl in Data.load_map("res://data/maps/millbrook_inn.json").placements:
+		counts[pl.def.id] = int(counts.get(pl.def.id, 0)) + 1
+	check_eq(counts.get("bar_counter", 0), 1, "a bar counter")
+	check_eq(counts.get("bar_back", 0), 1, "shelves behind the bar")
+	check(counts.get("table", 0) >= 3, "tables (%d)" % counts.get("table", 0))
+
+
 ## Phase 1 promised that a building is as large inside as outside: every
 ## building's interior map is exactly its footprint, and its exit leads back
 ## to that building.

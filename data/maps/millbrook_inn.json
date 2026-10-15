@@ -20,18 +20,18 @@
 		"____________"
 	],
 	"props": [
-		{"type": "cupboard", "at": [4, 0], "id": "pantry", "name": "Pantry", "items": [{"item": "rations", "qty": 4}, {"item": "torch", "qty": 5}, {"item": "lantern", "qty": 1}]},
-		{"type": "barrels", "at": [5, 0]},
-		{"type": "chest", "at": [7, 0], "id": "cashbox", "name": "Cash Box", "locked": true, "lock_dc": 12, "items": [{"item": "garnet", "qty": 1}], "gold": 35},
-		{"type": "barrels", "at": [8, 0]},
-		{"type": "table", "at": [1, 1]},
+		{"type": "cupboard", "at": [0, 0], "id": "pantry", "name": "Pantry", "items": [{"item": "rations", "qty": 4}, {"item": "torch", "qty": 5}, {"item": "lantern", "qty": 1}]},
+		{"type": "chest", "at": [1, 0], "id": "cashbox", "name": "Cash Box", "locked": true, "lock_dc": 12, "items": [{"item": "garnet", "qty": 1}], "gold": 35},
 		{"type": "rug", "at": [9, 1]},
-		{"type": "bar_counter", "at": [5, 2]},
-		{"type": "table", "at": [1, 4]},
-		{"type": "table", "at": [9, 4]},
-		{"type": "table", "at": [6, 5]},
 		{"type": "chest", "at": [11, 7], "id": "sea_chest", "name": "Traveller's Chest", "items": [{"item": "cloak_of_protection", "qty": 1}, {"item": "studded_leather", "qty": 1}]},
 		{"type": "dresser", "at": [0, 7], "id": "linen", "name": "Linen Drawers", "items": [{"item": "rations", "qty": 2}], "gold": 3},
+		{"type": "bar_back", "at": [4, 0]},
+		{"type": "bar_counter", "at": [4, 2]},
+		{"type": "barrels", "at": [7, 0]},
+		{"type": "table", "at": [5, 4]},
+		{"type": "table", "at": [0, 2]},
+		{"type": "table", "at": [10, 2]},
+		{"type": "table", "at": [2, 6]},
 		{"type": "door_exit", "at": [5, 7], "name": "Way out", "map": "res://data/maps/millbrook_outskirts.json", "entry": "millbrook_inn"}
 	]
 }

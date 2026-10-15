@@ -280,6 +280,27 @@
 			"blocks_sight": false,
 			"interaction": "exit",
 			"minimap_color": "#c8b890"
+		},
+		"bar_back": {
+			"name": "Shelves",
+			"texture": "res://assets/props/bar_back.png",
+			"origin": [86, 102],
+			"footprint_rect": [3, 1],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#4a3220"
+		},
+		"item_pile": {
+			"name": "Items on the ground",
+			"texture": "res://assets/props/item_pile.png",
+			"origin": [17, 22],
+			"footprint": [[0, 0]],
+			"layer": "ground",
+			"blocks_movement": false,
+			"blocks_sight": false,
+			"interaction": "container",
+			"minimap_color": "#c8b890"
 		}
 	}
 }
