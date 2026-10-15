@@ -17,6 +17,8 @@ const LEFT_SLOTS := ["helmet", "armor", "cloak", "gloves", "ring_1"]
 const RIGHT_SLOTS := ["amulet", "ring_2", "boots"]
 const HAND_SLOTS := ["main_hand", "off_hand"]
 const PACK_COLUMNS := 4
+const HINT := "Drag to move, equip or drop on the ground  ·  right-click to use, equip or take  ·  drop on a portrait to give"
+const HINT_SHOP := "Drag from the stock to buy the stack, into it to sell  ·  right-click buys one or sells  ·  prices in gold pieces"
 const CONTAINER_COLUMNS := 8
 
 var sheet: CharacterSheet
@@ -25,6 +27,8 @@ var container: ContainerState
 var ground_provider: Callable
 ## True when the bottom panel shows the ground rather than an opened container.
 var showing_ground: bool = false
+## Trade terms while a shop is open (the bottom panel is the vendor's stock).
+var trade: Dictionary = {}
 
 var _name_label: Label
 var _class_label: Label
@@ -38,6 +42,8 @@ var _container_box: VBoxContainer
 var _container_title: Label
 var _container_grid: GridContainer
 var _container_slots: Array[ItemSlot] = []
+var _take_all: Button
+var _hint: Label
 
 
 func _ready() -> void:
@@ -50,6 +56,7 @@ func _ready() -> void:
 
 ## Shows `s`'s inventory, with `c` open beside it if given (otherwise the ground).
 func open(s: CharacterSheet, c: ContainerState = null, title: String = "") -> void:
+	_set_trade({})
 	showing_ground = c == null
 	show_sheet(s)
 	if c != null:
@@ -59,10 +66,31 @@ func open(s: CharacterSheet, c: ContainerState = null, title: String = "") -> vo
 	visible = true
 
 
+## Opens a vendor's shop: their stock below, `s`'s backpack above. Dragging
+## from the stock buys, dragging into it sells.
+func open_shop(s: CharacterSheet, stock: ContainerState, title: String, terms: Dictionary) -> void:
+	showing_ground = false
+	_set_trade(terms)
+	show_sheet(s)
+	set_container(stock, title)
+	if not visible:
+		Audio.play_sfx("ui_open")
+	visible = true
+
+
+func _set_trade(terms: Dictionary) -> void:
+	trade = terms
+	_take_all.visible = trade.is_empty()
+	_hint.text = HINT_SHOP if not trade.is_empty() else HINT
+	for slot in _all_slots():
+		slot.trade = trade
+
+
 func close() -> void:
 	if not visible:
 		return
 	set_container(null)
+	_set_trade({})
 	visible = false
 	closed.emit()
 
@@ -100,7 +128,9 @@ func set_container(c: ContainerState, title: String = "") -> void:
 	_container_title.text = title
 	_resize_slots(_container_grid, _container_slots, c.inventory.capacity())
 	for i in _container_slots.size():
-		_container_slots[i].ref = InventoryOps.container_slot(c, i)
+		_container_slots[i].ref = InventoryOps.shop_slot(c, i, trade) if not trade.is_empty() \
+				else InventoryOps.container_slot(c, i)
+		_container_slots[i].trade = trade
 	_refresh()
 
 
@@ -127,6 +157,15 @@ func _refresh() -> void:
 	_gold_label.text = "Party gold: %d" % GameState.gold
 
 
+func _all_slots() -> Array[ItemSlot]:
+	var out: Array[ItemSlot] = []
+	for slot in _equip.values():
+		out.append(slot)
+	out.append_array(_pack)
+	out.append_array(_container_slots)
+	return out
+
+
 func _on_slot_used(slot: ItemSlot) -> void:
 	var st := slot.stack()
 	if st == null or st.def == null:
@@ -134,8 +173,14 @@ func _on_slot_used(slot: ItemSlot) -> void:
 	var err := ""
 	match str(slot.ref.get("kind")):
 		"container", "equip":
-			err = InventoryOps.give(slot.ref, sheet)  # take it / take it off
+			err = InventoryOps.give(slot.ref, sheet)  # take it / take it off / buy it
 		"backpack":
+			if not trade.is_empty() and container != null:
+				err = InventoryOps.sell(slot.ref, InventoryOps.shop_slot(container, 0, trade))
+				if not err.is_empty():
+					Audio.play_sfx("error")
+					Events.toast_requested.emit(err)
+				return
 			if st.def.is_usable():
 				var msg := InventoryOps.use(slot.ref, sheet)
 				if not msg.is_empty():
@@ -157,7 +202,7 @@ func _slot_for(def: ItemDef) -> String:
 	return def.slot
 
 
-func _take_all() -> void:
+func _take_all_pressed() -> void:
 	if container == null:
 		return
 	var err := InventoryOps.take_all(container, sheet)
@@ -254,16 +299,16 @@ func _build() -> void:
 	_container_title = _label("", 15, UiTheme.GOLD)
 	_container_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	crow.add_child(_container_title)
-	crow.add_child(_button("Take all", _take_all))
+	_take_all = _button("Take all", _take_all_pressed)
+	crow.add_child(_take_all)
 	_container_grid = GridContainer.new()
 	_container_grid.columns = CONTAINER_COLUMNS
 	_container_grid.add_theme_constant_override("h_separation", 6)
 	_container_grid.add_theme_constant_override("v_separation", 6)
 	_container_box.add_child(_container_grid)
 
-	var hint := _label("Drag to move, equip or drop on the ground  ·  right-click to use, equip or take  ·  drop on a portrait to give",
-			12, UiTheme.TEXT_DIM)
-	root.add_child(hint)
+	_hint = _label(HINT, 12, UiTheme.TEXT_DIM)
+	root.add_child(_hint)
 
 
 func _slot_column(slot_names: Array) -> VBoxContainer:

@@ -876,6 +876,83 @@ def inn():
 # Set dressing
 # --------------------------------------------------------------------------
 
+def temple():
+    """A stone chapel with its gable to the front, a bell tower and a rose window
+    (8x8 hex footprint)."""
+    root = setup()
+    cols, rows = 8, 8
+    width = cols * lib.HEX_M - 0.4
+    depth = footprint_depth(rows)
+    nave_w = width - 3.2  # leaves room for the tower on the right
+    nave_x = -width / 2 + nave_w / 2
+    wall_top = 4.6
+    stone = stone_material("TempleStone", "#9a948a", scale=2.2)
+    dark = stone_material("Plinth", "#6e685e", scale=3.0)
+    lib.box("Nave", (nave_w, depth, wall_top), (nave_x, depth / 2, wall_top / 2), mat=stone, parent=root)
+    lib.box("Plinth", (nave_w + 0.2, depth + 0.2, 0.5), (nave_x, depth / 2, 0.25), mat=dark, parent=root)
+    # Buttresses down the side and at the front corners.
+    for k in range(4):
+        y = 1.2 + k * (depth - 2.0) / 3
+        lib.box(f"Buttress{k}", (0.6, 0.7, 3.4), (nave_x - nave_w / 2 - 0.25, y, 1.7), mat=stone, parent=root,
+                bevel=0.05)
+    for x in (nave_x - nave_w / 2 + 0.3, nave_x + nave_w / 2 - 0.3):
+        lib.box(f"FrontButtress{x:.1f}", (0.7, 0.6, 3.8), (x, -0.25, 1.9), mat=stone, parent=root, bevel=0.05)
+    # Gable roof with the ridge running front to back.
+    pitch = math.radians(52)
+    rise = (nave_w / 2 + 0.4) * math.tan(pitch)
+    slate = tiled_roof_material("TempleSlate", "#4e5058", rows_per_m=7.5, cols_per_m=2.5)
+    for side in (-1, 1):
+        half = nave_w / 2 + 0.45
+        v = [(nave_x + side * half, -0.4, wall_top - 0.1), (nave_x, -0.4, wall_top - 0.1 + rise),
+             (nave_x, depth + 0.4, wall_top - 0.1 + rise), (nave_x + side * half, depth + 0.4, wall_top - 0.1)]
+        roof = lib.mesh_object(f"Roof{side}", v, [(0, 1, 2, 3)], mat=slate, parent=root)
+        sol = roof.modifiers.new("T", 'SOLIDIFY')
+        sol.thickness = 0.25
+    gable = lib.mesh_object("Gable", [(nave_x - nave_w / 2, -0.01, wall_top), (nave_x + nave_w / 2, -0.01, wall_top),
+                                      (nave_x, -0.01, wall_top + rise - 0.3)], [(0, 1, 2)], mat=stone, parent=root)
+    gable.modifiers.new("T", 'SOLIDIFY').thickness = 0.4
+    lib.box("RidgeCross", (0.12, 0.12, 1.0), (nave_x, -0.3, wall_top + rise + 0.3), mat=iron_material(), parent=root)
+    lib.box("CrossArm", (0.6, 0.12, 0.12), (nave_x, -0.3, wall_top + rise + 0.5), mat=iron_material(), parent=root)
+    # Arched door, steps and a rose window above.
+    door = wood_material("TempleDoor", "#4a2e1a")
+    lib.box("DoorArchStone", (2.2, 0.3, 3.0), (nave_x, -0.12, 1.5), mat=dark, parent=root, bevel=0.05)
+    lib.box("Door", (1.6, 0.2, 2.4), (nave_x, -0.2, 1.3), mat=door, parent=root, bevel=0.02)
+    arch = lib.primitive("cylinder", "DoorArch", mat=door, parent=root, radius=0.8, depth=0.2, vertices=24,
+                         location=(nave_x, -0.2, 2.5))
+    arch.rotation_euler = (math.radians(90), 0, 0)
+    for k in range(3):
+        lib.box(f"Step{k}", (3.0 - k * 0.4, 0.45, 0.18), (nave_x, -0.55 + k * 0.25, 0.09 + k * 0.18), mat=dark,
+                parent=root, bevel=0.02)
+    glass = lib.material("RoseGlass", lib.lin("#c84a3a"), rough=0.1, emission=lib.lin("#ffb060"), emission_strength=1.6)
+    rose = lib.primitive("cylinder", "Rose", mat=glass, parent=root, radius=0.9, depth=0.2, vertices=32,
+                         location=(nave_x, -0.2, wall_top + 0.9))
+    rose.rotation_euler = (math.radians(90), 0, 0)
+    tracery = lib.primitive("torus", "RoseRim", mat=dark, parent=root, major_radius=0.95, minor_radius=0.12,
+                            location=(nave_x, -0.25, wall_top + 0.9))
+    tracery.rotation_euler = (math.radians(90), 0, 0)
+    for k in range(4):
+        lib.box(f"RoseBar{k}", (1.8, 0.1, 0.08), (nave_x, -0.3, wall_top + 0.9), mat=dark, parent=root,
+                rotation=(0, math.radians(k * 45), 0))
+    lancet = lib.material("Lancet", lib.lin("#3a5a8a"), rough=0.1, emission=lib.lin("#9ac0ff"), emission_strength=0.6)
+    for x in (nave_x - 2.3, nave_x + 2.3):
+        lib.box(f"Lancet{x:.1f}", (0.5, 0.2, 1.8), (x, -0.08, 2.4), mat=lancet, parent=root)
+    # Bell tower on the right, with an open belfry and a spire.
+    tx = width / 2 - 1.5
+    lib.box("Tower", (2.8, 2.8, 8.0), (tx, 1.4, 4.0), mat=stone, parent=root)
+    lib.box("TowerPlinth", (3.0, 3.0, 0.6), (tx, 1.4, 0.3), mat=dark, parent=root)
+    shade = lib.material("Belfry", lib.lin("#141210"), rough=1.0)
+    for y in (-0.01,):
+        lib.box("BelfryOpen", (1.2, 0.2, 1.6), (tx, y, 6.6), mat=shade, parent=root)
+    bell = lib.material("Bell", lib.lin("#a8843e"), rough=0.3, metallic=1.0)
+    lib.primitive("cone", "Bell", mat=bell, parent=root, radius1=0.45, radius2=0.2, depth=0.7,
+                  location=(tx, 0.05, 6.5))
+    spire = lib.primitive("cone", "Spire", mat=slate, parent=root, radius1=2.1, radius2=0.05, depth=4.2, vertices=4,
+                          location=(tx, 1.4, 10.1))
+    spire.rotation_euler = (0, 0, math.radians(45))
+    lib.box("TowerSlit", (0.3, 0.2, 1.0), (tx, -0.01, 3.2), mat=lancet, parent=root)
+    finish("temple", root, door=(nave_x, 0, 0.05))
+
+
 def strips(name, items, mat_rough=0.6, parent=None):
     """Many tapered strips (blades, fronds). items: list of (points[n,3], widths[n], colors[n,3])."""
     verts, faces, cols = [], [], []
@@ -1246,6 +1323,7 @@ ALL = {
     "lamp_post": [lamp_post],
     "market_stall": variants(market_stall, 2),
     "cart": [cart],
+    "temple": [temple],
 }
 
 

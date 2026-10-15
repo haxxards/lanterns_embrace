@@ -17,6 +17,9 @@
 		"________",
 		"________"
 	],
+	"npcs": [
+		{"id": "bram", "at": [5, 2]}
+	],
 	"props": [
 		{"type": "chest", "at": [0, 1], "id": "chest", "name": "Tool Chest", "items": [{"item": "warhammer", "qty": 1}, {"item": "chain_shirt", "qty": 1}, {"item": "iron_helm", "qty": 1}]},
 		{"type": "anvil", "at": [4, 2]},

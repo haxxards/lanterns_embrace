@@ -9,6 +9,7 @@ extends Node2D
 ##   left click sign      leader walks over and reads it
 ##   left click chest     leader walks over and opens it
 ##   left click door      the party gathers at the door and goes in
+##   left click someone   leader walks over and talks to them
 ##   right click          clear selection
 
 const DRAG_THRESHOLD := 8.0
@@ -33,10 +34,13 @@ var selection_box: SelectionBox
 var camera: GameCamera
 var party: PartyController
 var fog: FogOfWar
+## Townsfolk on this map.
+var npcs: Array[Npc] = []
 
 var _hover_hex: Vector2i = NO_HEX
 var _hover_prop: Prop = null
 var _hover_member: PartyMember = null
+var _hover_npc: Npc = null
 var _mouse_screen := Vector2(-1.0, -1.0)
 var _press_screen := Vector2.ZERO
 var _press_world := Vector2.ZERO
@@ -107,7 +111,10 @@ func load_map(path: String, entry: String = "") -> bool:
 		for c in map.width:
 			grid.set_terrain(Hex.offset_to_axial(Vector2i(c, r)), map.terrain[r * map.width + c])
 	for placement in map.placements:
-		_spawn_prop(placement)
+		if placement.def.id == "item_pile":
+			_seed_item_pile(placement)
+		else:
+			_spawn_prop(placement)
 	_spawn_saved_piles()
 	grid.rebuild_pathfinding()
 
@@ -128,12 +135,18 @@ func load_map(path: String, entry: String = "") -> bool:
 	party.grid = grid
 	RenderingServer.set_default_clear_color(map.background_color)
 
+	_spawn_npcs()
 	var spawn := entry_hex(entry)
 	party.spawn_party(GameState.party, spawn, GameState.pending_positions)
 	GameState.pending_positions.clear()
 	for m in party.members:
 		m.hex_entered.connect(func(_m: PartyMember, _h: Vector2i) -> void: fog.mark_dirty())
-	fog.setup(grid, map.id, map.fog, party.members)
+	var wholes: Array = []
+	if map.fog:
+		for p in props:
+			if p.def.blocks_sight and p.cells.size() > 1:
+				wholes.append({"cells": p.cells, "covered": p.covered_hexes(grid)})
+	fog.setup(grid, map.id, map.fog, party.members, wholes)
 	camera.set_bounds(view_bounds)
 	var focus: Vector2 = GameState.pending_camera if GameState.pending_camera is Vector2 \
 			else grid.hex_to_world(spawn)
@@ -177,6 +190,10 @@ func _clear() -> void:
 	props.clear()
 	props_by_hex.clear()
 	_pile_props.clear()
+	for n in npcs:
+		n.queue_free()
+	npcs.clear()
+	_hover_npc = null
 	_hover_prop = null
 	_hover_member = null
 	_hover_hex = NO_HEX
@@ -206,6 +223,41 @@ func _spawn_prop(placement: MapData.Placement) -> Prop:
 		entities.add_child(prop)
 	props.append(prop)
 	return prop
+
+
+# --- townsfolk ---------------------------------------------------------------------
+
+## Places the map's NPCs (before the party, so the party avoids their hexes).
+func _spawn_npcs() -> void:
+	for spawn in map.npc_spawns:
+		var def: NpcDef = Data.npcs.get(spawn["id"])
+		if def == null:
+			push_warning("Map %s places unknown NPC '%s'" % [map.id, spawn["id"]])
+			continue
+		var h: Vector2i = spawn["hex"]
+		if not grid.is_walkable(h):
+			push_warning("NPC %s stands on blocked ground at %s" % [def.id, h])
+			continue
+		var npc := Npc.new()
+		npc.setup(def, grid, h, party)
+		entities.add_child(npc)
+		npcs.append(npc)
+
+
+## The visible NPC under a world position (front-most first).
+func npc_at(world_pos: Vector2) -> Npc:
+	var best: Npc = null
+	for n in npcs:
+		if n.visible and n.pick_rect().has_point(world_pos) and (best == null or n.position.y > best.position.y):
+			best = n
+	return best
+
+
+func npc(npc_id: String) -> Npc:
+	for n in npcs:
+		if n.def.id == npc_id:
+			return n
+	return null
 
 
 # --- items on the ground ----------------------------------------------------------
@@ -254,6 +306,19 @@ func _on_pile_changed(h: Vector2i, state: ContainerState) -> void:
 		pl.cells = [h]
 		pl.extra = {"id": _pile_id(h), "name": "Items on the ground"}
 		_pile_props[h] = _spawn_prop(pl)
+
+
+## Items the map file leaves lying about ("item_pile" props) join the ground
+## pile on that hex the first time the map loads, so they behave exactly like
+## dropped items afterwards (and are not put back once picked up).
+func _seed_item_pile(placement: MapData.Placement) -> void:
+	var flag := "seeded:%s:%s" % [map.id, str(placement.extra.get("id", placement.cell))]
+	if GameState.flags.has(flag):
+		return
+	GameState.flags[flag] = true
+	var state := ground_pile(placement.anchor, true)
+	for e in placement.extra.get("items", []):
+		state.inventory.add(ItemStack.create(str(e["item"]), int(e.get("qty", 1))))
 
 
 ## Piles dropped on this map earlier (or loaded from a save).
@@ -331,6 +396,12 @@ func _on_click(world_pos: Vector2, shift: bool) -> void:
 		else:
 			party.select_only(member)
 		return
+	var person := npc_at(world_pos)
+	if person and party.leader():
+		person.hold()
+		if not party.interact_with(person):
+			person.end_talk()
+		return
 	var prop := _interactable_at(world_pos)
 	if prop and party.leader():
 		party.interact_with(prop)
@@ -389,6 +460,8 @@ func _process(_delta: float) -> void:
 	if party.leader() and party.leader().is_moving():
 		_refresh_hover(true)
 	_update_occlusion()
+	for n in npcs:  # townsfolk only show where the party can see
+		n.visible = fog.is_in_sight(n.hex)
 
 
 ## Fades tall props (trees, buildings) that hide a party member behind them.
@@ -411,11 +484,17 @@ func _refresh_hover(force: bool = false) -> void:
 	var world_pos := screen_to_world(_mouse_screen)
 	var h := grid.world_to_hex(world_pos)
 	var member := party.member_at(world_pos)
-	var prop := _interactable_at(world_pos)
-	if not force and h == _hover_hex and member == _hover_member and prop == _hover_prop:
+	var person := npc_at(world_pos) if member == null else null
+	var prop := _interactable_at(world_pos) if person == null else null
+	if not force and h == _hover_hex and member == _hover_member and prop == _hover_prop and person == _hover_npc:
 		return
 	if _hover_member and is_instance_valid(_hover_member):
 		_hover_member.hovered = false
+	if _hover_npc and is_instance_valid(_hover_npc):
+		_hover_npc.hovered = false
+	_hover_npc = person
+	if person:
+		person.hovered = true
 	if _hover_prop and is_instance_valid(_hover_prop):
 		_hover_prop.highlighted = false
 	_hover_hex = h
@@ -449,10 +528,16 @@ func _refresh_hover(force: bool = false) -> void:
 		info["prop"] = any_prop.display_name()
 	if member:
 		info["member"] = member.sheet.display_name
+	if person:
+		info["member"] = "%s, %s" % [person.def.display_name, person.def.title] if not person.def.title.is_empty() \
+				else person.def.display_name
 
 	var cursor_shape := Input.CURSOR_ARROW
 	if member:
 		cursor.hover_hex = null
+	elif person:
+		cursor.hover_hex = null
+		cursor_shape = Input.CURSOR_POINTING_HAND
 	elif prop:
 		cursor.hover_color = CursorOverlay.HOVER_INTERACT
 		cursor_shape = Input.CURSOR_POINTING_HAND

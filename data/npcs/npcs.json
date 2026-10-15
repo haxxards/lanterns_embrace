@@ -1,0 +1,62 @@
+{
+	"schema_version": 1,
+	"_comment": "Townsfolk. 'animation' is a sprite sheet from tools/art/blender/render_characters.py; 'vendor' makes them a trader (markup = what the party pays x item value, buy_rate = what they pay for the party's goods). See docs/NPCS_AND_QUESTS.md.",
+	"npcs": {
+		"tobin": {
+			"name": "Tobin Hale", "title": "Innkeeper",
+			"portrait": "res://assets/portraits/npc_elder.png",
+			"animation": "res://assets/characters/innkeeper_anim.json",
+			"dialogue": "res://data/dialogue/tobin.json", "wander": 1,
+			"vendor": {"markup": 1.0, "buy_rate": 0.4, "stock": [
+				{"item": "rations", "qty": 10}, {"item": "apple", "qty": 20}, {"item": "torch", "qty": 10},
+				{"item": "lantern", "qty": 3}, {"item": "potion_of_healing", "qty": 2}, {"item": "arrows", "qty": 40}]}
+		},
+		"pip": {
+			"name": "Pip Fairweather", "title": "Bard",
+			"portrait": "res://assets/portraits/npc_bard.png",
+			"animation": "res://assets/characters/villager_man_anim.json",
+			"dialogue": "res://data/dialogue/pip.json", "wander": 2
+		},
+		"bram": {
+			"name": "Bram Ashford", "title": "Blacksmith",
+			"portrait": "res://assets/portraits/npc_veteran.png",
+			"animation": "res://assets/characters/smith_anim.json",
+			"dialogue": "res://data/dialogue/bram.json", "wander": 1,
+			"vendor": {"markup": 1.0, "buy_rate": 0.5, "stock": [
+				{"item": "dagger", "qty": 4}, {"item": "shortsword", "qty": 2}, {"item": "longsword", "qty": 2},
+				{"item": "rapier", "qty": 1}, {"item": "mace", "qty": 2}, {"item": "warhammer", "qty": 1},
+				{"item": "greataxe", "qty": 1}, {"item": "shortbow", "qty": 2}, {"item": "arrows", "qty": 40},
+				{"item": "arrows", "qty": 20}, {"item": "shield", "qty": 1}, {"item": "shield", "qty": 1},
+				{"item": "leather", "qty": 1}, {"item": "studded_leather", "qty": 1}, {"item": "chain_shirt", "qty": 1},
+				{"item": "chain_mail", "qty": 1}, {"item": "iron_helm", "qty": 1}, {"item": "leather_boots", "qty": 1},
+				{"item": "leather_gloves", "qty": 1}]}
+		},
+		"wenna": {
+			"name": "Wenna Moss", "title": "Herbalist",
+			"portrait": "res://assets/portraits/npc_villager.png",
+			"animation": "res://assets/characters/villager_woman_anim.json",
+			"dialogue": "res://data/dialogue/wenna.json", "wander": 1,
+			"vendor": {"markup": 1.1, "buy_rate": 0.5, "stock": [
+				{"item": "potion_of_healing", "qty": 5}, {"item": "potion_of_greater_healing", "qty": 1},
+				{"item": "apple", "qty": 10}, {"item": "rations", "qty": 4}]}
+		},
+		"hob": {
+			"name": "Hob Turnbull", "title": "Miller",
+			"portrait": "res://assets/portraits/npc_merchant.png",
+			"animation": "res://assets/characters/villager_man_anim.json",
+			"dialogue": "res://data/dialogue/hob.json", "wander": 1
+		},
+		"aldous": {
+			"name": "Aldous Grey", "title": "Reeve of Millbrook",
+			"portrait": "res://assets/portraits/npc_noble.png",
+			"animation": "res://assets/characters/noble_anim.json",
+			"dialogue": "res://data/dialogue/aldous.json", "wander": 2
+		},
+		"anselm": {
+			"name": "Father Anselm", "title": "Priest of the Dawn",
+			"portrait": "res://assets/portraits/npc_priest.png",
+			"animation": "res://assets/characters/priest_anim.json",
+			"dialogue": "res://data/dialogue/anselm.json", "wander": 1
+		}
+	}
+}

@@ -12,7 +12,8 @@ Left click member / portrait  –  select   (Shift: add)
 Left drag  –  box select        Ctrl+A  –  select all
 1-%d  –  select member        Right click  –  deselect
 Left click a sign / chest / door  –  read / open / go in
-I  –  inventory        Esc  –  menu (save, load)
+Left click a townsperson  –  talk (1-9 picks an answer)
+I  –  inventory        J  –  journal        Esc  –  menu
 F5  –  quicksave        F9  –  quickload
 WASD / arrows / screen edge / middle drag  –  pan
 Mouse wheel, + / -  –  zoom        C  –  centre on selection
@@ -41,6 +42,9 @@ var _gold_label: Label
 var _inventory: InventoryScreen
 var _menu: GameMenu
 var _save_load: SaveLoadScreen
+var _dialogue: DialogueWindow
+var _journal: JournalScreen
+var _game_over: PanelContainer
 ## Pause state from before the first modal screen opened (restored on close).
 var _paused_before_modal: Variant = null
 ## Screenshot of the game view taken when the menu opens (save thumbnail).
@@ -63,6 +67,8 @@ func _ready() -> void:
 	Events.pause_changed.connect(func(_p: bool) -> void: _update_pause_banner())
 	Events.party_order_issued.connect(func() -> void: _message_panel.visible = false)
 	Events.container_opened.connect(_on_container_opened)
+	Events.dialogue_requested.connect(_on_dialogue_requested)
+	Events.party_defeated.connect(_show_game_over)
 	GameState.gold_changed.connect(func(g: int) -> void: _gold_label.text = "Gold  %d" % g)
 	SaveManager.game_loaded.connect(func(_slot: String) -> void: _close_all_modals())
 
@@ -80,8 +86,20 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("toggle_inventory"):
 		if _inventory.visible:
 			_inventory.close()
-		elif not _menu.visible and not _save_load.visible:
+		elif not _modal_open():
 			open_inventory()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("toggle_journal"):
+		if _journal.visible:
+			_journal.close()
+		elif not _modal_open():
+			open_journal()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("debug_knock_out") and GameConfig.debug_keys and world.party.leader():
+		# Testing aid: drop the leader to 0 HP, to try the temple's raise dead.
+		var s := world.party.leader().sheet
+		s.damage(s.hp_current)
+		show_toast("%s has fallen. (debug: Ctrl+K)" % s.display_name)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("quicksave"):
 		quicksave()
@@ -93,6 +111,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		# Esc closes the top-most thing, or opens the menu.
 		if _message_panel.visible:
 			_message_panel.visible = false
+		elif _game_over.visible:
+			pass
+		elif _dialogue.visible:
+			_dialogue.close()
+		elif _journal.visible:
+			_journal.close()
 		elif _save_load.visible:
 			_save_load.close()
 		elif _inventory.visible:
@@ -172,7 +196,8 @@ func _capture_view() -> Image:
 
 
 func _modal_open() -> bool:
-	return _inventory.visible or _menu.visible or _save_load.visible
+	return _inventory.visible or _menu.visible or _save_load.visible or _dialogue.visible \
+			or _journal.visible or _game_over.visible
 
 
 ## The "PAUSED" banner is only for the player's own pause, not for menus.
@@ -199,8 +224,42 @@ func _on_modal_closed() -> void:
 func _close_all_modals() -> void:
 	_inventory.close()
 	_save_load.close()
+	_dialogue.visible = false
+	_journal.visible = false
+	_game_over.visible = false
 	_menu.visible = false
 	_on_modal_closed()
+
+
+func open_journal() -> void:
+	_enter_modal()
+	_journal.open()
+
+
+func _on_dialogue_requested(npc: Npc, speaker: PartyMember) -> void:
+	_enter_modal()
+	_dialogue.open(npc, speaker)
+
+
+## After a conversation: the NPC strolls again, and a shop opens if asked for.
+func _on_dialogue_closed(runner: DialogueRunner, npc: Npc) -> void:
+	if is_instance_valid(npc):
+		npc.end_talk()
+		Events.dialogue_ended.emit(npc)
+		if runner.wants_shop and npc.def.is_vendor():
+			_inventory.open_shop(runner.speaker, GameState.vendor_stock(npc.def),
+					"%s's wares" % npc.def.display_name, npc.def.trade_terms())
+			return
+	_on_modal_closed()
+
+
+func _show_game_over() -> void:
+	if _game_over.visible:
+		return
+	_dialogue.visible = false
+	_inventory.close()
+	_enter_modal()
+	_game_over.visible = true
 
 
 ## The pile of dropped items under a party member (made on demand).
@@ -378,10 +437,10 @@ func _build_sidebar() -> void:
 	buttons.add_theme_constant_override("v_separation", 6)
 	vbox.add_child(buttons)
 	_add_button(buttons, "Inventory", open_inventory)
+	_add_button(buttons, "Journal", open_journal)
 	_add_button(buttons, "Menu", open_menu)
 	_add_button(buttons, "Select all", func() -> void: world.party.select_all())
 	_add_button(buttons, "Pause", func() -> void: world.set_paused(not get_tree().paused))
-	_add_button(buttons, "Grid", func() -> void: world.grid_lines.visible = not world.grid_lines.visible)
 	_add_button(buttons, "Help", func() -> void: _help_panel.visible = not _help_panel.visible)
 
 
@@ -515,8 +574,64 @@ func _build_modals() -> void:
 	_save_load.save_requested.connect(_on_save_requested)
 	_save_load.load_requested.connect(_on_load_requested)
 	center.add_child(_save_load)
+	_journal = JournalScreen.new()
+	_journal.name = "Journal"
+	_journal.closed.connect(_on_modal_closed)
+	center.add_child(_journal)
+	_game_over = _build_game_over()
+	center.add_child(_game_over)
+	# The conversation panel sits along the bottom of the map area.
+	var bottom := Control.new()
+	bottom.name = "DialogueLayer"
+	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bottom.offset_right = -SIDEBAR_WIDTH
+	_root.add_child(bottom)
+	_dialogue = DialogueWindow.new()
+	_dialogue.name = "Dialogue"
+	bottom.add_child(_dialogue)
+	_dialogue.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_dialogue.offset_left = 24
+	_dialogue.offset_right = -24
+	_dialogue.offset_bottom = -16
+	_dialogue.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_dialogue.closed.connect(_on_dialogue_closed)
 	# The message box stays above the modal screens.
 	_root.move_child(_root.get_node("MessageLayer"), -1)
+
+
+func _build_game_over() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.name = "GameOver"
+	panel.visible = false
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.add_theme_stylebox_override("panel", UiTheme.panel_box(Color(0.08, 0.03, 0.03, 0.97), Color("8c3b2e"), 2, 6, 24))
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	box.custom_minimum_size = Vector2(340, 0)
+	panel.add_child(box)
+	var title := Label.new()
+	title.text = "The party has fallen"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", Color("e05a4a"))
+	box.add_child(title)
+	var text := Label.new()
+	text.text = "No one is left standing to carry the fallen to a temple."
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(text)
+	var load_b := Button.new()
+	load_b.text = "Load a saved game"
+	load_b.focus_mode = Control.FOCUS_NONE
+	load_b.pressed.connect(func() -> void: _save_load.open(false))
+	box.add_child(load_b)
+	var quit_b := Button.new()
+	quit_b.text = "Quit to desktop"
+	quit_b.focus_mode = Control.FOCUS_NONE
+	quit_b.pressed.connect(func() -> void: get_tree().quit())
+	box.add_child(quit_b)
+	return panel
 
 
 func _add_button(parent: Control, text: String, action: Callable) -> void:

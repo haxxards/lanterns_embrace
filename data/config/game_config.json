@@ -10,6 +10,7 @@
 	"show_grid_default": false,
 	"backpack_slots": 16,
 	"save_slots": 8,
+	"debug_keys": true,
 
 	"fog_of_war": {
 		"enabled": true,

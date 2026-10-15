@@ -1,7 +1,9 @@
 class_name PartyController
 extends Node
 ## Owns the party tokens on the current map: selection, move orders and
-## walk-to-interact. Exploration rules: members may pass through each other
+## walk-to-interact (props and NPCs alike: anything with approach_hexes(),
+## is_adjacent_to(), interact(), is_transition() and display_name()). The
+## fallen can't be selected or given orders. Exploration rules: members may pass through each other
 ## while walking, but no two members end a move on the same hex.
 
 ## How far from the clicked hex group members may be placed.
@@ -13,7 +15,7 @@ var members: Array[PartyMember] = []
 ## Selected members, always kept in party (portrait) order.
 var selected: Array[PartyMember] = []
 ## A door or exit the party is gathering at; fires once everyone has stopped.
-var _waiting_transition: Prop = null
+var _waiting_transition: Node2D = null
 
 
 ## Places the party around `spawn`, or on saved hexes ({member id: hex}).
@@ -48,6 +50,15 @@ func leader() -> PartyMember:
 
 func select_only(m: PartyMember) -> void:
 	_set_selection([m])
+
+
+## Living members only (the fallen can't act).
+func living() -> Array[PartyMember]:
+	var out: Array[PartyMember] = []
+	for m in members:
+		if m.is_alive():
+			out.append(m)
+	return out
 
 
 func toggle(m: PartyMember) -> void:
@@ -100,7 +111,7 @@ func member_at(world_pos: Vector2) -> PartyMember:
 func _set_selection(list: Array) -> void:
 	selected.clear()
 	for m in members:  # keep party order
-		if list.has(m):
+		if list.has(m) and m.is_alive():
 			selected.append(m)
 	for m in members:
 		m.selected = selected.has(m)
@@ -140,9 +151,9 @@ func _move_group(group: Array[PartyMember], target: Vector2i, taken: Dictionary)
 	return any_moved
 
 
-## Walks the leader next to `prop` and triggers its interaction on arrival.
-## For doors and exits the whole party gathers there first.
-func interact_with(prop: Prop) -> bool:
+## Walks the leader next to `prop` (a Prop or an Npc) and triggers its
+## interaction on arrival. For doors and exits the whole party gathers there first.
+func interact_with(prop: Node2D) -> bool:
 	var actor := leader()
 	if actor == null:
 		return false
@@ -151,7 +162,8 @@ func interact_with(prop: Prop) -> bool:
 	var best_path: Array[Vector2i] = []
 	var best_hex: Variant = null
 	var best_cost := INF
-	for h in prop.approach_hexes(grid):
+	var target: Variant = prop  # Prop or Npc: called by name (duck typing)
+	for h in target.approach_hexes(grid):
 		if taken.has(h):
 			continue
 		if h == actor.hex:
@@ -167,14 +179,14 @@ func interact_with(prop: Prop) -> bool:
 			best_hex = h
 			best_path = p
 	if best_hex == null:
-		Events.toast_requested.emit("Can't reach %s." % prop.display_name())
+		Events.toast_requested.emit("Can't reach %s." % target.display_name())
 		return false
 	Events.party_order_issued.emit()
 	actor.follow_path(best_path)
 	actor.pending_interaction = prop
-	if prop.is_transition():
+	if target.is_transition():
 		var others: Array[PartyMember] = []
-		for m in members:
+		for m in living():
 			if m != actor:
 				others.append(m)
 		_move_group(others, best_hex, {best_hex: true})
@@ -214,15 +226,15 @@ func _nearest_free(center: Vector2i, taken: Dictionary, reachable_from: Vector2i
 
 
 func _on_member_arrived(m: PartyMember) -> void:
-	var prop := m.pending_interaction
+	var target: Variant = m.pending_interaction
 	m.pending_interaction = null
-	if prop != null and is_instance_valid(prop) and prop.is_adjacent_to(m.hex):
-		if prop.is_transition():
-			_waiting_transition = prop
+	if target != null and is_instance_valid(target) and target.is_adjacent_to(m.hex):
+		if target.is_transition():
+			_waiting_transition = target
 		else:
-			prop.interact(m)
+			target.interact(m)
 	if _waiting_transition != null and is_instance_valid(_waiting_transition) and not _anyone_moving():
-		var door := _waiting_transition
+		var door: Variant = _waiting_transition
 		_waiting_transition = null
 		door.interact(m)
 

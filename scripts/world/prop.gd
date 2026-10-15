@@ -50,6 +50,33 @@ func setup(placement: MapData.Placement, grid: HexGrid) -> void:
 	add_child(_sprite)
 
 
+## Hexes the opaque part of the sprite is drawn over. A tall building's roof
+## covers ground north of its footprint; the fog shows those hexes together
+## with the building (see FogOfWar.setup) so the roof isn't blacked out.
+func covered_hexes(grid: HexGrid) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	if look.texture == null:
+		return out
+	var img := look.texture.get_image()
+	if img == null:
+		return out
+	if img.is_compressed():
+		img.decompress()
+	var rect := Rect2(position - look.origin, look.texture.get_size())
+	var a := Hex.axial_to_offset(grid.world_to_hex(rect.position))
+	var b := Hex.axial_to_offset(grid.world_to_hex(rect.end))
+	for r in range(a.y - 1, b.y + 2):
+		for c in range(a.x - 1, b.x + 2):
+			var h := Hex.offset_to_axial(Vector2i(c, r))
+			var p := grid.hex_to_world(h)
+			if not grid.in_bounds(h) or not rect.has_point(p):
+				continue
+			var px := Vector2i(p - rect.position).clamp(Vector2i.ZERO, img.get_size() - Vector2i.ONE)
+			if img.get_pixelv(px).a > 0.5:
+				out.append(h)
+	return out
+
+
 ## Hex the entrance opens from (buildings), or null.
 func door_hex(grid: HexGrid) -> Variant:
 	return PropDef.door_hex(def, cells, anchor, grid.radius, look_index)

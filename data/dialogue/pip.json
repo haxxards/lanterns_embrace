@@ -1,0 +1,38 @@
+{
+	"id": "pip",
+	"start": "greet",
+	"nodes": {
+		"greet": {
+			"text": "Ah, an audience! Pip Fairweather, teller of tales, singer of songs, occasional washer of tankards.",
+			"options": [
+				{"text": "Play us something.", "goto": "song"},
+				{"text": "Heard any rumours?", "goto": "rumour"},
+				{"text": "A halfling, playing the lute? Wren likes you already.", "if": {"member": "wren"}, "goto": "wren"},
+				{"text": "Farewell.", "end": true}
+			]
+		},
+		"song": {
+			"text": "[i]Oh the lantern burns where the river bends,\nand it burned before the hills began,\nand it waits for one whose journey ends\nwhere the light outlasts the man...[/i]\n\nAn old tune. Nobody knows who wrote it.",
+			"options": [
+				{"text": "What lantern?", "goto": "rumour"},
+				{"text": "Lovely. Farewell.", "end": true}
+			]
+		},
+		"rumour": {
+			"text": "They say there's a lantern hidden in these hills that has never once gone out. Shepherds swear they've seen its light on the ridge on moonless nights. Folk who go looking come back empty-handed, or don't come back.",
+			"do": [{"quest": "the_undying_lantern", "stage": "rumour"}],
+			"options": [
+				{"text": "Elowen: \"That is exactly the lantern I'm looking for.\"", "if": {"member": "elowen"}, "goto": "elowen"},
+				{"text": "Interesting. Farewell.", "end": true}
+			]
+		},
+		"elowen": {
+			"text": "Is it now? Then I'll write a song about you, miss, whether it ends well or badly. Bad endings sell better, but I'm rooting for you.",
+			"next": "greet"
+		},
+		"wren": {
+			"text": "Takes one to know one. Keep your fingers out of my tip jar, friend, and I'll keep mine out of your pockets.",
+			"next": "greet"
+		}
+	}
+}

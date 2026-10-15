@@ -1,0 +1,34 @@
+{
+	"schema_version": 1,
+	"_comment": "Quests: ordered stages with journal entries. A stage with \"done\": true completes the quest and gives every living member its xp. \"auto_if\" stages are reached on their own when the condition holds. See docs/NPCS_AND_QUESTS.md.",
+	"quests": {
+		"the_reeves_key": {
+			"name": "The Reeve's Key", "xp": 150,
+			"stages": [
+				{"id": "started", "journal": "Aldous Grey, the reeve, lost an iron key somewhere around the village well. It opens the strongbox where Millbrook keeps its taxes."},
+				{"id": "found", "auto_if": {"item": "reeve_key"}, "journal": "We found the reeve's key lying on the cobbles near the well."},
+				{"id": "done", "done": true, "journal": "We gave the key back to the reeve, who paid us 40 gold."}
+			]
+		},
+		"wennas_remedy": {
+			"name": "A Draught for the Miller's Wife", "xp": 100,
+			"stages": [
+				{"id": "started", "journal": "Wenna the herbalist gave us a fever draught for Merra, the miller's wife. Hob the miller lives in the thatched cottage west of the square."},
+				{"id": "done", "done": true, "journal": "Hob took the draught for Merra and gave us 20 gold for our trouble."}
+			]
+		},
+		"light_for_the_dawn": {
+			"name": "Light for the Dawn", "xp": 150,
+			"stages": [
+				{"id": "started", "journal": "Father Anselm needs a hooded lantern to replace the cracked lamp on the temple altar. Tobin at the Lantern & Thistle sells them."},
+				{"id": "done", "done": true, "journal": "We gave the temple a lantern. Father Anselm blessed us with a potion of greater healing."}
+			]
+		},
+		"the_undying_lantern": {
+			"name": "The Lantern That Never Goes Out", "xp": 0,
+			"stages": [
+				{"id": "rumour", "journal": "Pip the bard sang of a lantern hidden somewhere in these hills that has burned since before Millbrook was built. It is what Elowen came here to find."}
+			]
+		}
+	}
+}

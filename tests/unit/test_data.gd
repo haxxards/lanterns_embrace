@@ -169,4 +169,4 @@ func test_interiors_match_their_buildings() -> void:
 				check_eq(str(ip.extra.get("map")), GameConfig.starting_map_path, "%s exit map" % inside.id)
 				check_eq(str(ip.extra.get("entry")), str(pl.extra.get("id")), "%s exit leads to its building" % inside.id)
 		check_eq(exits, 1, "%s has one exit" % inside.id)
-	check_eq(count, 5, "five buildings with interiors")
+	check_eq(count, 6, "six buildings with interiors (five houses and the temple)")

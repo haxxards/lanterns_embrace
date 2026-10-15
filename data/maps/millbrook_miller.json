@@ -17,6 +17,9 @@
 		"________",
 		"________"
 	],
+	"npcs": [
+		{"id": "hob", "at": [4, 1]}
+	],
 	"props": [
 		{"type": "bed", "at": [5, 0]},
 		{"type": "dresser", "at": [7, 0], "id": "drawers", "name": "Chest of Drawers", "items": [{"item": "apple", "qty": 5}, {"item": "rations", "qty": 2}], "gold": 12},

@@ -89,7 +89,8 @@ func refresh() -> void:
 	var s := member.sheet
 	_hp_bar.max_value = s.hp_max
 	_hp_bar.value = s.hp_current
-	_hp_label.text = "HP %d / %d" % [s.hp_current, s.hp_max]
+	_hp_label.text = "HP %d / %d" % [s.hp_current, s.hp_max] if s.is_alive() else "Fallen"
+	modulate = Color.WHITE if s.is_alive() else Color(0.6, 0.55, 0.55)
 	_stats_label.text = "AC %d   Speed %d ft" % [s.armor_class, s.effective_speed_ft()]
 
 

@@ -17,6 +17,9 @@
 		"________",
 		"________"
 	],
+	"npcs": [
+		{"id": "wenna", "at": [3, 1]}
+	],
 	"props": [
 		{"type": "cupboard", "at": [3, 0], "variant": 1, "id": "remedies", "name": "Shelf of Remedies", "items": [{"item": "potion_of_healing", "qty": 2}, {"item": "potion_of_greater_healing", "qty": 1}]},
 		{"type": "cupboard", "at": [4, 0], "variant": 1, "id": "jars", "name": "Shelf of Jars", "items": [{"item": "apple", "qty": 3}, {"item": "leather_gloves", "qty": 1}]},

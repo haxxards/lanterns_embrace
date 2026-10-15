@@ -6,7 +6,9 @@ for a cottage, 12x8 for the inn), uses a pre-rendered room backdrop from
 assets/interiors/backdrops.json (written by tools/art/blender/render_interiors.py)
 and has a "door_exit" on the bottom row that leads back outside to the
 building's door. Furniture and containers (with their contents) are listed
-per room below.
+per room below, along with the townsfolk who live there ("npcs": an NPC id
+from data/npcs/npcs.json and a hex; "bar" puts them behind the bar add-on,
+and a hex that furniture took is nudged to the nearest free one).
 
 A house can also ask for furnishing **add-ons**, laid out automatically
 around whatever is already in the room (see ADDONS below):
@@ -32,7 +34,8 @@ def item(item_id, qty=1):
 
 
 # Footprints of the furniture types, [cols, rows] (1x1 when not listed).
-RECTS = {"table": (2, 2), "bed": (2, 1), "bar_counter": (4, 1), "rug": (3, 2), "bar_back": (3, 1)}
+RECTS = {"table": (2, 2), "bed": (2, 1), "bar_counter": (4, 1), "rug": (3, 2), "bar_back": (3, 1),
+         "pew": (3, 1), "altar": (2, 1)}
 GROUND = {"rug"}
 
 ROOMS = [
@@ -46,7 +49,7 @@ ROOMS = [
              items=[item("leather_boots"), item("torch", 3)]),
         dict(type="crates", at=[7, 3]),
         dict(type="barrels", at=[7, 4]),
-    ]),
+    ], npcs=[dict(id="hob", at=[4, 1])]),
     dict(id="millbrook_reeve", name="Reeve's House", backdrop="cottage_timber", props=[
         dict(type="cupboard", at=[0, 0], id="cupboard", name="Cupboard", items=[item("rations", 3), item("torch", 2)]),
         dict(type="bed", at=[4, 0]),
@@ -55,7 +58,7 @@ ROOMS = [
         dict(type="rug", at=[2, 2]),
         dict(type="table", at=[1, 3]),
         dict(type="dresser", at=[7, 3], id="desk", name="Reeve's Drawers",
-             items=[item("reeve_key"), item("silver_amulet")], gold=8),
+             items=[item("silver_amulet"), item("rations")], gold=8),
     ]),
     dict(id="millbrook_herbalist", name="Herbalist's Cottage", backdrop="cottage_stone", props=[
         dict(type="cupboard", at=[3, 0], variant=1, id="remedies", name="Shelf of Remedies",
@@ -66,7 +69,7 @@ ROOMS = [
         dict(type="dresser", at=[7, 2], id="drawers", name="Chest of Drawers", items=[item("rations")], gold=5),
         dict(type="bed", at=[0, 4]),
         dict(type="barrels", at=[7, 4]),
-    ]),
+    ], npcs=[dict(id="wenna", at=[3, 1])]),
     dict(id="millbrook_smithy", name="Smithy", backdrop="smithy", props=[
         dict(type="chest", at=[0, 1], id="chest", name="Tool Chest",
              items=[item("warhammer"), item("chain_shirt"), item("iron_helm")]),
@@ -75,7 +78,7 @@ ROOMS = [
              items=[item("shortbow"), item("arrows", 20)]),
         dict(type="barrels", at=[0, 3]),
         dict(type="crates", at=[7, 4]),
-    ]),
+    ], npcs=[dict(id="bram", at=[5, 2])]),
     dict(id="millbrook_inn", name="The Lantern & Thistle", backdrop="inn_hall", props=[
         dict(type="cupboard", at=[0, 0], id="pantry", name="Pantry",
              items=[item("rations", 4), item("torch", 5), item("lantern")]),
@@ -85,7 +88,16 @@ ROOMS = [
         dict(type="chest", at=[11, 7], id="sea_chest", name="Traveller's Chest",
              items=[item("cloak_of_protection"), item("studded_leather")]),
         dict(type="dresser", at=[0, 7], id="linen", name="Linen Drawers", items=[item("rations", 2)], gold=3),
-    ]),
+    ], npcs=[dict(id="tobin", at="bar"), dict(id="pip", at=[9, 3])]),
+    dict(id="millbrook_temple", name="Temple of the Dawn", backdrop="temple_nave", music="temple", ambience="", props=[
+        dict(type="altar", at=[3, 1]),
+        dict(type="cupboard", at=[7, 0], id="vestry", name="Vestry Cupboard",
+             items=[item("torch", 2), item("potion_of_healing")]),
+        dict(type="pew", at=[0, 3]),
+        dict(type="pew", at=[5, 3]),
+        dict(type="pew", at=[0, 5]),
+        dict(type="pew", at=[5, 5]),
+    ], npcs=[dict(id="anselm", at=[3, 0])]),
 ]
 
 
@@ -118,6 +130,7 @@ class Layout:
         self.cols, self.rows = cols, rows
         self.entry, self.exit = tuple(entry), tuple(exit_cell)
         self.blocked = set()
+        self.bar = None  # where a barkeep stands, once the bar add-on is placed
         # Never block the door, the hex inside it, or the floor in front of the hearth.
         self.reserved = {self.entry, self.exit} | {(c, 0) for c in keep_clear} | {(c, 1) for c in keep_clear}
 
@@ -160,6 +173,7 @@ def addon_bar(layout, props):
                 and layout.fits(cells_of(back) + cells_of(counter)):
             layout.add(back)
             layout.add(counter)
+            layout.bar = (c + 1, 1)  # between the shelves and the counter
             props += [back, counter]
             for kc in (c + 3, c - 1):
                 kegs = dict(type="barrels", at=[kc, 0])
@@ -210,6 +224,52 @@ def apply_addons(room, addons, bd, props):
             ADDONS[name](layout, props, int(n))
         else:
             ADDONS[name](layout, props) if name != "tables" else ADDONS[name](layout, props, 2)
+    return layout
+
+
+def reachable(start, cols, rows, blocked):
+    seen, todo = {start}, [start]
+    while todo:
+        cur = todo.pop()
+        for n in neighbours(*cur):
+            if 0 <= n[0] < cols and 0 <= n[1] < rows and n not in blocked and n not in seen:
+                seen.add(n)
+                todo.append(n)
+    return seen
+
+
+def place_npcs(room, layout, blocked, entry, exit_cell):
+    """Resolves each NPC's hex: free floor, not the doorway, and never one that
+    would cut the room in two (NPCs block movement while they stand still)."""
+    cols, rows = layout.cols, layout.rows
+    taken = set(blocked) | {tuple(entry), tuple(exit_cell)}
+    out = []
+    for n in room.get("npcs", []):
+        want = n["at"]
+        if want == "bar":
+            assert layout.bar is not None, (room["id"], n["id"], "no bar add-on to stand behind")
+            want = layout.bar
+        want = tuple(want)
+        # nearest acceptable hex, breadth first from the wanted one
+        order, seen = [want], {want}
+        found = None
+        while order:
+            cell = order.pop(0)
+            c, r = cell
+            if 0 <= c < cols and 0 <= r < rows and cell not in taken:
+                npc_cells = {tuple(o["at"]) for o in out} | {cell}
+                free = {(x, y) for y in range(rows) for x in range(cols)} - set(blocked) - npc_cells
+                if free <= reachable(tuple(entry), cols, rows, set(blocked) | npc_cells):
+                    found = cell
+                    break
+            for nb in neighbours(c, r):
+                if nb not in seen and 0 <= nb[0] < cols and 0 <= nb[1] < rows:
+                    seen.add(nb)
+                    order.append(nb)
+        assert found is not None, (room["id"], n["id"], "nowhere to stand")
+        taken.add(found)
+        out.append({"id": n["id"], "at": list(found)})
+    return out
 
 
 def build(room, backdrops, addons=()):
@@ -218,7 +278,7 @@ def build(room, backdrops, addons=()):
     exit_col, exit_row = bd["exit"]
     entry = [exit_col, exit_row - 1]
     furniture = [dict(p) for p in room["props"]]
-    apply_addons(room, list(room.get("addons", [])) + list(addons), bd, furniture)
+    layout = apply_addons(room, list(room.get("addons", [])) + list(addons), bd, furniture)
     blocked = set()
     for p in furniture:
         for (c, r) in cells_of(p):
@@ -238,6 +298,7 @@ def build(room, backdrops, addons=()):
                 todo.append(n)
     free = {(c, r) for r in range(rows) for c in range(cols)} - blocked
     assert free <= seen, (room["id"], "unreachable floor", sorted(free - seen))
+    npcs = place_npcs(room, layout, blocked, entry, (exit_col, exit_row))
     props = furniture
     props.append({"type": "door_exit", "at": [exit_col, exit_row], "name": "Way out", "map": OUTSIDE,
                   "entry": room["id"]})
@@ -247,12 +308,13 @@ def build(room, backdrops, addons=()):
         "name": room["name"],
         "background_color": "#0b0907",
         "fog": False,
-        "music": "hearth",
-        "ambience": "fireplace",
+        "music": room.get("music", "hearth"),
+        "ambience": room.get("ambience", "fireplace"),
         "backdrop": {"texture": bd["texture"], "origin": bd["origin"]},
         "spawns": {"party": entry},
         "entries": {"door": entry},
         "terrain": ["_" * cols for _ in range(rows)],
+        "npcs": npcs,
         "props": props,
     }
 
@@ -263,7 +325,7 @@ def write(path, data):
     for i, k in enumerate(keys):
         comma = "," if i < len(keys) - 1 else ""
         v = data[k]
-        if k in ("terrain", "props"):
+        if k in ("terrain", "props", "npcs") and v:
             lines.append(f'\t"{k}": [')
             lines += [f"\t\t{json.dumps(x)}" + ("," if j < len(v) - 1 else "") for j, x in enumerate(v)]
             lines.append("\t]" + comma)

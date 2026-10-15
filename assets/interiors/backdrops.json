@@ -93,5 +93,21 @@
 			5,
 			6
 		]
+	},
+	"temple_nave": {
+		"texture": "res://assets/interiors/temple_nave.png",
+		"origin": [
+			79,
+			120
+		],
+		"size": [
+			8,
+			8
+		],
+		"exit": [
+			3,
+			7
+		],
+		"keep_clear": []
 	}
 }

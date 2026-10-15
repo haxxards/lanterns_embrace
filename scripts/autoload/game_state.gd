@@ -23,8 +23,12 @@ var pending_positions: Dictionary = {}
 var pending_camera: Variant = null
 ## Seconds of unpaused play.
 var playtime: float = 0.0
-## Story flags for later phases (quests, dialogue).
+## Story flags set by dialogue (and "seen:<dialogue>:<node>" markers).
 var flags: Dictionary = {}
+## Quest id -> current stage id.
+var quests: Dictionary = {}
+## Quest id -> stage ids reached so far, in order (the journal).
+var quest_log: Dictionary = {}
 
 ## map id -> {container id -> ContainerState}
 var _containers: Dictionary = {}
@@ -42,6 +46,8 @@ func start_new_game() -> void:
 	party.clear()
 	gold = 0
 	flags.clear()
+	quests.clear()
+	quest_log.clear()
 	playtime = 0.0
 	_containers.clear()
 	_explored.clear()
@@ -84,6 +90,19 @@ func _join(sheet: CharacterSheet) -> void:
 	party.append(sheet)
 	gold += sheet.gold
 	sheet.gold = 0
+	_watch(sheet)
+
+
+## Re-checks quests when items change hands, and notices a fallen party.
+func _watch(sheet: CharacterSheet) -> void:
+	if not sheet.changed.is_connected(_on_sheet_changed):
+		sheet.changed.connect(_on_sheet_changed)
+
+
+func _on_sheet_changed() -> void:
+	check_quests()
+	if not party.is_empty() and not anyone_alive():
+		Events.party_defeated.emit()
 
 
 func add_gold(amount: int) -> void:
@@ -97,6 +116,130 @@ func spend_gold(amount: int) -> bool:
 		return false
 	add_gold(-amount)
 	return true
+
+
+# --- the party as a whole -----------------------------------------------------------
+
+func anyone_alive() -> bool:
+	for s in party:
+		if s.is_alive():
+			return true
+	return false
+
+
+func anyone_fallen() -> bool:
+	for s in party:
+		if not s.is_alive():
+			return true
+	return false
+
+
+func anyone_hurt() -> bool:
+	for s in party:
+		if s.is_alive() and s.hp_current < s.hp_max:
+			return true
+	return false
+
+
+## How many of an item the whole party carries (backpacks and equipment).
+func party_item_count(item_id: String) -> int:
+	var n := 0
+	for s in party:
+		for st in s.all_items():
+			if st.id == item_id:
+				n += st.qty
+	return n
+
+
+## Gives items to `first` if there is room, else to whoever has room.
+## Returns the quantity nobody could carry.
+func give_party_item(item_id: String, qty: int, first: CharacterSheet = null) -> int:
+	var left := qty
+	var order: Array[CharacterSheet] = []
+	if first != null:
+		order.append(first)
+	for s in party:
+		if s != first:
+			order.append(s)
+	for s in order:
+		if left <= 0:
+			break
+		left = s.inventory.add(ItemStack.create(item_id, left))
+	return left
+
+
+## Removes items from whoever carries them (backpacks first, then worn).
+func take_party_item(item_id: String, qty: int) -> int:
+	var taken := 0
+	for s in party:
+		if taken < qty:
+			taken += s.inventory.remove_item(item_id, qty - taken)
+	for s in party:
+		for slot in ItemDef.EQUIP_SLOTS:
+			var st := s.equipped(slot)
+			if taken < qty and st != null and st.id == item_id:
+				taken += st.qty
+				s.unequip(slot)
+	return taken
+
+
+## Every living member gains `amount` XP (quest rewards are not split).
+func award_xp(amount: int) -> void:
+	for s in party:
+		if s.is_alive():
+			var levels := s.add_xp(amount)
+			if levels > 0:
+				Events.toast_requested.emit("%s reaches level %d!" % [s.display_name, s.level])
+
+
+# --- quests -------------------------------------------------------------------------
+
+## "not_started", "active" or "done".
+func quest_state(quest_id: String) -> String:
+	if not quests.has(quest_id):
+		return "not_started"
+	var q: QuestDef = Data.quests.get(quest_id)
+	return "done" if q != null and q.is_done_stage(str(quests[quest_id])) else "active"
+
+
+func quest_stage(quest_id: String) -> String:
+	return str(quests.get(quest_id, ""))
+
+
+## Moves a quest to `stage` (and logs the journal entry). Reaching a "done"
+## stage completes it and awards its XP.
+func set_quest_stage(quest_id: String, stage: String) -> void:
+	var q: QuestDef = Data.quests.get(quest_id)
+	if q == null or q.stage_index(stage) < 0:
+		push_warning("Unknown quest stage %s/%s" % [quest_id, stage])
+		return
+	if quest_stage(quest_id) == stage or quest_state(quest_id) == "done":
+		return
+	quests[quest_id] = stage
+	if not quest_log.has(quest_id):
+		quest_log[quest_id] = []
+	quest_log[quest_id].append(stage)
+	Events.quest_updated.emit(quest_id, stage)
+	if q.is_done_stage(stage):
+		Events.toast_requested.emit("Quest complete: %s  (+%d XP)" % [q.display_name, q.xp])
+		award_xp(q.xp)
+	else:
+		Events.toast_requested.emit("Journal updated: %s" % q.display_name)
+		check_quests()  # e.g. the item a new quest asks for is already in a pack
+
+
+## Advances active quests whose next stages have an "auto_if" that now holds.
+func check_quests() -> void:
+	for quest_id in quests.keys():
+		if quest_state(quest_id) != "active":
+			continue
+		var q: QuestDef = Data.quests.get(quest_id)
+		var current := q.stage_index(quest_stage(quest_id))
+		for i in range(current + 1, q.stages.size()):
+			var st: Dictionary = q.stages[i]
+			if st.has("auto_if") and Conditions.check(st["auto_if"]):
+				set_quest_stage(quest_id, str(st["id"]))
+				break
 
 
 func member(member_id: String) -> CharacterSheet:
@@ -121,6 +264,18 @@ func set_container(map_id: String, container_id: String, state: ContainerState) 
 	if not _containers.has(map_id):
 		_containers[map_id] = {}
 	_containers[map_id][container_id] = state
+
+
+## A vendor's stock: a container kept under the pseudo-map "_vendors", made
+## from the NPC's starting stock the first time the shop opens.
+func vendor_stock(npc: NpcDef) -> ContainerState:
+	var state := get_container("_vendors", npc.id)
+	if state == null:
+		var stock: Array = npc.vendor.get("stock", [])
+		state = ContainerState.new()
+		state.inventory = Inventory.from_array(stock, stock.size() + 16)
+		set_container("_vendors", npc.id, state)
+	return state
 
 
 ## The explored-hex mask for a map (created empty on first visit).
@@ -169,6 +324,8 @@ func to_dict(positions: Dictionary = {}, camera: Variant = null) -> Dictionary:
 		"positions": pos,
 		"playtime": playtime,
 		"flags": flags.duplicate(true),
+		"quests": quests.duplicate(),
+		"quest_log": quest_log.duplicate(true),
 		"maps": maps,
 	}
 	if camera is Vector2:
@@ -197,6 +354,10 @@ func load_dict(d: Dictionary) -> bool:
 	current_entry = ""
 	playtime = float(d.get("playtime", 0.0))
 	flags = (d.get("flags", {}) as Dictionary).duplicate(true)
+	quests = (d.get("quests", {}) as Dictionary).duplicate()
+	quest_log = (d.get("quest_log", {}) as Dictionary).duplicate(true)
+	for sheet in party:
+		_watch(sheet)
 	pending_positions.clear()
 	var pos: Dictionary = d.get("positions", {})
 	for k in pos:

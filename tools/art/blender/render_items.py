@@ -544,6 +544,10 @@ def potion_of_greater_healing():
     potion("potion_of_greater_healing", "#7a1a6a")
 
 
+def remedy():
+    potion("remedy", "#4a9a3a")
+
+
 def rations():
     root = setup()
     cl = cloth("Wrap", "#a89878")
@@ -687,6 +691,7 @@ ALL = {
     "cloak_of_protection": cloak_of_protection, "ring_of_protection": ring_of_protection,
     "silver_amulet": silver_amulet, "leather_boots": leather_boots, "leather_gloves": leather_gloves,
     "potion_of_healing": potion_of_healing, "potion_of_greater_healing": potion_of_greater_healing,
+    "remedy": remedy,
     "rations": rations, "apple": apple, "torch": torch, "lantern": lantern, "holy_symbol": holy_symbol,
     "thieves_tools": thieves_tools, "spellbook": spellbook, "garnet": garnet, "key": key, "gold": gold,
 }

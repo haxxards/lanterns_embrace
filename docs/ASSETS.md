@@ -10,10 +10,10 @@ track, and every file is a drop-in placeholder you can replace with your own art
 | What | Made by | Notes |
 |---|---|---|
 | Terrain textures | `tools/art/blender/render_terrain.py` | Small 3D ground patches (grass blades, pebbles, leaves, cobbles, rock, rippled water) laid out to wrap at the edges, rendered straight down. |
-| Props and buildings | `tools/art/blender/render_props.py` | Oaks, pines and birches (several shapes each) with tens of thousands of leaf cards; thatched, tiled and shingled cottages; a two-storey inn with lit windows; well, bridge, rocks, signpost; set dressing such as reeds, ferns, wildflowers, logs, stumps, barrels, crates, hay, lamp posts, market stalls and a cart. |
-| Character sprites | `tools/art/blender/render_characters.py` | Posable 3D figures with class gear. Each is rendered as a sprite sheet: 5 facings × (idle + 8-frame walk), mirrored in game for the other 3 facings. |
+| Props and buildings | `tools/art/blender/render_props.py` | Oaks, pines and birches (several shapes each) with tens of thousands of leaf cards; thatched, tiled and shingled cottages; a two-storey inn with lit windows; a stone temple with a bell tower and rose window; well, bridge, rocks, signpost; set dressing such as reeds, ferns, wildflowers, logs, stumps, barrels, crates, hay, lamp posts, market stalls and a cart. |
+| Character sprites | `tools/art/blender/render_characters.py` | Posable 3D figures with class gear, plus townsfolk outfits (innkeeper's apron, smith's leather apron, priest's robes, the reeve's coat, villagers). Each is rendered as a sprite sheet: 5 facings × (idle + 8-frame walk), mirrored in game for the other 3 facings. |
 | Item icons | `tools/art/blender/render_items.py` | 64×64 icons of small procedural models (blades, armour, potions, coins...) under a studio light rig, with a soft drop shadow. |
-| Interiors | `tools/art/blender/render_interiors.py` | Room backdrops (floorboards or flagstones, back wall with hearth or forge and lit windows, side walls leaning out as a cutaway) and furniture props: chests, drawers, cupboards, tables, beds, the bar, an anvil, a rug, the exit mat. |
+| Interiors | `tools/art/blender/render_interiors.py` | Room backdrops (floorboards or flagstones, back wall with hearth or forge and lit windows, side walls leaning out as a cutaway; the temple nave has stained glass, a dais, candles and a runner) and furniture props: chests, drawers, cupboards, tables, beds, the bar and its shelves, an anvil, a rug, pews, an altar, a pile of items on the ground, the exit mat. |
 | Sounds and music | `tools/audio/generate_placeholder_audio.py` | Synthesised placeholders, see [AUDIO.md](AUDIO.md). |
 | Portraits | `tools/art/portraits/make_portraits.py` | Crops of CC0 public-domain paintings from the Met (see below). |
 
@@ -67,10 +67,11 @@ python3 tools/art/portraits/make_portraits.py              # all of them (needs 
 python3 tools/art/portraits/make_portraits.py wren --sheet /tmp/check.png
 ```
 
-Besides the four party members there is a small library for later NPCs: `npc_veteran`,
+Besides the four party members there is a small library for NPCs: `npc_veteran`,
 `npc_pickpocket`, `npc_elder`, `npc_merchant`, `npc_priest`, `npc_monk`, `npc_sage`,
 `npc_noble`, `npc_villager`, `npc_young_knight`, `npc_warrior` and `npc_bard`. Any of them
-can be given to a character with `art.portrait`. [CREDITS.md](../CREDITS.md) lists every
+can be given to a character with `art.portrait`, or to a townsperson with `"portrait"` in
+`data/npcs/npcs.json` (seven of them are in use in Millbrook). [CREDITS.md](../CREDITS.md) lists every
 painting.
 
 To use your own, drop in any 4:5 PNG (256×320 recommended; the sidebar shows 64×80).

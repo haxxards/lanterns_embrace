@@ -1,0 +1,64 @@
+{
+	"id": "tobin",
+	"start": [
+		{"if": {"not_flag": "met_tobin"}, "node": "first"},
+		{"node": "greet"}
+	],
+	"nodes": {
+		"first": {
+			"text": "Welcome to the Lantern & Thistle! Tobin Hale, at your service. Sit anywhere that isn't on fire. You've the look of travellers. What'll it be?",
+			"do": [{"set_flag": "met_tobin"}],
+			"options": [
+				{"text": "What have you got for sale?", "shop": true},
+				{"text": "We need a room for the night.", "if": {"hurt": true}, "goto": "room"},
+				{"text": "Any news in Millbrook?", "goto": "news"},
+				{"text": "Farewell.", "end": true}
+			]
+		},
+		"greet": {
+			"text": "Back again, {leader}? What'll it be?",
+			"options": [
+				{"text": "What have you got for sale?", "shop": true},
+				{"text": "We need a room for the night.", "if": {"hurt": true}, "goto": "room"},
+				{"text": "Any news in Millbrook?", "goto": "news"},
+				{"text": "Father Anselm needs a lantern for the temple.", "if": {"quest": "light_for_the_dawn", "is": "started", "not_item": "lantern"}, "goto": "lantern"},
+				{"text": "Farewell.", "end": true}
+			]
+		},
+		"room": {
+			"text": "Five gold for a bed, a hot bath and Marta's stew in the morning. You'll wake up a new person. Probably the same person, but rested.",
+			"options": [
+				{"text": "Here's five gold.", "if": {"gold": 5}, "do": [{"take_gold": 5}, {"heal_party": true}], "goto": "rested"},
+				{"text": "We can't afford it.", "if": {"not": {"gold": 5}}, "goto": "greet"},
+				{"text": "Maybe later.", "goto": "greet"}
+			]
+		},
+		"rested": {
+			"text": "There, colour back in your cheeks. The road will still be there, more's the pity.",
+			"next": "greet"
+		},
+		"news": {
+			"text": "News? The reeve's been tearing his hair out over a key he lost by the well. Old Wenna's run off her feet, the miller's wife has a fever. And Father Anselm up at the temple keeps asking after a proper lantern for his altar.",
+			"options": [
+				{"text": "Tell us about the temple.", "goto": "temple"},
+				{"text": "Who's the singer?", "goto": "pip"},
+				{"text": "Back to business.", "goto": "greet"}
+			]
+		},
+		"temple": {
+			"text": "The Temple of the Dawn, up the lane north-east of the square. Father Anselm will patch up the hurt for a small offering, and he says the dawn can even call back the fallen. I've never needed to find out, and I'd like to keep it that way.",
+			"next": "greet"
+		},
+		"pip": {
+			"text": "Pip Fairweather. Sings for his supper, and sometimes I even let him have it. Knows every tale in these hills and makes up the rest.",
+			"next": "greet"
+		},
+		"lantern": {
+			"text": "A lantern? I sell good hooded ones, five gold apiece. They're on the shelf behind me.",
+			"options": [
+				{"text": "Show me.", "shop": true},
+				{"text": "Later.", "goto": "greet"}
+			]
+		}
+	}
+}

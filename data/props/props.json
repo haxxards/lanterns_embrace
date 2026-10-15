@@ -301,6 +301,37 @@
 			"blocks_sight": false,
 			"interaction": "container",
 			"minimap_color": "#c8b890"
+		},
+		"temple": {
+			"name": "Temple of the Dawn",
+			"texture": "res://assets/props/temple.png",
+			"origin": [242, 666],
+			"door_pixel": [184, 664],
+			"footprint_rect": [8, 8],
+			"blocks_movement": true,
+			"blocks_sight": true,
+			"interaction": "enter",
+			"minimap_color": "#8a8478"
+		},
+		"pew": {
+			"name": "Pew",
+			"texture": "res://assets/props/pew.png",
+			"origin": [82, 56],
+			"footprint_rect": [3, 1],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#5a3c24"
+		},
+		"altar": {
+			"name": "Altar",
+			"texture": "res://assets/props/altar.png",
+			"origin": [50, 81],
+			"footprint_rect": [2, 1],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#efe9da"
 		}
 	}
 }

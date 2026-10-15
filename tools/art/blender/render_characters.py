@@ -328,11 +328,136 @@ def rogue(root):
     _ = hood
 
 
+# --------------------------------------------------------------------------
+# Townsfolk (NPCs)
+# --------------------------------------------------------------------------
+
+def apron(root, s, color, top=1.25, bottom=0.45, width=0.36, y=-0.16):
+    m = mat("Apron", color, rough=0.9, noise_var=0.2)
+    lib.box("Apron", (width * s, 0.02, (top - bottom) * s), (0, y * s, (top + bottom) / 2 * s), mat=m, parent=root,
+            bevel=0.01)
+    loft("ApronTie", [(0.9 * s, 0.21 * s, 0.15 * s, 0, 0), (0.93 * s, 0.21 * s, 0.15 * s, 0, 0)], m, root)
+
+
+def skirt(root, s, color, waist=0.92, hem=0.0, flare=0.3):
+    m = mat("Skirt", color, rough=0.9, noise_var=0.2, bump=0.2, bump_scale=30)
+    loft("Skirt", [(hem, flare * s, (flare - 0.04) * s, 0, 0.01 * s), (0.45 * s, 0.24 * s, 0.19 * s, 0, 0),
+                   (waist * s, 0.17 * s, 0.12 * s, 0, 0)], m, root)
+    return m
+
+
+def innkeeper(root):
+    b = body(root, h=1.74, build=1.28, skin="#d8a882", shirt="#d9cfb6", trousers="#4a3a2a", boots="#3a2a1e",
+             hair="#8a8478", hair_style="short", eye="#3a2a1a")
+    s = b["s"]
+    apron(root, s, "#efe8d6", top=1.2, bottom=0.42, width=0.4, y=-0.165)
+    vest = mat("Vest", "#5a3a24", rough=0.8, noise_var=0.2)
+    loft("Vest", [(1.05 * s, 0.215 * s, 0.14 * s, 0, 0), (1.3 * s, 0.22 * s, 0.135 * s, 0, 0),
+                  (1.42 * s, 0.23 * s, 0.12 * s, 0, 0)], vest, root, cap=False)
+    rh = b["hands"][1]
+    wood = mat("Tankard", "#8a6a44", rough=0.6)
+    lib.primitive("cylinder", "Tankard", mat=wood, parent=root, vertices=14, radius=0.05, depth=0.13,
+                  location=(rh.x, rh.y - 0.04, rh.z + 0.04))
+
+
+def smith(root):
+    b = body(root, h=1.84, build=1.32, skin="#b98260", shirt="#b98260", trousers="#3a3530", boots="#2a201a",
+             hair="#2a1e16", hair_style="short", eye="#2a2018")
+    s = b["s"]
+    apron(root, s, "#4a3020", top=1.38, bottom=0.4, width=0.42, y=-0.17)
+    hc = b["head"]
+    beard = mat("Beard", "#2a1e16", rough=0.7, bump=0.5, bump_scale=150)
+    loft("Beard", [(hc.z - 0.2 * s, 0.05 * s, 0.04 * s, 0, -0.1 * s), (hc.z - 0.08 * s, 0.09 * s, 0.06 * s, 0, -0.07 * s),
+                   (hc.z, 0.085 * s, 0.05 * s, 0, -0.05 * s)], beard, root)
+    rh = b["hands"][1]
+    lib.cylinder_between("Haft", (rh.x, rh.y, rh.z - 0.05), (rh.x + 0.02, rh.y - 0.08, rh.z + 0.35 * s), 0.018,
+                         mat=mat("Haft", "#5a3d22", rough=0.7), parent=root, sides=8)
+    lib.box("HammerHead", (0.09, 0.14, 0.08), (rh.x + 0.02, rh.y - 0.09, rh.z + 0.38 * s),
+            mat=mat("Iron", "#3a3836", rough=0.4, metallic=0.9), parent=root, bevel=0.01)
+
+
+def priest(root):
+    b = body(root, h=1.76, build=1.0, skin="#e0bfa0", shirt="#efe9da", trousers="#efe9da", boots="#3a2a1e",
+             hair="#d8d4cc", hair_style="short", skip_legs=True, eye="#3a4a5a")
+    s = b["s"]
+    robe = mat("Robe", "#efe9da", rough=0.9, noise_var=0.15, bump=0.2, bump_scale=30)
+    gold = mat("Gold", "#d8b04a", rough=0.3, metallic=1.0)
+    loft("Robe", [(0.0, 0.29 * s, 0.25 * s, 0, 0.0), (0.4 * s, 0.24 * s, 0.19 * s, 0, 0),
+                  (0.9 * s, 0.18 * s, 0.13 * s, 0, 0), (1.2 * s, 0.18 * s, 0.12 * s, 0, 0),
+                  (1.4 * s, 0.21 * s, 0.12 * s, 0, 0), (1.47 * s, 0.12 * s, 0.08 * s, 0, 0)], robe, root)
+    for side in (-1, 1):
+        lib.box(f"Stole{side}", (0.06 * s, 0.02, 1.0 * s), (side * 0.08 * s, -0.17 * s, 0.95 * s), mat=gold,
+                parent=root)
+    sun = lib.primitive("cylinder", "Sun", mat=gold, parent=root, vertices=24, radius=0.06 * s, depth=0.015,
+                        location=(0, -0.2 * s, 1.25 * s))
+    sun.rotation_euler = (math.radians(90), 0, 0)
+    rh = b["hands"][1]
+    lib.cylinder_between("Crozier", (rh.x + 0.02, rh.y - 0.02, 0.02), (rh.x + 0.04, rh.y - 0.04, 1.9 * s), 0.02,
+                         mat=mat("Wood", "#6a4a2a", rough=0.6), parent=root, sides=10)
+    disc = lib.primitive("cylinder", "Crest", mat=gold, parent=root, vertices=24, radius=0.09 * s, depth=0.02,
+                         location=(rh.x + 0.04, rh.y - 0.04, 1.98 * s))
+    disc.rotation_euler = (math.radians(90), 0, 0)
+
+
+def noble(root):
+    b = body(root, h=1.8, build=1.05, skin="#e2b894", shirt="#7a1e1e", trousers="#2a2420", boots="#1e1814",
+             hair="#5a4632", hair_style="short", eye="#3a3020")
+    s = b["s"]
+    cloak = mat("Cloak", "#8e2424", rough=0.85, noise_var=0.2, bump=0.25, bump_scale=25)
+    loft("Cloak", [(0.35 * s, 0.27 * s, 0.2 * s, 0, 0.05 * s), (0.8 * s, 0.24 * s, 0.17 * s, 0, 0.04 * s),
+                   (1.2 * s, 0.22 * s, 0.14 * s, 0, 0.02 * s), (1.42 * s, 0.25 * s, 0.13 * s, 0, 0.01 * s),
+                   (1.48 * s, 0.14 * s, 0.1 * s, 0, 0.01 * s)], cloak, root, cap=False)
+    fur = mat("Fur", "#d8ccb4", rough=1.0, bump=0.8, bump_scale=200)
+    loft("Collar", [(1.42 * s, 0.24 * s, 0.15 * s, 0, 0), (1.5 * s, 0.17 * s, 0.12 * s, 0, 0)], fur, root)
+    gold = mat("Gold", "#d8b04a", rough=0.3, metallic=1.0)
+    for i in range(7):
+        a = math.pi * (1.15 + 0.7 * i / 6)
+        sphere(f"Chain{i}", (math.cos(a) * 0.13 * s, -0.12 * s + math.sin(a) * 0.0, 1.32 * s + math.sin(a) * 0.06 * s),
+               (0.018 * s,) * 3, gold, root, 8)
+    hc = b["head"]
+    hat = mat("Hat", "#2a2420", rough=0.8)
+    lib.primitive("cylinder", "Hat", mat=hat, parent=root, vertices=24, radius=0.115 * s, depth=0.06 * s,
+                  location=(hc.x, hc.y, hc.z + 0.1 * s))
+
+
+def villager_woman(root):
+    b = body(root, h=1.66, build=0.92, skin="#e6c09c", shirt="#6a7a4a", trousers="#5a4a3a", boots="#3a2a1e",
+             hair="#6a3a1e", hair_style="long", skip_legs=True, eye="#3a4a2a")
+    s = b["s"]
+    skirt(root, s, "#5a4a6a")
+    apron(root, s, "#d8cfb6", top=0.9, bottom=0.12, width=0.32, y=-0.2)
+    hc = b["head"]
+    scarf = mat("Scarf", "#a85a3a", rough=0.9, noise_var=0.2)
+    sphere("Kerchief", hc + Vector((0, 0.02 * s, 0.05 * s)), (0.108 * s, 0.115 * s, 0.1 * s), scarf, root, 20)
+    rh = b["hands"][1]
+    basket = mat("Basket", "#a07a44", rough=0.9, bump=0.6, bump_scale=120)
+    lib.primitive("cylinder", "Basket", mat=basket, parent=root, vertices=16, radius=0.12, depth=0.12,
+                  location=(rh.x + 0.05, rh.y - 0.02, rh.z - 0.06))
+    herbs = mat("Herbs", "#4a6a2a", rough=0.9)
+    sphere("Herbs", (rh.x + 0.05, rh.y - 0.02, rh.z + 0.01), (0.1, 0.1, 0.05), herbs, root, 12)
+
+
+def villager_man(root):
+    b = body(root, h=1.76, build=1.1, skin="#d0a07a", shirt="#7a6a4a", trousers="#4a4234", boots="#3a2a1e",
+             hair="#6a5030", hair_style="short", eye="#3a3020")
+    s = b["s"]
+    apron(root, s, "#cfc7b2", top=1.15, bottom=0.5, width=0.38, y=-0.16)
+    hc = b["head"]
+    cap = mat("Cap", "#4a4a3a", rough=0.9, noise_var=0.2)
+    sphere("Cap", hc + Vector((0, 0.01 * s, 0.06 * s)), (0.105 * s, 0.112 * s, 0.075 * s), cap, root, 20)
+
+
 CHARACTERS = {
     "fighter": fighter,
     "wizard": wizard,
     "cleric": cleric,
     "rogue": rogue,
+    "innkeeper": innkeeper,
+    "smith": smith,
+    "priest": priest,
+    "noble": noble,
+    "villager_woman": villager_woman,
+    "villager_man": villager_man,
 }
 
 

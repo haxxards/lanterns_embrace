@@ -1,5 +1,6 @@
 extends Node
-## Loads and indexes static game data: terrain, props, items and character sheets.
+## Loads and indexes static game data: terrain, props, items, character
+## sheets, townsfolk (NPCs), quests and dialogues.
 ##
 ## Content is plain JSON under res://data so it can be authored outside Godot.
 ## Textures referenced by data are loaded through load_texture(), which also
@@ -8,11 +9,16 @@ extends Node
 const TERRAIN_PATH := "res://data/terrain/terrain.json"
 const PROPS_PATH := "res://data/props/props.json"
 const ITEMS_PATH := "res://data/items/items.json"
+const NPCS_PATH := "res://data/npcs/npcs.json"
+const QUESTS_PATH := "res://data/quests/quests.json"
 
 var terrain: Dictionary = {}            # id -> TerrainDef
 var terrain_by_symbol: Dictionary = {}  # symbol -> TerrainDef
 var props: Dictionary = {}              # id -> PropDef
 var items: Dictionary = {}              # id -> ItemDef
+var npcs: Dictionary = {}               # id -> NpcDef
+var quests: Dictionary = {}             # id -> QuestDef
+var _dialogues: Dictionary = {}         # path -> Dialogue (loaded on first use)
 var characters: Dictionary = {}         # id -> CharacterSheet (template, never mutated)
 
 var _texture_cache: Dictionary = {}
@@ -29,6 +35,9 @@ func reload() -> void:
 	_load_props()
 	_load_items()
 	_load_characters()
+	_load_npcs()
+	_load_quests()
+	_dialogues.clear()
 
 
 func _load_terrain() -> void:
@@ -72,6 +81,32 @@ func _load_items() -> void:
 		var it := ItemDef.from_dict(item_id, defs[item_id])
 		it.icon = load_texture(it.icon_path)
 		items[item_id] = it
+
+
+func _load_npcs() -> void:
+	npcs.clear()
+	var d: Variant = JsonUtil.load_json(NPCS_PATH)
+	if d is Dictionary:
+		for npc_id in d.get("npcs", {}):
+			npcs[npc_id] = NpcDef.from_dict(npc_id, d["npcs"][npc_id])
+
+
+func _load_quests() -> void:
+	quests.clear()
+	var d: Variant = JsonUtil.load_json(QUESTS_PATH)
+	if d is Dictionary:
+		for quest_id in d.get("quests", {}):
+			quests[quest_id] = QuestDef.from_dict(quest_id, d["quests"][quest_id])
+
+
+## A dialogue file, parsed once and cached.
+func dialogue(path: String) -> Dialogue:
+	if not _dialogues.has(path):
+		var dl := Dialogue.load_file(path)
+		for err in dl.errors:
+			push_warning("Dialogue %s: %s" % [path, err])
+		_dialogues[path] = dl
+	return _dialogues[path]
 
 
 ## Loads every sheet from GameConfig.character_dirs. Later directories win,

@@ -22,3 +22,13 @@ signal pause_changed(paused: bool)
 signal container_opened(container: ContainerState, title: String, opener: CharacterSheet)
 ## Leave this map for another (door, exit). Main performs the change.
 signal map_change_requested(map_path: String, entry: String)
+## A party member started talking to an NPC (the HUD opens the dialogue).
+signal dialogue_requested(npc: Npc, speaker: PartyMember)
+## A dialogue closed (the NPC can wander again).
+signal dialogue_ended(npc: Npc)
+## Open a vendor's shop for `buyer` (from a dialogue option).
+signal shop_requested(npc: Npc, buyer: CharacterSheet)
+## A quest advanced to `stage`.
+signal quest_updated(quest_id: String, stage: String)
+## Every party member has fallen.
+signal party_defeated

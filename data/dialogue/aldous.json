@@ -1,0 +1,36 @@
+{
+	"id": "aldous",
+	"start": [
+		{"if": {"quest": "the_reeves_key", "is_not": "done", "item": "reeve_key"}, "node": "return"},
+		{"if": {"quest": "the_reeves_key", "is": "not_started"}, "node": "intro"},
+		{"if": {"quest": "the_reeves_key", "is": "active"}, "node": "searching"},
+		{"node": "after"}
+	],
+	"nodes": {
+		"intro": {
+			"text": "You there! Have you seen a key? Iron, about so long, with my mark on it. I had it at the well this morning and now it's gone. Every penny the village owes the crown is in that strongbox.",
+			"options": [
+				{"text": "We'll keep an eye out for it.", "do": [{"quest": "the_reeves_key", "stage": "started"}], "goto": "thanks"},
+				{"text": "Not our problem.", "end": true}
+			]
+		},
+		"thanks": {
+			"text": "Good, good. Bring it to me and you'll not regret it. It can't have gone far. Can it?",
+			"options": [{"text": "We'll look around.", "end": true}]
+		},
+		"searching": {
+			"text": "Any sign of my key? I've looked in every bucket in Millbrook.",
+			"options": [{"text": "Not yet.", "end": true}]
+		},
+		"return": {
+			"text": "My key! Where on earth... no, never mind where. Here, for your trouble.",
+			"options": [
+				{"text": "Here you are, reeve.", "do": [{"take_item": "reeve_key"}, {"give_gold": 40}, {"quest": "the_reeves_key", "stage": "done"}], "goto": "after"}
+			]
+		},
+		"after": {
+			"text": "Millbrook is in your debt. Mind you don't make a habit of finding other people's keys, though.",
+			"options": [{"text": "Farewell, reeve.", "end": true}]
+		}
+	}
+}

@@ -4,7 +4,8 @@ so there is nothing to license). Every file is a stand-in: replace it with a
 real recording of the same name, or point data/audio/audio.json elsewhere.
 
     pip install numpy scipy soundfile
-    python3 tools/audio/generate_placeholder_audio.py
+    python3 tools/audio/generate_placeholder_audio.py            # everything
+    python3 tools/audio/generate_placeholder_audio.py temple     # just one group
 
 Sound effects are short one-shots; music and ambience are seamless loops
 (the tail of each loop is folded back onto its start).
@@ -269,6 +270,37 @@ def music():
     save("music/hearth.ogg", tune(66, chords * 2, pattern, 2, 64, drone_gain=0.1), 0.6)
 
 
+def organ(freqs, seconds, attack=1.4, release=2.0):
+    """A soft organ pad: a few sine partials per note, slow swell and fade."""
+    n = int(seconds * SR)
+    tt = t(seconds)
+    x = np.zeros(n)
+    for f in freqs:
+        for k, a in ((1, 1.0), (2, 0.35), (3, 0.12), (4, 0.06)):
+            x += a * np.sin(2 * np.pi * f * k * tt) * (1 + 0.04 * np.sin(2 * np.pi * 4.8 * tt))
+    e = np.minimum(1.0, tt / attack) * np.minimum(1.0, np.maximum(0.0, (seconds - tt) / release))
+    return x * e / len(freqs)
+
+
+def temple():
+    """Slow modal chords with a plain chant line over them (no randomness, so
+    regenerating it on its own leaves the other files unchanged)."""
+    chords = [("D3", "A3", "D4", "F4"), ("A#2", "F3", "A#3", "D4"), ("F2", "C3", "F3", "A3"), ("C3", "G3", "C4", "E4")]
+    bar = 8.0
+    total = bar * len(chords) * 2
+    x = np.zeros(int((total + 6.0) * SR))
+    for i, chord in enumerate(chords * 2):
+        place(x, organ([note_hz(nm) for nm in chord], bar + 2.0), i * bar, 0.5)
+    chant = ["A4", "G4", "F4", "G4", "A4", "A4", "D5", "C5", "A4", "G4", "F4", "E4", "D4", "D4", "F4", "E4"]
+    for i, nm in enumerate(chant):
+        place(x, organ([note_hz(nm)], 3.6, attack=0.5, release=1.2), 16.0 + i * 3.0, 0.22)
+    # Stone hall: a few long, darkening echoes.
+    for delay, gain in ((0.31, 0.32), (0.53, 0.26), (0.89, 0.2), (1.37, 0.14)):
+        d = int(delay * SR)
+        x[d:] += lowpass(x[:-d], 2500) * gain
+    save("music/temple.ogg", loop_fold(x, total), 0.5)
+
+
 # --------------------------------------------------------------------------
 # Ambience loops
 # --------------------------------------------------------------------------
@@ -305,6 +337,7 @@ def ambience():
 
 
 if __name__ == "__main__":
-    sfx()
-    music()
-    ambience()
+    import sys
+    groups = {"sfx": sfx, "music": music, "temple": temple, "ambience": ambience}
+    for name in sys.argv[1:] or ["sfx", "music", "temple", "ambience"]:
+        groups[name]()

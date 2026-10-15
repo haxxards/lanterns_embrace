@@ -9,14 +9,48 @@ The goal of this repository is to be a *core engine*: each system exists in a mi
 data-driven form you can extend, not a finished game.
 
 ![Village overview](docs/images/phase1_overview.jpg)
-![Inside the inn](docs/images/phase2_interior.jpg)
+![Talking to the innkeeper behind his bar](docs/images/phase3_dialogue.jpg)
+![The Temple of the Dawn: Father Anselm offers to raise a fallen companion](docs/images/phase3_temple.jpg)
+![Buying from the innkeeper](docs/images/phase3_shop.jpg)
 ![Inventory and paper doll with a shelf of remedies open](docs/images/phase2_inventory.jpg)
 ![The party crossing the bridge](docs/images/walk.gif)
 
 New to Godot, or want to know how this is put together before extending it? Start with
 **[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md)**.
 
-## Status: Phase 2, items and places
+## Status: Phase 3, people
+
+### Phase 3: people
+
+- **Townsfolk:** seven NPCs with their own rendered, animated sprites and painted portraits:
+  an innkeeper behind his bar, a bard, a blacksmith, a herbalist, a miller, the reeve and
+  a priest. They stroll near their spots, block the hex they stand on, turn to face you,
+  and are hidden in the fog like everything else. Defined in
+  [`data/npcs/npcs.json`](data/npcs/npcs.json), see
+  [docs/NPCS_AND_QUESTS.md](docs/NPCS_AND_QUESTS.md).
+- **Branching dialogue**, in-house (no addons): JSON conversation graphs with conditions
+  (flags, quests, items, gold, who's in the party, who's talking, someone hurt or fallen)
+  and effects (items, gold, quest stages, XP, healing, raising the fallen). Click someone
+  to walk over and talk; pick answers with the mouse or the number keys. See
+  [docs/DIALOGUE.md](docs/DIALOGUE.md).
+- **Quests and a journal** (J): staged quests whose entries fill the journal, stages that
+  advance by themselves (pick up the lost key and the journal notes it), and quest XP for
+  every living member, with level-ups and hit points per level. Four quests in Millbrook:
+  the reeve's lost key, a fever draught for the miller's wife, a lantern for the temple's
+  altar, and a rumour for later.
+- **Vendors:** the innkeeper, the blacksmith and the herbalist trade on the inventory
+  screen. Drag to buy a stack or right-click to buy one; drag or right-click your own
+  items to sell. Each vendor has their own markup and buying rate, and quest items can't
+  be sold. What you sell stays on their shelf, in saves too.
+- **The Temple of the Dawn**, a new building with its own nave: Father Anselm heals for
+  10 gold and raises the fallen for 100. Characters at 0 HP are **fallen** (greyed out,
+  can't act). The game is over only when the whole party is down, with a screen to load a
+  save. Until combat arrives, Ctrl+K knocks out the selected leader for testing
+  (`debug_keys` in the config).
+- **Map items:** maps can leave items lying on the ground (the reeve's key by the well),
+  which behave exactly like dropped items.
+- **Whole buildings in the fog:** once you see any part of a building, all of it shows,
+  rather than its roof vanishing into the unexplored dark behind it.
 
 ### Phase 2: items and places
 
@@ -38,9 +72,11 @@ New to Godot, or want to know how this is put together before extending it? Star
   character's feet. Dropped items form a pile on the map that stays there (and in saves)
   until picked up.
 - **Building interiors as separate maps**, each exactly the size of its building
-  (cottages 8×6 hexes, the inn 12×8). Click a building and the party gathers at the door
-  and goes in; the way out leads back to the same door. Five pre-rendered rooms (an inn, a
-  smithy with a forge, three cottages) with furniture the party walks around.
+  (cottages 8×6 hexes, the inn 12×8, the temple 8×8). Click a building and the party
+  gathers at the door and goes in; the way out leads back to the same door. Six
+  pre-rendered rooms (an inn with a bar, a smithy with a forge, three cottages, a temple
+  nave) with furniture the party walks around. Furnishing add-ons ("bar", "tables:4") lay
+  out a tavern in any house.
 - **Fog of war:** black where nobody has been, dimmed where the party has been but can't
   see now, with line of sight blocked by buildings. On the minimap too. Off indoors, and
   configurable (`fog_of_war` in the config).
@@ -115,7 +151,10 @@ New to Godot, or want to know how this is put together before extending it? Star
 | Left click a signpost | Leader walks over and reads it |
 | Left click a chest, drawers, cupboard | Leader walks over and opens it |
 | Left click a building or a way out | The party gathers at the door and goes through |
+| Left click a person | Leader walks over and talks to them |
+| `1`–`9` in a conversation | Pick an answer (or click it) |
 | `I` | Inventory (drag to move or equip, right-click to use) |
+| `J` | Journal: quests and XP |
 | Esc | Menu: save, load, quicksave, quickload, quit (also closes windows) |
 | F5 / F9 | Quicksave / quickload |
 | Double-click a portrait | Centre the camera on that member |
@@ -126,6 +165,7 @@ New to Godot, or want to know how this is put together before extending it? Star
 | `G` | Toggle the debug hex grid |
 | F3 | Toggle the hover info panel |
 | F1 | Toggle the controls help |
+| Ctrl+K | Debug: knock out the selected leader (with `debug_keys` on) |
 
 ## What to try
 
@@ -138,8 +178,18 @@ New to Godot, or want to know how this is put together before extending it? Star
 - Walk behind the inn or into the forest to see the occlusion fade.
 - Pause with Space, queue up orders, and resume.
 - Walk into **The Lantern & Thistle** (the big inn) or any cottage. Inside, open the
-  drawers and chests. The **Reeve's strongbox** is locked: find the key in the reeve's
-  drawers, or let Wren pick it. The **smithy** has a locked chest too.
+  drawers and chests. The **Reeve's strongbox** is locked: let Wren pick it, or find the
+  reeve's key. The **smithy** has a locked chest too.
+- Talk to **Aldous**, the reeve, by the well. His key lies on the cobbles nearby. Give
+  it back for 40 gold and 150 XP, or keep it and open his strongbox.
+- Talk to **Wenna** the herbalist (south-west cottage) and take her draught to **Hob**
+  the miller (west of the square).
+- Visit **Father Anselm** at the temple (up the lane north-east of the square) and ask
+  what the temple needs. **Tobin** at the inn sells the lantern.
+- Party members have their own lines: Anselm and Wenna know Odran, Bram talks shop with
+  Garrick, and Pip's song means something to Elowen.
+- Press Ctrl+K to knock someone out, then walk them to the temple and pay to raise them.
+  Knock out everyone to see the game-over screen.
 - Press **I**, drag a ring onto a ring slot and watch the AC change, or give someone a
   potion by dropping it on their portrait.
 - Save with Esc → Save game, change things, and load it back.
@@ -172,7 +222,10 @@ data/
   props/           props.json: trees, houses, signs, furniture... (sprite, footprint, flags)
   items/           items.json: every item (docs/ITEMS.md)
   audio/           audio.json: sound names -> files (docs/AUDIO.md)
-  maps/            The village and five interiors (terrain rows + props), see docs/MAPS.md
+  maps/            The village and six interiors (terrain rows + props + townsfolk), see docs/MAPS.md
+  npcs/            npcs.json: townsfolk, their sprites, dialogue and shops (docs/NPCS_AND_QUESTS.md)
+  dialogue/        One conversation graph per speaker (docs/DIALOGUE.md)
+  quests/          quests.json: quest stages, journal entries and XP
 docs/              GODOT_GUIDE.md, plus format references (characters, maps, items, assets, audio)
 scenes/main.tscn   Entry scene: World + HUD
 scripts/
@@ -181,10 +234,14 @@ scripts/
   core/            Hex math, HexGrid (terrain + A*), JSON helpers
   data/            TerrainDef, PropDef, MapData parsers
   rules/           Rules (5e SRD numbers), CharacterSheet
-  items/           ItemDef, ItemStack, Inventory, ContainerState, InventoryOps
-  world/           World, TerrainRenderer (+ blend shader), FogOfWar (+ shader),
+  items/           ItemDef, ItemStack, Inventory, ContainerState, InventoryOps (incl. buy/sell)
+  dialogue/        Dialogue, DialogueRunner, Conditions, Effects
+  quests/          QuestDef
+  npc/             NpcDef, Npc
+  world/           World, TerrainRenderer (+ blend shader), FogOfWar (+ shader), Actor,
                    PartyMember, PartyController, Prop, camera, overlays
-  ui/              HUD, portrait cards, minimap, inventory screen, item slots, menus, theme
+  ui/              HUD, portrait cards, minimap, inventory/shop screen, item slots,
+                   dialogue window, journal, menus, theme
 tests/             Headless test runner, unit and integration tests
 tools/             make_character.py, art renderers (tools/art/blender), portrait cropper
                    (tools/art/portraits), map generators (tools/maps), sound synthesiser
@@ -203,8 +260,10 @@ tools/             make_character.py, art renderers (tools/art/blender), portrai
 - `Events` is the signal hub, so the world never holds UI references. The HUD listens
   for `selection_changed`, `hover_info_changed`, `message_requested` and so on.
 - `GameState` holds the playthrough (party sheets, purse, current map, container contents,
-  explored fog) and serialises to a dictionary, which is exactly what a save file holds.
-  `SaveManager` writes and reads the slots.
+  explored fog, quests, story flags) and serialises to a dictionary, which is exactly what
+  a save file holds. `SaveManager` writes and reads the slots.
+- People: `Npc` and `PartyMember` share the `Actor` base (sprite, facing, walking). A
+  conversation is a `DialogueRunner` (pure logic) shown by the `DialogueWindow`.
 - Items: `ItemDef` is a type from items.json, `ItemStack` a quantity of one, `Inventory` a
   row of slots. `InventoryOps` applies the rules for every move, for the UI and the tests.
 
@@ -216,6 +275,9 @@ tools/             make_character.py, art renderers (tools/art/blender), portrai
   the id to `data/party/starting_party.json`. See [docs/CHARACTER_SHEETS.md](docs/CHARACTER_SHEETS.md).
 - **New map:** copy `data/maps/millbrook_outskirts.json` and edit the text rows, then point
   `starting_map` at it. See [docs/MAPS.md](docs/MAPS.md).
+- **New townsperson, conversation or quest:** an entry in `data/npcs/npcs.json`, a file in
+  `data/dialogue/`, a stage list in `data/quests/quests.json`, and `{"id", "at"}` in a
+  map's `"npcs"`. See [docs/NPCS_AND_QUESTS.md](docs/NPCS_AND_QUESTS.md).
 - **New terrain or prop:** add an entry to `data/terrain/terrain.json` or `data/props/props.json`.
 - **Real art:** overwrite the PNGs, or change the paths in the JSON. See [docs/ASSETS.md](docs/ASSETS.md).
 
@@ -232,20 +294,26 @@ no map has overlapping props, everything interactable is reachable, every interi
 its building). Integration tests drive the real main scene: group moves, redirects
 mid-walk, sign interaction, pause, box select, mouse routing, smoothed walking, going in and
 out of a cottage, emptying drawers, keys and lock-picking, the inventory screen, fog
-reveal, saving and loading, and quicksave. Any engine or script error raised during a test
-fails that test.
+reveal, saving and loading, and quicksave. Phase 3 adds tests for every condition and
+effect, whole conversations and quests played through the dialogue runner, XP and
+levelling, buying and selling, the temple's healing and raising, defeat, and checks that
+every dialogue link, item and quest reference is valid. In the running game it checks
+that every NPC can be reached, walking up to the innkeeper and shopping, the key by the
+well, entering the temple, the journal and the game-over screen. Any engine or script
+error raised during a test fails that test.
 
 ## Roadmap
 
 This order follows the plan agreed before Phase 1. See the end of
-[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phases 3 and 4 plug into the code.
+[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phase 3 was added and where Phase 4
+plugs into the code.
 
 1. ~~**Foundation:** hex grid, pathfinding, party selection and movement, camera, minimap, sample map~~
 2. ~~**Items and places:** item and equipment data, inventory and paper doll, chests and
    drawers, gold, building interiors as separate maps (door transitions), fog of war,
    save/load with a basic slot menu, and minimal drop-in audio hooks.~~
-3. **People:** NPCs, a branching dialogue system (in-house, no addons), quests, vendors
-   (buy and sell), temple revival (paid service, game over only when the whole party is down).
+3. ~~**People:** NPCs, a branching dialogue system (in-house, no addons), quests, vendors
+   (buy and sell), temple revival (paid service, game over only when the whole party is down).~~
 4. **Combat:** hostile actions trigger turn-based mode, with initiative, movement and
    actions on hexes. Also weapons and armour, spells and abilities, enemies and AI, death,
    XP and levelling.

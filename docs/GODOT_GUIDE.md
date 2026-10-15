@@ -163,13 +163,14 @@ terrain, fog of war and the colour grade); see [§5](#5-drawing-the-world).
 ## 2. The shape of this project
 
 ```
-            data/*.json (terrain, props, items, maps, characters, audio, config)
+   data/*.json (terrain, props, items, maps, characters, npcs, dialogue, quests, audio, config)
                  │  read once at start
                  ▼
         ┌──────────────────┐     ┌──────────────────────────────┐
         │ GameConfig, Data │     │ GameState (the playthrough)  │
         │ (static content) │     │ party sheets, purse, map,    │
-        └────────┬─────────┘     │ containers, explored fog     │
+        └────────┬─────────┘     │ containers, explored fog,    │
+                 │               │ quests, story flags          │
                  │               └───────┬──────────────▲───────┘
                  ▼                       │              │ SaveManager
         ┌──────────────────────────────────────────┐    │ to_dict / load_dict
@@ -177,14 +178,16 @@ terrain, fog of war and the colour grade); see [§5](#5-drawing-the-world).
         │  HexGrid ─ terrain, blockers, A*         │────┘
         │  TerrainRenderer / backdrop ─ the ground │
         │  Props ─ trees, houses, chests, doors    │
-        │  PartyController → PartyMembers          │
+        │  PartyController → PartyMembers (Actors) │
+        │  Npcs (Actors) ─ townsfolk               │
         │  FogOfWar, Camera                        │
         └───────────────┬──────────────────────────┘
                         │ Events (signals)
                         ▼
         ┌──────────────────────────────────────────┐
         │ HUD: sidebar, portraits, minimap, toasts,│
-        │ inventory screen, menus, save/load       │
+        │ inventory and shop screen, dialogue      │
+        │ window, journal, menus, save/load        │
         └──────────────────────────────────────────┘
 ```
 
@@ -193,8 +196,9 @@ Four layers, each depending only on the ones above it:
 1. **Data** (`scripts/data`, `scripts/autoload/data_registry.gd`, `game_config.gd`): parses
    JSON into typed definitions (`TerrainDef`, `PropDef`, `ItemDef`, `MapData`). Definitions
    never change during play.
-2. **Rules and state** (`scripts/rules`, `scripts/items`, `game_state.gd`): character
-   sheets, inventories, the 5e numbers, everything that must be saved. Pure logic, no nodes.
+2. **Rules and state** (`scripts/rules`, `scripts/items`, `scripts/dialogue`,
+   `scripts/quests`, `game_state.gd`): character sheets, inventories, the 5e numbers,
+   dialogue logic, quests, everything that must be saved. Pure logic, no nodes.
 3. **World** (`scripts/world`): turns a map into nodes, handles map input, moves the party.
 4. **UI** (`scripts/ui`): shows state and sends orders back to the world.
 
@@ -249,9 +253,35 @@ the live copies in `GameState.party` (`Data.new_character()` makes a copy).
    party member's signal, and changing maps frees that member, so the change must wait until
    the current frame's callbacks have finished.
 4. `World.load_map(path, entry)` clears the old props, builds the new grid, draws the
-   backdrop (interiors) or blended terrain, spawns the party at the entry, sets up fog,
-   music and ambience, and emits `Events.map_loaded`. The HUD rebuilds the portraits and
-   minimap on that signal.
+   backdrop (interiors) or blended terrain, spawns the townsfolk and then the party at the
+   entry, sets up fog, music and ambience, and emits `Events.map_loaded`. The HUD rebuilds
+   the portraits and minimap on that signal.
+
+### Talking to someone
+
+1. `World._on_click()` finds a visible `Npc` under the cursor (`npc_at()`), tells it to
+   `hold()` still, and calls `party.interact_with(npc)`. This is the same call a chest
+   gets: `interact_with` only asks its target for `approach_hexes()`, `is_adjacent_to()`
+   and `interact()`, so a `Prop` and an `Npc` both work. GDScript calls methods by name
+   at run time, so the two classes need no shared base beyond `Node2D` ("duck typing").
+   Inside, the target is held in a `Variant` variable so the type checker allows calls
+   that `Node2D` itself doesn't declare.
+2. The leader walks to a free hex beside the NPC. The NPC's own hex is blocked:
+   `HexGrid.set_occupied()` disables that A* point while someone stands on it.
+3. On arrival `Npc.interact()` turns both to face each other and emits
+   `Events.dialogue_requested(npc, member)`.
+4. The HUD pauses the game and opens the `DialogueWindow`, which creates a
+   `DialogueRunner` (`scripts/dialogue/dialogue_runner.gd`) for the NPC's dialogue file.
+   The runner picks the start node (the first entry whose condition holds), and lists
+   the options whose `"if"` holds (`Conditions.check`).
+5. Choosing an option applies its effects (`Effects.apply`: gold, items, quest stages,
+   healing) and moves to its `goto` node. The effects' messages become toasts.
+6. When the conversation ends, the window emits `closed(runner, npc)`. The HUD lets the NPC
+   wander again and, if the last option asked for the shop, opens the inventory screen in
+   trade mode with the vendor's stock (`GameState.vendor_stock`). Dragging between the
+   stock and a backpack then goes through `InventoryOps.buy` / `sell`.
+7. A quest stage change (`GameState.set_quest_stage`) writes the journal, and a finished
+   quest calls `award_xp`, which levels characters up through `CharacterSheet.add_xp`.
 
 ---
 
@@ -456,7 +486,7 @@ JSON at a new file. [ASSETS.md](ASSETS.md) lists sizes and pivots.
 
 ## 11. A reading order for the code
 
-Roughly 5,500 lines of GDScript. In this order, each file only depends on ones you have
+Roughly 7,200 lines of GDScript (and 2,300 of tests). In this order, each file only depends on ones you have
 already read:
 
 1. `project.godot`: autoloads and input actions.
@@ -468,11 +498,16 @@ already read:
 5. `scripts/autoload/game_state.gd`, `events.gd`, `save_manager.gd`, `audio.gd`.
 6. `scripts/main.gd`, then `scripts/world/world.gd`: how a map is loaded and how input
    becomes orders.
-7. `party_controller.gd`, `party_member.gd`, `prop.gd`: orders, walking, interactions.
-8. `terrain_renderer.gd` + `terrain_blend.gdshader`, `fog_of_war.gd` + `.gdshader`.
-9. `scripts/ui/hud.gd`, then `portrait_card.gd`, `minimap.gd`, `inventory_screen.gd`,
-   `item_slot.gd`, `game_menu.gd`, `save_load_screen.gd`.
-10. `tests/integration/test_phase2.gd`: shows the whole game being driven from code.
+7. `actor.gd`, then `party_member.gd`, `party_controller.gd`, `prop.gd`: walking,
+   orders, interactions. Then `scripts/npc/npc.gd`.
+8. `scripts/dialogue/` (`conditions.gd`, `effects.gd`, `dialogue.gd`, `dialogue_runner.gd`)
+   and `scripts/quests/quest_def.gd`, with the quest half of `game_state.gd`.
+9. `terrain_renderer.gd` + `terrain_blend.gdshader`, `fog_of_war.gd` + `.gdshader`.
+10. `scripts/ui/hud.gd`, then `portrait_card.gd`, `minimap.gd`, `inventory_screen.gd`,
+    `item_slot.gd`, `dialogue_window.gd`, `journal_screen.gd`, `game_menu.gd`,
+    `save_load_screen.gd`.
+11. `tests/integration/test_phase2.gd` and `test_phase3.gd`: the whole game driven from
+    code.
 
 Keep the game running while you read: hover with F3 on to see hex coordinates, and put
 `print()` calls or breakpoints (click left of a line number in the script editor) in the
@@ -500,24 +535,32 @@ functions above to watch them fire.
 
 ### Where the next phases plug in
 
-**Phase 3: people (NPCs, dialogue, quests, vendors, temple)**
+**Phase 3 (done): how people were added**
 
-- *NPCs*: `PartyMember` already does sprite-sheet animation, facing and smooth hex walking.
-  Extract the shared parts into an `Actor` base class (`extends Node2D`) and derive
-  `PartyMember` and `Npc` from it. NPCs go on the `Entities` node so they y-sort, and are
-  placed by map entries (`{"type": "npc", "at": [...], "id": "innkeeper"}`). Their sheets
-  can be the same `CharacterSheet` JSON, and portraits for twelve of them already exist
-  (`assets/portraits/npc_*.png`).
-- *Dialogue*: a JSON (or Resource) graph of nodes with text, the speaker, options,
-  conditions (`GameState.flags`, items, gold) and effects (set a flag, give an item, start a
-  quest). A `DialogueRunner` (`RefCounted`) walks the graph; a `DialogueWindow` shows it.
-  Keep the runner free of UI so it can be unit-tested like `InventoryOps`.
-- *Quests*: a quest is a set of named stages stored in `GameState` (save it!), advanced by
-  dialogue effects and by world events (`Events.container_opened`, map changes).
-- *Vendors*: a vendor is an NPC with an `Inventory` (a `ContainerState` works), buying and
-  selling at `ItemDef.value` with a markup, paid from `GameState.gold`. The inventory
-  screen's container panel is already half of a shop screen.
-- *Temple revival*: a dialogue effect that sets `hp_current` back for a price.
+This is the plan that was followed, kept here as a worked example of growing the
+codebase. [DIALOGUE.md](DIALOGUE.md) and [NPCS_AND_QUESTS.md](NPCS_AND_QUESTS.md) have the
+data formats.
+
+- *An `Actor` base class* (`scripts/world/actor.gd`) took the sprite sheet, facing and
+  smooth hex walking out of `PartyMember`. `PartyMember` and `Npc` both extend it. They
+  override small virtual methods: `move_speed()`, `_can_stand(hex)` and
+  `_on_hex_changed()`. That is how an NPC keeps its hex marked as occupied while it
+  walks.
+- *NPC data* (`data/npcs/npcs.json`, `NpcDef`) is separate from character sheets.
+  Townsfolk don't need ability scores until combat, and a sheet can be linked later.
+- *Dialogue* is a JSON graph walked by `DialogueRunner`, a `RefCounted` with no UI. The
+  unit tests play whole conversations through it without a scene. Conditions and effects
+  are small dictionaries interpreted by two static classes, so a new kind is one more
+  `match` branch.
+- *Quests* are ordered stages in `GameState.quests` (saved). Stages advance through
+  dialogue effects, or by themselves through an `auto_if` condition checked whenever a
+  character sheet changes.
+- *Vendors* reuse the inventory screen: a shop is a `ContainerState` plus a "trade" terms
+  dictionary on the slot references. `InventoryOps.move` sees the terms and buys or sells
+  instead of moving.
+- *The temple* is just dialogue: options gated on `{"fallen": true, "gold": 100}` with
+  `take_gold` and `revive` effects. `GameState` watches every sheet's `changed` signal and
+  emits `Events.party_defeated` when nobody is left standing.
 
 **Phase 4: combat**
 
@@ -525,13 +568,17 @@ functions above to watch them fire.
   → victory/defeat*. While it runs, the world's click handling routes to it instead of
   `move_selected_to`.
 - Movement per turn is `CharacterSheet.speed_hexes()`; paths should treat other combatants'
-  hexes as blocked (give `HexGrid` a temporary blocker set) and use `smooth_paths = false`.
+  hexes as blocked (`HexGrid.set_occupied()`, as NPCs already do) and use
+  `smooth_paths = false`.
 - Attacks use `Rules.weapon_ability`, `attack_summary`'s numbers, `Rules.roll_expr` for
   damage and `armor_class` for defence. All of these exist already.
 - Spells are data (range, area in hexes, save, damage dice) plus a little code per effect
   kind. `Hex.spiral`/`Hex.ring`/`Hex.line` give the areas.
-- XP and levelling: `Rules.level_for_xp` and `XP_THRESHOLDS` are in place; add hit point
-  gains per level from `hit_die`.
+- XP and levelling exist (`GameState.award_xp`, `CharacterSheet.add_xp` with hit points
+  per level). Monsters only need an XP value. Falling at 0 HP, the temple's revival and
+  the game-over screen are in place too: combat only has to call `sheet.damage()`.
+- NPCs that turn hostile can become combatants: an `Npc` is an `Actor`, so it already
+  walks on hexes and blocks them.
 
 ### Things to keep doing
 
@@ -567,6 +614,15 @@ functions above to watch them fire.
   `@warning_ignore("integer_division")` when integer division is intended.
 - **JSON numbers are floats**: `JSON.parse_string("3")` gives `3.0`. Wrap reads in `int()`
   where an integer is meant, as the parsers here do.
+- **Freed nodes in typed arrays**: `array.has(node)` on an `Array[Node2D]` raises an error
+  if `node` has been freed. Check `is_instance_valid(node)` first.
+- **Disabled A\* points are forgotten on rebuild**: `HexGrid.rebuild_pathfinding()`
+  re-creates the points, so it re-applies the occupied hexes afterwards. Any state you
+  keep "on top of" an `AStar2D` needs the same care.
+- **Fog drawn over tall sprites**: fog is per hex, but a building's roof is drawn over the
+  hexes behind it. `FogOfWar` reveals the hexes under a building's picture together with
+  the building (`Prop.covered_hexes()` samples the sprite's alpha), so roofs don't vanish
+  into the dark.
 
 ---
 

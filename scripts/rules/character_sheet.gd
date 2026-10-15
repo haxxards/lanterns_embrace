@@ -265,6 +265,31 @@ func effective_speed_ft() -> int:
 	return maxi(0, speed)
 
 
+## Adds experience; levels up (more hit points) when a threshold is crossed.
+## Returns how many levels were gained.
+@warning_ignore("integer_division")
+func add_xp(amount: int) -> int:
+	xp = maxi(0, xp + amount)
+	var gained := 0
+	while level < Rules.MAX_LEVEL and xp >= Rules.XP_THRESHOLDS[level]:
+		level += 1
+		gained += 1
+		# 5e fixed hit points per level: half the hit die + 1, plus Con.
+		var die := int(str(raw.get("hit_die", "d8")).trim_prefix("d"))
+		var hp := maxi(1, die / 2 + 1 + ability_mod("con"))
+		hp_max += hp
+		if is_alive():
+			hp_current += hp
+	changed.emit()
+	return gained
+
+
+## Takes damage (never below 0). A character at 0 hit points has fallen.
+func damage(amount: int) -> void:
+	hp_current = clampi(hp_current - amount, 0, hp_max)
+	changed.emit()
+
+
 ## Restores up to `amount` hit points; returns how many were restored.
 func heal(amount: int) -> int:
 	var before := hp_current

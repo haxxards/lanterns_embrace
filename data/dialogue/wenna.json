@@ -1,0 +1,44 @@
+{
+	"id": "wenna",
+	"start": [
+		{"if": {"quest": "wennas_remedy", "is": "not_started"}, "node": "intro"},
+		{"if": {"quest": "wennas_remedy", "is": "active"}, "node": "waiting"},
+		{"node": "after"}
+	],
+	"nodes": {
+		"intro": {
+			"text": "Mind the jars, dears. Oh, strangers! You wouldn't be passing the mill, would you? Hob's wife Merra has a fever and I daren't leave my pots.",
+			"options": [
+				{"text": "We'll take your remedy to her.", "do": [{"give_item": "wenna_remedy"}, {"quest": "wennas_remedy", "stage": "started"}], "goto": "thanks"},
+				{"text": "What do you sell?", "shop": true},
+				{"text": "Odran: \"Your feverfew did wonders at the old temple last winter.\"", "if": {"member": "odran"}, "goto": "odran"},
+				{"text": "Not now.", "end": true}
+			]
+		},
+		"thanks": {
+			"text": "Bless you. Three drops in warm milk, morning and night. And tell Hob none of it is for him, the old goat.",
+			"options": [
+				{"text": "What else do you sell?", "shop": true},
+				{"text": "We'll go now.", "end": true}
+			]
+		},
+		"odran": {
+			"text": "Brother Odran! I wondered where you'd got to. Still carrying half the temple's troubles on that broad back of yours?",
+			"next": "intro"
+		},
+		"waiting": {
+			"text": "Has Hob had the draught yet? The thatched cottage, west of the square.",
+			"options": [
+				{"text": "We're on our way.", "end": true},
+				{"text": "Can we buy some remedies?", "shop": true}
+			]
+		},
+		"after": {
+			"text": "Hob says Merra's fever broke in the night. You did a kind thing. Now, what can I do for you?",
+			"options": [
+				{"text": "Let's see your remedies.", "shop": true},
+				{"text": "Farewell.", "end": true}
+			]
+		}
+	}
+}

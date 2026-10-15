@@ -100,6 +100,27 @@ The six axial directions are `[1,0]` E, `[1,-1]` NE, `[0,-1]` NW, `[-1,0]` W,
 Per-instance keys in a map's `props` entry (`name`, `title`, `text`, ...) are passed to the
 prop as-is, so new interaction types can read their own keys.
 
+**Items lying about:** an `item_pile` placement with `"items"` (and an `"id"`) puts those
+items on the ground at that hex the first time the map loads. From then on they are an
+ordinary pile of dropped items: pick them up and they're gone for good (a flag in the save
+remembers that the pile was laid out). The reeve's key by the well is one.
+
+```json
+{"type": "item_pile", "at": [66, 31], "id": "reeve_key_pile", "items": [{"item": "reeve_key", "qty": 1}]}
+```
+
+## Townsfolk
+
+A map lists the NPCs who stand on it, by id from `data/npcs/npcs.json` and an offset
+`[col, row]`:
+
+```json
+"npcs": [{"id": "aldous", "at": [62, 29]}]
+```
+
+The hex must be walkable. Each NPC blocks the hex it stands on and strolls up to its
+`wander` distance from it. See [NPCS_AND_QUESTS.md](NPCS_AND_QUESTS.md).
+
 ## Moving between maps
 
 Doors and exits are ordinary props. Clicking one sends the leader to it and the rest of
@@ -124,9 +145,11 @@ Interior maps use a pre-rendered **backdrop** instead of blended terrain:
 
 `origin` is the backdrop pixel that sits on the centre of hex [0, 0]. Furniture (tables,
 beds, chests...) are props, so characters walk in front of and behind them correctly. The
-five Millbrook interiors are written by `tools/maps/generate_interiors.py`, which reads
+six Millbrook interiors are written by `tools/maps/generate_interiors.py`, which reads
 the backdrop list from `assets/interiors/backdrops.json` (made by the Blender room renderer)
 and checks that nothing overlaps and that every free hex can be reached from the door.
+Each room also lists who lives there (`npcs=[dict(id="tobin", at="bar")]`) and can set
+its own `music` and `ambience` (the temple has organ music and no fire crackle).
 
 ### Furnishing add-ons
 
@@ -153,4 +176,5 @@ re-running the script regenerates it from scratch.
 The automated tests (`tests/unit/test_data.gd`) check every map in `data/maps/`: no
 unknown symbols, props stay on the map and don't overlap, the spawn and entries are
 walkable, every interactable prop can be reached from the spawn, container items exist,
-and each building's interior matches its footprint and leads back out to it.
+and each building's interior matches its footprint and leads back out to it. The Phase 3
+tests add that every NPC is known, placed exactly once, and can be walked up to.

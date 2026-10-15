@@ -8,6 +8,8 @@ extends RefCounted
 ##   {"kind": "backpack",  "sheet": CharacterSheet, "index": int}
 ##   {"kind": "equip",     "sheet": CharacterSheet, "slot": String}
 ##   {"kind": "container", "container": ContainerState, "index": int}
+## A vendor's stock is a container ref with "trade" terms added
+## ({"markup", "buy_rate", "vendor"}): moving out of it buys, into it sells.
 ## Every function returns "" on success or a message explaining the refusal.
 
 
@@ -21,6 +23,26 @@ static func equip_slot(sheet: CharacterSheet, slot: String) -> Dictionary:
 
 static func container_slot(container: ContainerState, index: int) -> Dictionary:
 	return {"kind": "container", "container": container, "index": index}
+
+
+static func shop_slot(stock: ContainerState, index: int, terms: Dictionary) -> Dictionary:
+	return {"kind": "container", "container": stock, "index": index, "trade": terms}
+
+
+# --- prices ---------------------------------------------------------------------
+
+## What the party pays per item: value × markup, at least 1 gp.
+static func buy_price(def: ItemDef, terms: Dictionary) -> int:
+	return maxi(1, ceili(def.value * float(terms.get("markup", 1.0))))
+
+
+## What the party gets per item: value × buy_rate, rounded down.
+static func sell_price(def: ItemDef, terms: Dictionary) -> int:
+	return floori(def.value * float(terms.get("buy_rate", 0.5)))
+
+
+static func can_sell(def: ItemDef) -> bool:
+	return def != null and def.value > 0.0 and not def.is_currency() and not def.quest
 
 
 static func stack_at(ref: Dictionary) -> ItemStack:
@@ -67,11 +89,18 @@ static func can_place(ref: Dictionary, stack: ItemStack) -> String:
 	return ""
 
 
-## Moves the stack at `from` onto `to`: places, merges or swaps.
+## Moves the stack at `from` onto `to`: places, merges or swaps. Out of a
+## shop it buys, into a shop it sells.
 static func move(from: Dictionary, to: Dictionary) -> String:
 	var moving := stack_at(from)
 	if moving == null or same_slot(from, to):
 		return ""
+	if from.has("trade") or to.has("trade"):
+		if from.has("trade") and to.has("trade"):
+			return ""
+		if from.has("trade"):
+			return buy(from, to["sheet"] if to.has("sheet") else null)
+		return sell(from, to)
 	# Gold never sits in a backpack: it goes to the shared purse.
 	if moving.def != null and moving.def.is_currency() and to.get("kind") != "container":
 		GameState.add_gold(moving.qty)
@@ -125,6 +154,8 @@ static func give(from: Dictionary, to_sheet: CharacterSheet) -> String:
 	var moving := stack_at(from)
 	if moving == null:
 		return ""
+	if from.has("trade"):
+		return buy(from, to_sheet, 1)  # a right-click buys one at a time
 	if from.get("kind") != "container" and from.get("sheet") == to_sheet and from.get("kind") == "backpack":
 		return ""
 	if moving.def != null and moving.def.is_currency():
@@ -158,6 +189,48 @@ static func take_all(container: ContainerState, sheet: CharacterSheet) -> String
 			container.inventory.set_at(i, null)
 	Audio.play_sfx("item_pickup")
 	return "%s's backpack is full." % sheet.display_name if full else ""
+
+
+## Buys as much of the shop stack at `from` as the purse allows (at most
+## `limit` when given), into the buyer's backpack.
+@warning_ignore("integer_division")
+static func buy(from: Dictionary, buyer: CharacterSheet, limit: int = -1) -> String:
+	var st := stack_at(from)
+	if st == null or st.def == null or buyer == null:
+		return ""
+	var terms: Dictionary = from["trade"]
+	var unit := buy_price(st.def, terms)
+	var n := mini(st.qty if limit < 0 else mini(limit, st.qty), GameState.gold / unit)
+	if n <= 0:
+		return "You can't afford the %s (%d gp)." % [st.def.display_name, unit]
+	var left := buyer.inventory.add(ItemStack.create(st.id, n))
+	var bought := n - left
+	if bought <= 0:
+		return "%s's backpack is full." % buyer.display_name
+	GameState.add_gold(-bought * unit)
+	st.qty -= bought
+	_put(from, st if st.qty > 0 else null)
+	Audio.play_sfx("coins")
+	return ""
+
+
+## Sells the stack at `from` to the shop whose stock is `to`.
+static func sell(from: Dictionary, to: Dictionary) -> String:
+	var st := stack_at(from)
+	if st == null:
+		return ""
+	var terms: Dictionary = to["trade"]
+	if not can_sell(st.def):
+		return "%s doesn't want that." % str(terms.get("vendor", "The trader"))
+	var stock: ContainerState = to["container"]
+	if not stock.inventory.can_fit(st):
+		return "%s has no room for more." % str(terms.get("vendor", "The trader"))
+	var price := sell_price(st.def, terms) * st.qty
+	_put(from, null)
+	stock.inventory.add(st)
+	GameState.add_gold(price)
+	Audio.play_sfx("coins")
+	return ""
 
 
 ## Uses a consumable (drinks a potion, eats an apple). Returns what happened.

@@ -399,6 +399,41 @@ def rug():
     rp.finish("rug", root)
 
 
+def pew():
+    """A long wooden pew with a back (3x1 hexes), seats facing the altar (north)."""
+    root = furniture_setup()
+    wood = rp.wood_material("PewWood", "#5a3c24")
+    cy = rp.footprint_depth(1) / 2
+    length = 3 * lib.HEX_M - 0.5
+    lib.box("Seat", (length, 0.42, 0.06), (0, cy, 0.46), mat=wood, parent=root, bevel=0.01)
+    lib.box("Back", (length, 0.06, 0.55), (0, cy - 0.2, 0.78), mat=wood, parent=root, bevel=0.01)
+    for x in (-length / 2 + 0.05, 0, length / 2 - 0.05):
+        lib.box(f"End{x:.1f}", (0.07, 0.48, 0.95), (x, cy - 0.02, 0.48), mat=wood, parent=root, bevel=0.015)
+    rp.finish("pew", root)
+
+
+def altar():
+    """A stone altar under a white cloth, with candles and a gilded sun (2x1 hexes)."""
+    root = furniture_setup()
+    stone = rp.stone_material("AltarStone", "#b8b2a4", scale=3.0)
+    cy = rp.footprint_depth(1) / 2
+    lib.box("Altar", (2.2, 0.85, 1.0), (0, cy, 0.5), mat=stone, parent=root, bevel=0.03)
+    lib.box("Cloth", (2.3, 0.9, 0.04), (0, cy, 1.02), mat=cloth("AltarCloth", "#efe9da"), parent=root, bevel=0.01)
+    lib.box("Runner", (0.5, 0.92, 0.5), (0, cy - 0.03, 0.8), mat=cloth("Runner", "#b8922e"), parent=root)
+    for x in (-0.85, -0.55, 0.55, 0.85):
+        candle(f"Candle{x}", (x, cy, 1.04), root)
+    gold = lib.material("Gold", lib.lin("#d8b04a"), rough=0.25, metallic=1.0)
+    sun = lib.primitive("cylinder", "Sun", mat=gold, parent=root, radius=0.28, depth=0.04, vertices=32,
+                        location=(0, cy + 0.15, 1.45))
+    sun.rotation_euler = (math.radians(90), 0, 0)
+    for k in range(12):
+        a = math.tau * k / 12
+        lib.box(f"Ray{k}", (0.05, 0.03, 0.22), (math.cos(a) * 0.4, cy + 0.15, 1.45 + math.sin(a) * 0.4), mat=gold,
+                parent=root, rotation=(0, -a + math.pi / 2, 0))
+    lib.box("SunStand", (0.06, 0.06, 0.4), (0, cy + 0.15, 1.1), mat=gold, parent=root)
+    rp.finish("altar", root)
+
+
 def bar_back():
     """Shelves of bottles and mugs that stand behind a bar, against the back
     wall (3x1 hexes). Part of the "bar" furnishing add-on."""
@@ -462,6 +497,8 @@ ROOMS = {
                            exit=(4.5 / 6), hearth=0.25, windows=(0.55, 0.85), shelf=0.7),
     "smithy": dict(cols=8, rows=6, walls="stone", timber="#2e2218", floor="flags",
                    exit=(2.5 / 6), forge=0.72, windows=(0.25,), shelf=0.45),
+    "temple_nave": dict(cols=8, rows=8, walls="ashlar", timber="#3a2818", floor="temple",
+                        exit=(0.5), windows=(0.2, 0.8), stained=True, shelf=None),
     "inn_hall": dict(cols=12, rows=8, walls="plaster", timber="#3a2818", floor="planks",
                      exit=(4.5 / 9), hearth=0.82, windows=(0.15, 0.38), shelf=0.6),
 }
@@ -472,6 +509,8 @@ LEAN = 0.9
 
 
 def wall_material(kind, variant_name):
+    if kind == "ashlar":  # pale dressed stone (the temple)
+        return rp.stone_material("Walls" + variant_name, "#b8ae9a", scale=1.3, mortar="#7a7264")
     if kind == "stone":
         return rp.stone_material("Walls" + variant_name, "#8a8274", scale=2.4)
     if kind == "dark":
@@ -488,8 +527,24 @@ def leaning_wall(name, x_floor, x_top, y0, y1, mat, parent):
     return lib.mesh_object(name, v, f, mat=mat, parent=parent)
 
 
-def window_on_wall(name, x, y, parent, timber):
+def window_on_wall(name, x, y, parent, timber, stained=False):
     glass = glow_material(name + "Glass", "#dfe8f0", 2.2)
+    if stained:
+        # A tall lancet of coloured glass.
+        colours = ("#c84a3a", "#3a6ac8", "#d8b04a", "#4a9a5a")
+        for k, c in enumerate(colours):
+            lib.box(f"{name}Pane{k}", (0.6, 0.1, 0.48), (x, y - 0.06, 0.95 + k * 0.5),
+                    mat=glow_material(f"{name}Glass{k}", c, 2.6), parent=parent)
+        lib.box(name + "Frame", (0.8, 0.08, 2.15), (x, y - 0.02, 1.7), mat=timber, parent=parent)
+        data = bpy.data.lights.new(name + "Light", 'AREA')
+        data.energy = 220.0
+        data.size = 1.0
+        data.color = (1.0, 0.85, 0.7)
+        obj = bpy.data.objects.new(name + "Light", data)
+        lib.link(obj, parent)
+        obj.location = (x, y - 0.3, 1.8)
+        obj.rotation_euler = (math.radians(-60), 0, 0)
+        return
     lib.box(name + "Frame", (1.0, 0.1, 1.05), (x, y - 0.03, 1.55), mat=timber, parent=parent, bevel=0.02)
     lib.box(name + "Pane", (0.82, 0.1, 0.87), (x, y - 0.06, 1.55), mat=glass, parent=parent)
     lib.box(name + "Mull", (0.05, 0.12, 0.87), (x, y - 0.08, 1.55), mat=timber, parent=parent)
@@ -573,8 +628,12 @@ def room(name):
     # Floor covers every hex of a cols x rows odd-r map, hex [0, 0] at the origin.
     x0, x1 = -w / 2 - 0.05, w * cols + 0.05
     yb, yf = r + 0.05, -(rows - 1) * lib.ROW_M - r - 0.05
-    floor = plank_floor("Floor", "#7a5636") if spec["floor"] == "planks" else \
-        rp.stone_material("Flags", "#6f685d", scale=2.2, mortar="#2e2a25")
+    if spec["floor"] == "planks":
+        floor = plank_floor("Floor", "#7a5636")
+    elif spec["floor"] == "temple":
+        floor = rp.stone_material("Flags", "#958c7c", scale=1.9, mortar="#57514a")
+    else:
+        floor = rp.stone_material("Flags", "#6f685d", scale=2.2, mortar="#2e2a25")
     lib.box("Floor", (x1 - x0 + 1.0, yb - yf, 0.1), ((x0 + x1) / 2, (yb + yf) / 2, -0.05), mat=floor, parent=root)
     walls = wall_material(spec["walls"], name)
     timber = rp.wood_material("Timber", spec["timber"])
@@ -585,7 +644,7 @@ def room(name):
     lib.box("BackBeam", (x1 - x0 + 2 * LEAN, 0.18, 0.22), ((x0 + x1) / 2, yb - 0.05, WALL_H - 0.11), mat=timber,
             parent=root, bevel=0.02)
     lib.box("Skirting", (x1 - x0, 0.06, 0.12), ((x0 + x1) / 2, yb - 0.02, 0.06), mat=timber, parent=root)
-    if spec["walls"] != "stone":
+    if spec["walls"] not in ("stone", "ashlar"):
         n_posts = max(3, round((x1 - x0) / 2.4))
         for k in range(n_posts + 1):
             px = x0 + (x1 - x0) * k / n_posts
@@ -609,7 +668,43 @@ def room(name):
     def wx(f):
         return x0 + (x1 - x0) * f
     for k, f in enumerate(spec.get("windows", ())):
-        window_on_wall(f"Win{k}", wx(f), yb, root, timber)
+        window_on_wall(f"Win{k}", wx(f), yb, root, timber, stained=spec.get("stained", False))
+    if spec.get("stained"):
+        # A raised step for the altar, a round window above it, a runner down
+        # the aisle from the door and candle stands either side.
+        lib.box("Dais", (x1 - x0 - 3.0, 1.6, 0.12), ((x0 + x1) / 2, yb - 0.6, 0.06),
+                mat=rp.stone_material("Dais", "#c2baa8", scale=1.6, mortar="#8a8274"), parent=root)
+        rose = lib.primitive("cylinder", "Rose", mat=glow_material("RoseGlass", "#e8903a", 3.0), parent=root,
+                             radius=0.5, depth=0.1, vertices=32, location=((x0 + x1) / 2, yb - 0.05, 1.95))
+        rose.rotation_euler = (math.radians(90), 0, 0)
+        for k in range(8):  # tracery spokes
+            a = k * math.pi / 4
+            lib.cylinder_between(f"RoseSpoke{k}", ((x0 + x1) / 2, yb - 0.1, 1.95),
+                                 ((x0 + x1) / 2 + 0.5 * math.cos(a), yb - 0.1, 1.95 + 0.5 * math.sin(a)), 0.025,
+                                 mat=timber, parent=root, sides=4)
+        cloth = lib.material("Runner", lib.lin("#7a2420"), rough=0.95, noise_var=0.25, noise_scale=8.0)
+        trim = lib.material("RunnerTrim", lib.lin("#c8a040"), rough=0.6)
+        run_x = (x0 + x1) / 2 - 0.15
+        y_end = yb - 1.4
+        lib.box("Runner", (1.1, y_end - yf, 0.015), (run_x, (y_end + yf) / 2, 0.008), mat=cloth, parent=root)
+        for s in (-1, 1):
+            lib.box(f"RunnerTrim{s}", (0.06, y_end - yf, 0.017), (run_x + s * 0.5, (y_end + yf) / 2, 0.009),
+                    mat=trim, parent=root)
+        iron = rp.iron_material()
+        flame = glow_material("CandleFlame", "#ffc860", 12.0)
+        wax = lib.material("Wax", lib.lin("#efe6cf"), rough=0.6)
+        for k, cx in enumerate((x0 + 0.55, x1 - 0.55)):  # in the back corners, clear of the floor
+            cy = yb - 0.32
+            lib.cylinder_between(f"Stand{k}", (cx, cy, 0.0), (cx, cy, 1.25), 0.04, mat=iron, parent=root, sides=8)
+            lib.cylinder_between(f"StandFoot{k}", (cx, cy, 0.0), (cx, cy, 0.05), 0.2, mat=iron, parent=root, sides=12)
+            lib.cylinder_between(f"StandDish{k}", (cx, cy, 1.25), (cx, cy, 1.29), 0.18, mat=iron, parent=root,
+                                 sides=12)
+            for j, (dx, dy, h) in enumerate(((-0.08, 0.0, 0.22), (0.07, 0.05, 0.17), (0.02, -0.08, 0.12))):
+                lib.cylinder_between(f"Candle{k}{j}", (cx + dx, cy + dy, 1.29), (cx + dx, cy + dy, 1.29 + h), 0.03,
+                                     mat=wax, parent=root, sides=8)
+                lib.primitive("uv_sphere", f"Flame{k}{j}", mat=flame, parent=root, radius=0.025,
+                              location=(cx + dx, cy + dy, 1.29 + h + 0.03))
+            point_light(f"CandleLight{k}", (cx, cy - 0.2, 1.7), 140.0, (1.0, 0.75, 0.4), radius=0.15, parent=root)
     if "hearth" in spec:
         hearth(wx(spec["hearth"]), yb, root, stone, timber)
     if "forge" in spec:
@@ -617,7 +712,7 @@ def room(name):
     if "bar_shelves" in spec:
         a, b = spec["bar_shelves"]
         bar_shelves(wx(a), wx(b), yb, root, timber)
-    else:
+    elif spec.get("shelf", 0.4) is not None:
         hanging_herbs(wx(0.05) + 0.3, yb, root)
         wall_shelf(wx(spec.get("shelf", 0.4)), yb, root, timber)
     objs = [o for o in bpy.context.scene.objects if o.type == 'MESH' and not o.hide_render]
@@ -659,6 +754,8 @@ FURNITURE = {
     "rug": [rug],
     "door_exit": [door_exit],
     "bar_back": [bar_back],
+    "pew": [pew],
+    "altar": [altar],
     "item_pile": [item_pile],
 }
 

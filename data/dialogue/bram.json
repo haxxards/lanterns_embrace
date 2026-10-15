@@ -1,0 +1,23 @@
+{
+	"id": "bram",
+	"start": "greet",
+	"nodes": {
+		"greet": {
+			"text": "Mind the sparks. Bram Ashford. If it's steel you want, you've come to the right forge. Only forge, come to that.",
+			"options": [
+				{"text": "Let's see your wares.", "shop": true},
+				{"text": "How's business?", "goto": "business"},
+				{"text": "Garrick: \"Good balance on that hammer.\"", "if": {"member": "garrick"}, "goto": "garrick"},
+				{"text": "Farewell.", "end": true}
+			]
+		},
+		"business": {
+			"text": "Quiet. Horseshoes and hinges, mostly. The old temple road's gone wild, so nobody comes down from the hills to trade any more. If you're the sort that goes up there, you'll want something sharper than a hinge.",
+			"next": "greet"
+		},
+		"garrick": {
+			"text": "Ha! A soldier who looks at the balance and not the shine. I'll knock a little off for you, then. Well. I'll think about it.",
+			"next": "greet"
+		}
+	}
+}

@@ -1,0 +1,31 @@
+{
+	"id": "hob",
+	"start": [
+		{"if": {"quest": "wennas_remedy", "is": "started", "item": "wenna_remedy"}, "node": "deliver"},
+		{"if": {"quest": "wennas_remedy", "is": "done"}, "node": "after"},
+		{"node": "greet"}
+	],
+	"nodes": {
+		"greet": {
+			"text": "Aye? If it's flour you're after, come back when the wheel's turning. Merra's poorly and I've no heart for the mill.",
+			"options": [
+				{"text": "We'll ask the herbalist about her.", "end": true},
+				{"text": "Sorry to trouble you.", "end": true}
+			]
+		},
+		"deliver": {
+			"text": "Is that Wenna's bottle? Gods be thanked.",
+			"options": [
+				{"text": "Three drops in warm milk, she says. And none for you.", "do": [{"take_item": "wenna_remedy"}, {"give_gold": 20}, {"quest": "wennas_remedy", "stage": "done"}], "goto": "thanks"}
+			]
+		},
+		"thanks": {
+			"text": "Ha! That sounds like her. Take this, it isn't much. And if you're ever hungry, there's always bread at the mill.",
+			"options": [{"text": "Look after her.", "end": true}]
+		},
+		"after": {
+			"text": "Merra's sitting up and complaining about the state of the kitchen. Best sign there is.",
+			"options": [{"text": "Glad to hear it.", "end": true}]
+		}
+	}
+}

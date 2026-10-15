@@ -28,6 +28,8 @@ var party_spawn: Vector2i = Vector2i.ZERO  # axial
 ## the map also act as entries: an entry named after a prop's "id" is the
 ## ground in front of its door.
 var entries: Dictionary = {}
+## Townsfolk to place: [{"id": npc id, "hex": axial Vector2i}].
+var npc_spawns: Array[Dictionary] = []
 ## Names from data/audio/audio.json ("" = silence).
 var music: String = ""
 var ambience: String = ""
@@ -91,6 +93,11 @@ static func load_file(path: String, terrain_by_symbol: Dictionary, props: Dictio
 	var entries: Dictionary = d.get("entries", {})
 	for entry_name in entries:
 		m.entries[str(entry_name)] = Hex.offset_to_axial(JsonUtil.to_vec2i(entries[entry_name]))
+	for entry in d.get("npcs", []):
+		if not entry is Dictionary or not entry.has("id"):
+			m.errors.append("npc entry without an id: %s" % str(entry))
+			continue
+		m.npc_spawns.append({"id": str(entry["id"]), "hex": Hex.offset_to_axial(JsonUtil.to_vec2i(entry.get("at")))})
 	m.music = str(d.get("music", ""))
 	m.ambience = str(d.get("ambience", ""))
 	m.fog = bool(d.get("fog", true))

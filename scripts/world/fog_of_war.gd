@@ -30,14 +30,19 @@ var texture: ImageTexture
 var cell_states := PackedByteArray()
 
 var _members: Array = []
+## Buildings seen as a whole: [{"cells": footprint, "covered": hexes under the sprite}].
+var _wholes: Array = []
 var _dirty: bool = false
 var _rect := Rect2()
 
 
-func setup(g: HexGrid, id: String, on: bool, members: Array) -> void:
+## `wholes` lists buildings to reveal all at once: when any hex of a
+## footprint ("cells") is in sight, so are the hexes its picture covers.
+func setup(g: HexGrid, id: String, on: bool, members: Array, wholes: Array = []) -> void:
 	grid = g
 	map_id = id
 	_members = members
+	_wholes = wholes
 	enabled = on and GameConfig.fog_enabled
 	visible = enabled
 	explored = GameState.explored_for(map_id, grid.cell_count())
@@ -93,6 +98,13 @@ func refresh() -> void:
 	for m in _members:
 		if is_instance_valid(m):
 			_reveal_from(m.hex, GameConfig.fog_sight_radius)
+	for w in _wholes:
+		for c: Vector2i in w["cells"]:
+			if grid.in_bounds(c) and in_sight[grid.index_of(c)] == 1:
+				for h: Vector2i in w["covered"]:
+					in_sight[grid.index_of(h)] = 1
+					explored[grid.index_of(h)] = 1
+				break
 	var data := PackedByteArray()
 	data.resize(grid.cell_count())
 	for i in data.size():

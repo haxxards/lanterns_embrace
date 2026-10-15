@@ -126,7 +126,7 @@ def place(kind, cells, at, margin=1, allowed='.f#,:', **extra):
 # Door position across the front, as a fraction of the width, per look
 # (see COTTAGE_STYLES / inn in tools/art/blender/render_props.py).
 DOOR_FRACTION = {("house_small", 0): 3.5 / 6, ("house_small", 1): 2.5 / 6, ("house_small", 2): 4.5 / 6,
-                 ("house_large", 0): 4.5 / 9}
+                 ("house_large", 0): 4.5 / 9, ("temple", 0): 0.36}
 
 def building(kind, at, cols, rows, variant, name, building_id, addons=()):
     """A house with an interior map (tools/maps/generate_interiors.py writes it).
@@ -150,6 +150,11 @@ a_door = building("house_small", (47, 21), 8, 6, 0, "Miller's Cottage", "millbro
 b_door = building("house_small", (75, 20), 8, 6, 2, "Reeve's House", "millbrook_reeve")
 c_door = building("house_small", (46, 40), 8, 6, 1, "Herbalist's Cottage", "millbrook_herbalist")
 d_door = building("house_small", (66, 40), 8, 6, 1, "Smithy", "millbrook_smithy")
+# The temple stands on open ground north-east of the square (low enough on the
+# map that its tower doesn't poke past the top edge).
+t_door = building("temple", (74, 6), 8, 8, 0, "Temple of the Dawn", "millbrook_temple")
+paint_road(line(t_door, (72, 19)) + line((t_door[0] + 1, t_door[1]), (73, 19))
+           + line((72, 19), (71, 23)) + line((73, 19), (72, 23)))
 # paths from doors to the square
 paint_road(line(a_door, (58, 28)) + line((a_door[0], a_door[1]+1), (58, 29)))
 paint_road(line(b_door, (71, 27)) + line((b_door[0], b_door[1]+1), (71, 28)))
@@ -162,7 +167,7 @@ place("sign", [(4, 27)], (4, 27), title="Weathered Signpost",
 place("sign", [(b0 - 3, 28)], (b0 - 3, 28), title="Bridge Notice",
       text="BRIGHTWATER BRIDGE\n\nBy order of the reeve: no toll this season.\nThe southern ford is shallow but slow going.")
 place("sign", [(60, 34)], (60, 34), title="Village Notice Board",
-      text="MILLBROOK\n\nThe Lantern & Thistle serves supper at dusk.\nBrother Odran asks that the old temple road be cleared.")
+      text="MILLBROOK\n\nThe Lantern & Thistle serves supper at dusk.\nThe Temple of the Dawn, up the lane north-east of the square, tends the sick and the fallen.")
 
 # --- set dressing around the village (explicit, so doors and paths stay clear)
 def dress(kind, cell, **extra):
@@ -192,10 +197,26 @@ for at, variant in (((66, 25), 0), ((67, 33), 1)):
         assert P[r][c] == ' ' and T[r][c] == '#', ("market_stall", at, (c, r))
         P[r][c] = '@'
     props.append({"type": "market_stall", "at": list(at), "variant": variant})
-for (c, r) in rect_cells((72, 21), 2, 1):
-    assert P[r][c] == ' ', ("cart", (c, r))
+for (c, r) in rect_cells((73, 22), 2, 1):
+    assert P[r][c] == ' ' and (c, r) not in road, ("cart", (c, r))
     P[r][c] = '@'
-props.append({"type": "cart", "at": [72, 21]})
+props.append({"type": "cart", "at": [73, 22]})
+
+# Townsfolk who live outdoors (the rest are placed inside their houses by
+# generate_interiors.py). See data/npcs/npcs.json.
+npcs = []
+def npc(npc_id, cell):
+    c, r = cell
+    assert inb(c, r) and P[r][c] == ' ' and T[r][c] in '.#,:', (npc_id, cell, T[r][c], P[r][c])
+    P[r][c] = '@'
+    npcs.append({"id": npc_id, "at": [c, r]})
+npc("aldous", (62, 29))
+# The reeve's lost key lies on the cobbles by the well (a ground pile the
+# game seeds once; see World._seed_item_piles).
+for (c, r) in [(66, 31)]:
+    assert P[r][c] == ' ' and T[r][c] == '#', ("item_pile", (c, r))
+props.append({"type": "item_pile", "at": [66, 31], "id": "reeve_key_pile",
+              "items": [{"item": "reeve_key", "qty": 1}]})
 
 spawn = (4, 30)
 for cell in road: reserved.add(cell)
@@ -243,7 +264,7 @@ L = ['{', '\t"schema_version": 1,', '\t"id": "millbrook_outskirts",', '\t"name":
 L += [f'\t\t{json.dumps(r)}' + (',' if i < H-1 else '') for i, r in enumerate(data_rows_t)]
 L += ['\t],', '\t"prop_legend": {"T": "tree_oak", "P": "tree_pine", "B": "tree_birch", "b": "bush", "o": "rock", "r": "reeds", "n": "fern", "w": "flowers", "L": "log", "s": "stump"},', '\t"prop_layer": [']
 L += [f'\t\t{json.dumps(r)}' + (',' if i < H-1 else '') for i, r in enumerate(data_rows_p)]
-L += ['\t],', '\t"props": [']
+L += ['\t],', f'\t"npcs": {json.dumps(npcs)},', '\t"props": [']
 L += [f'\t\t{json.dumps(p)}' + (',' if i < len(props)-1 else '') for i, p in enumerate(props)]
 L += ['\t]', '}']
 out.write_text('\n'.join(L) + '\n')

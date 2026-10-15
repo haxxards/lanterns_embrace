@@ -32,6 +32,8 @@ var value: float = 0.0   # gold pieces
 var max_stack: int = 1
 var description: String = ""
 var magic: bool = false
+## Quest items can't be sold.
+var quest: bool = false
 ## Kind-specific blocks, straight from the JSON (see docs/ITEMS.md).
 var weapon: Dictionary = {}
 var armor: Dictionary = {}
@@ -52,6 +54,7 @@ static func from_dict(item_id: String, d: Dictionary) -> ItemDef:
 	it.max_stack = maxi(1, int(d.get("stack", 1)))
 	it.description = str(d.get("description", ""))
 	it.magic = bool(d.get("magic", false))
+	it.quest = bool(d.get("quest", false))
 	it.weapon = d.get("weapon", {})
 	it.armor = d.get("armor", {})
 	it.use = d.get("use", {})

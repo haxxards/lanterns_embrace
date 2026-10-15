@@ -89,7 +89,9 @@
 			"description": "A wizard's book of spells, its margins thick with notes."},
 		"garnet": {"name": "Garnet", "kind": "gem", "icon": "res://assets/items/garnet.png", "weight": 0, "value": 100, "stack": 20,
 			"description": "A deep red gemstone the size of a fingernail."},
-		"reeve_key": {"name": "Reeve's Key", "kind": "key", "icon": "res://assets/items/key.png", "weight": 0, "value": 0,
+		"wenna_remedy": {"name": "Fever Draught", "kind": "potion", "icon": "res://assets/items/remedy.png", "weight": 0.5, "value": 0, "quest": true,
+			"description": "A stoppered vial of green, bitter-smelling draught from Wenna, for the miller's wife."},
+		"reeve_key": {"name": "Reeve's Key", "kind": "key", "icon": "res://assets/items/key.png", "weight": 0, "value": 0, "quest": true,
 			"description": "A heavy iron key on a leather thong, stamped with the reeve's mark."}
 	}
 }

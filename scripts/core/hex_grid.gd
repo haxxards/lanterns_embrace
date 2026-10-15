@@ -13,6 +13,8 @@ var _terrain: Array[TerrainDef] = []
 var _prop_blocks: PackedByteArray = PackedByteArray()
 var _prop_sight: PackedByteArray = PackedByteArray()
 var _prop_cost: PackedFloat32Array = PackedFloat32Array()
+## Hexes taken by standing creatures (NPCs): not walkable while occupied.
+var _occupied: Dictionary = {}  # Vector2i -> true
 var _astar := AStar2D.new()
 
 
@@ -89,11 +91,36 @@ func add_prop_cell(h: Vector2i, def: PropDef) -> void:
 
 
 func is_walkable(h: Vector2i) -> bool:
+	if not in_bounds(h) or _occupied.has(h):
+		return false
+	return is_ground_walkable(h)
+
+
+## Walkable terrain and no blocking prop, ignoring creatures standing there.
+func is_ground_walkable(h: Vector2i) -> bool:
 	if not in_bounds(h):
 		return false
 	var i := index_of(h)
 	var t := _terrain[i]
 	return t != null and t.walkable and _prop_blocks[i] == 0
+
+
+## Marks a hex as taken by a creature (or frees it). Pathfinding goes around
+## occupied hexes without rebuilding the graph.
+func set_occupied(h: Vector2i, occupied: bool) -> void:
+	if not in_bounds(h):
+		return
+	if occupied:
+		_occupied[h] = true
+	else:
+		_occupied.erase(h)
+	var i := index_of(h)
+	if _astar.has_point(i):
+		_astar.set_point_disabled(i, occupied)
+
+
+func is_occupied(h: Vector2i) -> bool:
+	return _occupied.has(h)
 
 
 func blocks_sight(h: Vector2i) -> bool:
@@ -121,7 +148,7 @@ func rebuild_pathfinding() -> void:
 	_astar.reserve_space(cell_count())
 	for i in cell_count():
 		var h := hex_at_index(i)
-		if is_walkable(h):
+		if is_ground_walkable(h):
 			_astar.add_point(i, hex_to_world(h), move_cost(h))
 	for i in cell_count():
 		if not _astar.has_point(i):
@@ -132,6 +159,8 @@ func rebuild_pathfinding() -> void:
 				var j := index_of(n)
 				if j > i and _astar.has_point(j):
 					_astar.connect_points(i, j, true)
+	for h in _occupied:
+		_astar.set_point_disabled(index_of(h), true)
 
 
 ## Hex path from `from` to `to`, excluding `from`. Empty if unreachable.

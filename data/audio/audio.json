@@ -18,7 +18,8 @@
 	},
 	"music": {
 		"village": "res://assets/audio/music/village.ogg",
-		"hearth": "res://assets/audio/music/hearth.ogg"
+		"hearth": "res://assets/audio/music/hearth.ogg",
+		"temple": "res://assets/audio/music/temple.ogg"
 	},
 	"ambience": {
 		"outdoors": "res://assets/audio/ambience/outdoors.ogg",

@@ -123,7 +123,7 @@ func test_open_a_container_and_take_everything() -> void:
 	check(hud._inventory.visible and hud._inventory.container == drawers.container, "shown on the inventory screen")
 	check(runner.get_tree().paused, "game paused while the inventory is open")
 	var opener: CharacterSheet = opened[0][2]
-	hud._inventory._take_all()
+	hud._inventory._take_all_pressed()
 	check_eq(GameState.gold, gold_before + 12, "gold into the purse")
 	check_eq(opener.inventory.count("apple"), 5, "apples taken")
 	check(drawers.container.inventory.is_empty(), "drawers empty")
@@ -257,7 +257,7 @@ func test_drop_and_pick_up_items() -> void:
 	check(world.party.interact_with(pile), "order accepted")
 	check(_walk_until_idle(), "walks to the pile")
 	check_eq(opened.size(), 1, "the pile opens")
-	hud._inventory._take_all()
+	hud._inventory._take_all_pressed()
 	check_eq(world.party.members[1].sheet.inventory.count("potion_of_healing"), had + 1, "picked up")
 	check(world.props_by_hex.get(m.hex) == null or world.props_by_hex.get(m.hex).def.id != "item_pile",
 			"the empty pile disappears")

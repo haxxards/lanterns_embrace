@@ -16,6 +16,9 @@ const SIZE := Vector2(56, 56)
 var ref: Dictionary = {}
 ## Text shown in an empty equipment slot ("Head", "Off hand"...).
 var placeholder: String = ""
+## In a shop: trade terms. Shop slots show what an item costs; the party's own
+## slots mention what it would sell for.
+var trade: Dictionary = {}
 
 var _hover: bool = false
 var _drop_ok: Variant = null  # null = no drag over us, else true/false
@@ -42,6 +45,13 @@ func stack() -> ItemStack:
 func refresh() -> void:
 	var st := stack()
 	tooltip_text = st.def.describe() if st != null and st.def != null else (placeholder if not placeholder.is_empty() else "")
+	if st != null and st.def != null and not trade.is_empty():
+		if ref.has("trade"):
+			tooltip_text += "\nPrice: %d gp each" % InventoryOps.buy_price(st.def, trade)
+		elif InventoryOps.can_sell(st.def):
+			tooltip_text += "\nSells for %d gp each" % InventoryOps.sell_price(st.def, trade)
+		else:
+			tooltip_text += "\nCan't be sold"
 	queue_redraw()
 
 
@@ -70,6 +80,10 @@ func _draw() -> void:
 	draw_texture_rect(icon, Rect2(inner.position + (inner.size - draw_size) * 0.5, draw_size), false)
 	if st.def != null and st.def.magic:
 		draw_rect(r.grow(-2), Color(0.45, 0.6, 1.0, 0.5), false, 1.0)
+	if ref.has("trade") and st.def != null:
+		var price := "%dg" % InventoryOps.buy_price(st.def, ref["trade"])
+		draw_string_outline(font, Vector2(3, 13), price, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 3, Color.BLACK)
+		draw_string(font, Vector2(3, 13), price, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiTheme.GOLD)
 	if st.qty > 1:
 		var t := str(st.qty)
 		draw_string_outline(font, Vector2(0, size.y - 4), t, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 4, 12, 3, Color.BLACK)

@@ -19,6 +19,10 @@
 		"____________",
 		"____________"
 	],
+	"npcs": [
+		{"id": "tobin", "at": [5, 1]},
+		{"id": "pip", "at": [9, 3]}
+	],
 	"props": [
 		{"type": "cupboard", "at": [0, 0], "id": "pantry", "name": "Pantry", "items": [{"item": "rations", "qty": 4}, {"item": "torch", "qty": 5}, {"item": "lantern", "qty": 1}]},
 		{"type": "chest", "at": [1, 0], "id": "cashbox", "name": "Cash Box", "locked": true, "lock_dc": 12, "items": [{"item": "garnet", "qty": 1}], "gold": 35},
