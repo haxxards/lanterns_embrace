@@ -14,7 +14,8 @@ func test_terrain_definitions() -> void:
 func test_prop_definitions() -> void:
 	check(Data.props.size() > 0, "props loaded")
 	for p: PropDef in Data.props.values():
-		check(p.texture != Data.missing_texture(), "texture for %s exists (%s)" % [p.id, p.texture_path])
+		for l in p.looks:
+			check(l.texture != Data.missing_texture(), "texture for %s exists (%s)" % [p.id, l.texture_path])
 		check(p.is_rect() or not p.footprint.is_empty(), "%s has a footprint" % p.id)
 	check_eq(Data.props["house_small"].cells_at(Vector2i(3, 4)).size(), 48, "cottage covers 8 x 6 hexes")
 	check_eq(Data.props["house_large"].cells_at(Vector2i(3, 5)).size(), 96, "inn covers 12 x 8 hexes")
@@ -24,28 +25,33 @@ func test_buildings_are_as_big_outside_as_their_footprint() -> void:
 	# The sprite must cover the footprint (which is also the interior size),
 	# give or take the half-hex stagger of odd rows and the eaves.
 	var hex_w := Hex.SQRT3 * GameConfig.hex_radius
-	for p: PropDef in Data.props.values():
-		if not p.is_rect() or p.layer != PropDef.LAYER_ENTITIES:
-			continue
-		# Measure the solid building only: rendered shadows are semi-transparent.
-		var img := p.texture.get_image()
-		img.decompress()
-		var min_x := img.get_width()
-		var max_x := -1
-		for x in img.get_width():
-			for y in range(0, img.get_height(), 2):
-				if img.get_pixel(x, y).a > 0.97:
-					min_x = mini(min_x, x)
-					max_x = maxi(max_x, x)
-					break
-		var solid_w := max_x - min_x + 1
-		var foot_w := p.footprint_rect.x * hex_w
-		# Walls match the footprint; roof eaves may overhang by up to a hex in total.
-		check(solid_w >= foot_w - hex_w * 0.6 and solid_w <= foot_w + hex_w,
-				"%s building width %d px matches its %d-hex footprint (%d px)" % [p.id, solid_w, p.footprint_rect.x, foot_w])
-		# The origin (front-wall centre) must sit in the middle of the building.
-		check(absf(p.origin.x - (min_x + max_x) * 0.5) <= hex_w * 0.5, "%s origin is centred" % p.id)
-		check(p.has_door, "%s has a door" % p.id)
+	for building_id in ["house_small", "house_large"]:
+		var p: PropDef = Data.props[building_id]
+		check(p.is_rect(), "%s has a rectangular footprint" % building_id)
+		for l in p.looks:
+			_check_building_look(p, l, hex_w)
+
+
+func _check_building_look(p: PropDef, l: PropDef.Look, hex_w: float) -> void:
+	# Measure the solid building only: rendered shadows are semi-transparent.
+	var img := l.texture.get_image()
+	img.decompress()
+	var min_x := img.get_width()
+	var max_x := -1
+	for x in img.get_width():
+		for y in range(0, img.get_height(), 2):
+			if img.get_pixel(x, y).a > 0.97:
+				min_x = mini(min_x, x)
+				max_x = maxi(max_x, x)
+				break
+	var solid_w := max_x - min_x + 1
+	var foot_w := p.footprint_rect.x * hex_w
+	# Walls match the footprint; roof eaves may overhang by up to a hex in total.
+	check(solid_w >= foot_w - hex_w * 0.6 and solid_w <= foot_w + hex_w,
+			"%s building width %d px matches its %d-hex footprint (%d px)" % [p.id, solid_w, p.footprint_rect.x, foot_w])
+	# The origin (front-wall centre) must sit in the middle of the building.
+	check(absf(l.origin.x - (min_x + max_x) * 0.5) <= hex_w * 0.5, "%s origin is centred (%s)" % [p.id, l.texture_path])
+	check(l.has_door, "%s has a door (%s)" % [p.id, l.texture_path])
 
 
 func test_door_hex_is_on_the_front_row() -> void:
@@ -95,7 +101,7 @@ func test_sample_map_is_sound() -> void:
 			continue
 		var target: Vector2i = pl.anchor
 		if pl.def.has_door:
-			target = PropDef.door_hex(pl.def, pl.cells, pl.anchor, GameConfig.hex_radius)
+			target = PropDef.door_hex(pl.def, pl.cells, pl.anchor, GameConfig.hex_radius, pl.look)
 		var reachable := false
 		for n in Hex.neighbors(target):
 			if not pl.cells.has(n) and g.is_reachable(m.party_spawn, n):

@@ -246,3 +246,23 @@ func test_smoothed_walk_is_straighter_than_hex_steps() -> void:
 			break
 	check_eq(leader.hex, target, "arrived")
 	check(walked < hex_len - 5.0, "smoothed walk (%.0f px) shorter than hex steps (%.0f px)" % [walked, hex_len])
+
+
+func test_members_animate_and_face_their_walk() -> void:
+	var m := world.party.members[0]
+	check(m.is_animated(), "party member uses its sprite sheet")
+	world.party.select_only(m)
+	world.party.move_selected_to(_open(16, 30))  # east along the road
+	var frames := {}
+	for i in 30:
+		m._process(DT)
+		frames[m._sprite.frame] = true
+	check([7, 0, 1].has(m._facing), "faces east-ish while walking east (sector %d)" % m._facing)
+	check(frames.size() >= 4, "walk cycle advances (%d distinct frames)" % frames.size())
+	check(_walk_until_idle(), "arrives")
+	check_eq(m._sprite.frame % m._sprite.hframes, 0, "idle frame on arrival")
+	world.party.move_selected_to(_open(4, 30))  # back west
+	for i in 20:
+		m._process(DT)
+	check([3, 4, 5].has(m._facing), "faces west-ish walking west (sector %d)" % m._facing)
+	check(m._sprite.flip_h, "west facings mirror the east-facing rows")

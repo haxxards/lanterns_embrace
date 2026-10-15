@@ -1,22 +1,27 @@
-"""Pre-rendered character sprites (and portraits) from simple 3D figures.
+"""Pre-rendered, animated character sprites from simple 3D figures.
 
-Figures are built from smooth lofted shapes, posed standing and turned a little
-towards screen-right (the game mirrors the sprite when walking left). They are
-rendered with the prop camera, at slightly heroic scale so they read clearly
-next to 5 ft hexes. The feet pixel is written to every character sheet that
-uses the sprite (art.sprite_origin).
+Figures are built from smooth lofted shapes with posable limbs. Each class is
+rendered as a sprite sheet: 5 facings (S, SE, E, NE, N; the game mirrors them
+for SW, W, NW) x 9 frames (idle + an 8-frame walk cycle), all with the feet at
+the same pixel in every cell. A JSON file next to the sheet describes it, and
+the character sheets that use the class point at it (art.animation). A single
+idle frame is also written as the class's static sprite.
 """
 import json
 import math
 
 import bpy
+import numpy as np
 from mathutils import Euler, Vector
 
 import lib
 
-SAMPLES = 128
-HERO_SCALE = 1.2
-FACING = math.radians(22)  # turn towards screen-right
+SAMPLES = 64
+HERO_SCALE = 1.25
+DIRECTIONS = [("s", 0), ("se", 45), ("e", 90), ("ne", 135), ("n", 180)]
+WALK_FRAMES = 8
+# Current pose, read by body(): phase of the walk cycle and how much walking.
+POSE = {"phase": 0.0, "walk": 0.0}
 
 
 # --------------------------------------------------------------------------
@@ -88,40 +93,80 @@ def mat(name, color, rough=0.7, metallic=0.0, bump=0.0, bump_scale=60, noise_var
 # Body
 # --------------------------------------------------------------------------
 
+def _down(theta):
+    """Unit vector pointing down, swung forward (towards -y) by theta."""
+    return Vector((0.0, -math.sin(theta), -math.cos(theta)))
+
+
+def leg_pose(side, s):
+    """Hip swing and knee bend for one leg at the current POSE."""
+    phase = POSE["phase"] + (0.0 if side < 0 else math.pi)
+    walk = POSE["walk"]
+    swing = 0.42 * math.sin(phase) * walk
+    bend = walk * (0.12 + 0.55 * max(0.0, math.cos(phase)))
+    thigh, shin = 0.43 * s, 0.42 * s
+    knee = _down(swing) * thigh
+    ankle = knee + _down(swing - bend) * shin
+    return swing, bend, knee, ankle
+
+
 def body(root, h=1.8, build=1.0, skin="#c99a74", shirt="#6b5a40", trousers="#4a3a2a", boots="#2e241c",
          arms_out=0.2, hair=None, hair_style="short", head_cover=False, skip_legs=False, eye="#2a2018"):
-    """A standing figure of height h. Returns key points for gear placement."""
+    """A figure of height h in the current POSE. Returns key points for gear."""
     s = h / 1.8
     w = build
     m_skin = mat("Skin", skin, rough=0.6)
     m_shirt = mat("Shirt", shirt, rough=0.85, noise_var=0.15)
     m_trousers = mat("Trousers", trousers, rough=0.85, noise_var=0.15)
-    m_boots = mat("Boots", boots, rough=0.6)
-    hip_z, knee_z, ankle_z = 0.92 * s, 0.5 * s, 0.1 * s
+    m_boots = mat("Boots", boots, rough=0.55, bump=0.2, bump_scale=80)
+    hip_z = 0.92 * s
+    # How far the whole figure must drop so the lower foot stays on the ground
+    # through the stride; applied to the figure root after the gear is built.
+    lows = [leg_pose(side, s)[3].z for side in (-1, 1)]
+    POSE["lift"] = -min(lows) - hip_z + 0.07 * s
     if not skip_legs:
         for side in (-1, 1):
             x = side * 0.1 * s * w
-            limb(f"Leg{side}", [(x, 0, hip_z), (x * 1.05, -0.02 * s, knee_z), (x * 1.1, 0, ankle_z + 0.05 * s)],
-                 [0.075 * s * w, 0.058 * s * w, 0.045 * s * w], m_trousers, root)
-            limb(f"Boot{side}", [(x * 1.1, 0.01 * s, 0.32 * s), (x * 1.1, 0, ankle_z)], [0.055 * s * w, 0.05 * s * w],
-                 m_boots, root)
-            sphere(f"Foot{side}", (x * 1.1, -0.06 * s, 0.045 * s), (0.055 * s * w, 0.12 * s, 0.045 * s), m_boots, root)
-    loft("Torso", [(0.88 * s, 0.17 * s * w, 0.11 * s * w, 0, 0), (1.0 * s, 0.16 * s * w, 0.1 * s * w, 0, 0),
-                   (1.15 * s, 0.17 * s * w, 0.11 * s * w, 0, -0.005), (1.32 * s, 0.2 * s * w, 0.12 * s * w, 0, -0.01),
-                   (1.42 * s, 0.21 * s * w, 0.11 * s * w, 0, 0), (1.47 * s, 0.12 * s * w, 0.08 * s, 0, 0)],
-         m_shirt, root)
-    sh_z = 1.4 * s
+            swing, bend, knee, ankle = leg_pose(side, s)
+            hip = Vector((x, 0, hip_z))
+            k = hip + knee
+            a = hip + ankle
+            limb(f"Thigh{side}", [hip, k], [0.08 * s * w, 0.06 * s * w], m_trousers, root)
+            calf = k + (a - k) * 0.35 + Vector((0, 0.012 * s, 0))
+            limb(f"Shin{side}", [k, calf, a], [0.058 * s * w, 0.06 * s * w, 0.045 * s * w], m_trousers, root)
+            boot_top = a + (k - a).normalized() * 0.2 * s
+            limb(f"Boot{side}", [boot_top, a], [0.058 * s * w, 0.05 * s * w], m_boots, root)
+            toe_dir = _down(swing - bend * 0.4 + math.pi / 2)
+            toe = a + toe_dir * 0.13 * s + Vector((0, 0, -0.03 * s))
+            limb(f"Foot{side}", [a + Vector((0, 0.03 * s, -0.025 * s)), toe], [0.05 * s * w, 0.04 * s * w], m_boots, root)
+    tilt = 0.012 * s * POSE["walk"]  # walkers lean slightly forward
+    loft("Pelvis", [(hip_z - 0.06 * s, 0.15 * s * w, 0.1 * s * w, 0, 0), (hip_z + 0.04 * s, 0.17 * s * w, 0.11 * s * w, 0, 0)],
+         m_trousers, root)
+    loft("Torso", [(hip_z - 0.04 * s, 0.17 * s * w, 0.11 * s * w, 0, 0),
+                   (hip_z + 0.08 * s, 0.155 * s * w, 0.1 * s * w, 0, -tilt * 0.3),
+                   (hip_z + 0.23 * s, 0.17 * s * w, 0.115 * s * w, 0, -0.012 * s - tilt * 0.6),
+                   (hip_z + 0.38 * s, 0.2 * s * w, 0.125 * s * w, 0, -0.018 * s - tilt),
+                   (hip_z + 0.48 * s, 0.21 * s * w, 0.11 * s * w, 0, -0.008 * s - tilt),
+                   (hip_z + 0.54 * s, 0.12 * s * w, 0.08 * s, 0, -tilt)], m_shirt, root)
+    sh_z = hip_z + 0.48 * s
     hands = []
     for side in (-1, 1):
-        sx = side * 0.2 * s * w
-        elbow = (side * (0.25 * s * w + arms_out * 0.15 * s), -0.02 * s, 1.12 * s)
-        hand = (side * (0.27 * s * w + arms_out * 0.3 * s), -0.06 * s, 0.86 * s)
-        limb(f"Arm{side}", [(sx, 0, sh_z), elbow, hand], [0.055 * s * w, 0.045 * s * w, 0.04 * s * w], m_shirt, root)
-        sphere(f"Hand{side}", hand, (0.045 * s, 0.04 * s, 0.055 * s), m_skin, root)
-        hands.append(Vector(hand))
-    limb("Neck", [(0, 0, 1.44 * s), (0, -0.01 * s, 1.55 * s)], [0.05 * s, 0.048 * s], m_skin, root)
-    head_c = Vector((0, -0.015 * s, 1.66 * s))
+        phase = POSE["phase"] + (0.0 if side < 0 else math.pi)
+        swing = -0.38 * math.sin(phase) * POSE["walk"]
+        sx = side * 0.21 * s * w
+        shoulder = Vector((sx, -tilt, sh_z))
+        sphere(f"Deltoid{side}", shoulder, (0.07 * s * w, 0.07 * s * w, 0.06 * s * w), m_shirt, root)
+        out = Vector((side * arms_out * 0.12 * s, 0, 0))
+        elbow = shoulder + _down(swing) * 0.29 * s + out + Vector((side * 0.03 * s * w, 0, 0))
+        hand = elbow + _down(swing + 0.2 + 0.25 * POSE["walk"]) * 0.27 * s + out * 0.8
+        limb(f"Arm{side}", [shoulder, elbow, hand], [0.055 * s * w, 0.047 * s * w, 0.04 * s * w], m_shirt, root)
+        sphere(f"Hand{side}", hand, (0.042 * s, 0.038 * s, 0.055 * s), m_skin, root)
+        hands.append(hand)
+    neck_base = Vector((0, -tilt, sh_z + 0.04 * s))
+    limb("Neck", [neck_base, neck_base + Vector((0, -0.01 * s, 0.11 * s))], [0.05 * s, 0.048 * s], m_skin, root)
+    head_c = neck_base + Vector((0, -0.02 * s, 0.22 * s))
     sphere("Head", head_c, (0.095 * s, 0.105 * s, 0.12 * s), m_skin, root, segments=24)
+    sphere("Jaw", head_c + Vector((0, -0.02 * s, -0.06 * s)), (0.075 * s, 0.08 * s, 0.07 * s), m_skin, root, 16)
     sphere("Nose", head_c + Vector((0, -0.1 * s, -0.01 * s)), (0.018 * s, 0.03 * s, 0.03 * s), m_skin, root, 10)
     m_eye = mat("Eye", eye, rough=0.3)
     for side in (-1, 1):
@@ -130,11 +175,12 @@ def body(root, h=1.8, build=1.0, skin="#c99a74", shirt="#6b5a40", trousers="#4a3
     if hair and not head_cover:
         m_hair = mat("Hair", hair, rough=0.6, bump=0.4, bump_scale=120)
         if hair_style == "short":
-            sphere("Hair", head_c + Vector((0, 0.012 * s, 0.03 * s)), (0.102 * s, 0.11 * s, 0.11 * s), m_hair, root, 20)
+            sphere("Hair", head_c + Vector((0, 0.018 * s, 0.035 * s)), (0.1 * s, 0.108 * s, 0.105 * s), m_hair, root, 20)
         elif hair_style == "long":
-            sphere("Hair", head_c + Vector((0, 0.015 * s, 0.025 * s)), (0.104 * s, 0.112 * s, 0.115 * s), m_hair, root, 20)
-            loft("HairBack", [(1.2 * s, 0.11 * s, 0.05 * s, 0, 0.07 * s), (1.45 * s, 0.12 * s, 0.07 * s, 0, 0.06 * s),
-                              (1.68 * s, 0.1 * s, 0.08 * s, 0, 0.02 * s)], m_hair, root)
+            sphere("Hair", head_c + Vector((0, 0.02 * s, 0.03 * s)), (0.102 * s, 0.11 * s, 0.11 * s), m_hair, root, 20)
+            z0 = head_c.z
+            loft("HairBack", [(z0 - 0.46 * s, 0.11 * s, 0.05 * s, 0, 0.07 * s - tilt), (z0 - 0.21 * s, 0.12 * s, 0.07 * s, 0, 0.06 * s - tilt),
+                              (z0 + 0.02 * s, 0.1 * s, 0.08 * s, 0, 0.02 * s - tilt)], m_hair, root)
     return {"s": s, "hands": hands, "head": head_c, "shoulder_z": sh_z, "hip_z": hip_z, "skin": m_skin}
 
 
@@ -142,7 +188,7 @@ def body(root, h=1.8, build=1.0, skin="#c99a74", shirt="#6b5a40", trousers="#4a3
 # Characters
 # --------------------------------------------------------------------------
 
-def setup():
+def setup(yaw_deg=22.0):
     lib.reset_scene(samples=SAMPLES, transparent=True, sky=(0.62, 0.70, 0.82), sky_strength=1.0)
     lib.add_sun(strength=4.0, angle_deg=3.0)
     # Rim light from behind to separate figures from the ground.
@@ -150,7 +196,7 @@ def setup():
     root = bpy.data.objects.new("Figure", None)
     bpy.context.scene.collection.objects.link(root)
     root.scale = (HERO_SCALE,) * 3
-    root.rotation_euler = Euler((0, 0, FACING))
+    root.rotation_euler = Euler((0, 0, math.radians(yaw_deg)))
     return root
 
 
@@ -290,32 +336,117 @@ CHARACTERS = {
 }
 
 
-def render_sprite(name):
-    root = setup()
+def build(name, yaw, phase, walk):
+    """Builds one pose of a character; returns its root."""
+    POSE["phase"], POSE["walk"], POSE["lift"] = phase, walk, 0.0
+    root = setup(yaw)
     CHARACTERS[name](root)
-    objs = [o for o in bpy.context.scene.objects if o.type == 'MESH']
-    cam, res = lib.frame_oblique(objs, margin_px=4)
-    path = lib.ASSETS / "characters" / f"{name}.png"
-    lib.render(path, res=res)
-    feet = lib.to_pixel(cam, Vector((0, 0, 0)), res)
-    print("wrote", path, res, "feet", feet)
-    return [round(feet[0]), round(feet[1])]
+    root.location.z = POSE["lift"] * HERO_SCALE
+    bpy.context.view_layer.update()
+    return root
+
+
+def frames():
+    """(column, phase, walk) for idle + walk cycle."""
+    out = [(0, 0.0, 0.0)]
+    for k in range(WALK_FRAMES):
+        out.append((k + 1, 2 * math.pi * k / WALK_FRAMES, 1.0))
+    return out
+
+
+def cell_bounds(name):
+    """Camera-plane bounds (metres, relative to the feet) over every pose."""
+    xmax, ymin, ymax = 0.0, 0.0, 0.0
+    rot = Euler((math.pi / 2 - lib.ELEVATION, 0, 0)).to_matrix()
+    inv = rot.inverted()
+    for _, yaw in DIRECTIONS:
+        for _, phase, walk in frames():
+            build(name, yaw, phase, walk)
+            objs = [o for o in bpy.context.scene.objects if o.type == 'MESH']
+            pts = lib.mesh_points(objs)
+            local = np.array([inv @ Vector(p) for p in pts])
+            xmax = max(xmax, np.abs(local[:, 0]).max())
+            ymin = min(ymin, local[:, 1].min())
+            ymax = max(ymax, local[:, 1].max())
+    return xmax, ymin, ymax
+
+
+def fixed_camera(xmax, ymin, ymax, margin_px=3):
+    """Ortho camera with the feet (world origin) at the same pixel for every pose."""
+    s = lib.PX_PER_M
+    half_w = int(math.ceil(xmax * s)) + margin_px
+    top = int(math.ceil(ymax * s)) + margin_px
+    bottom = int(math.ceil(-ymin * s)) + margin_px
+    res = (2 * half_w, top + bottom)
+    rot = Euler((math.pi / 2 - lib.ELEVATION, 0, 0))
+    data = bpy.data.cameras.new("Camera")
+    data.type = 'ORTHO'
+    cam = bpy.data.objects.new("Camera", data)
+    bpy.context.scene.collection.objects.link(cam)
+    bpy.context.scene.camera = cam
+    cam.rotation_euler = rot
+    center_local = Vector((0.0, (top - bottom) / 2 / s, 60.0))
+    cam.location = rot.to_matrix() @ center_local
+    data.ortho_scale = max(res) / s
+    data.clip_end = 400
+    sc = bpy.context.scene
+    sc.render.resolution_x = res[0] * lib.SUPERSAMPLE
+    sc.render.resolution_y = res[1] * lib.SUPERSAMPLE
+    return res, (half_w, top)
+
+
+def render_sheet(name):
+    """Renders every facing and frame into one sheet plus its JSON description."""
+    from PIL import Image
+    bounds = cell_bounds(name)
+    tmp = lib.ASSETS / "characters" / f".{name}_frame.png"
+    cells = {}
+    res = origin = None
+    for row, (dir_name, yaw) in enumerate(DIRECTIONS):
+        for col, phase, walk in frames():
+            build(name, yaw, phase, walk)
+            res, origin = fixed_camera(*bounds)
+            cells[(row, col)] = lib.render(tmp, res=res).copy()
+    tmp.unlink(missing_ok=True)
+    n_cols = 1 + WALK_FRAMES
+    sheet = Image.new("RGBA", (res[0] * n_cols, res[1] * len(DIRECTIONS)), (0, 0, 0, 0))
+    for (row, col), img in cells.items():
+        sheet.paste(img, (col * res[0], row * res[1]))
+    sheet_path = lib.ASSETS / "characters" / f"{name}_sheet.png"
+    sheet.save(sheet_path)
+    # The south-east idle frame doubles as the class's static sprite.
+    cells[(1, 0)].save(lib.ASSETS / "characters" / f"{name}.png")
+    anim = {
+        "texture": f"res://assets/characters/{name}_sheet.png",
+        "cell": list(res),
+        "origin": list(origin),
+        "directions": [d for d, _ in DIRECTIONS],
+        "columns": n_cols,
+        "idle_column": 0,
+        "walk_columns": list(range(1, n_cols)),
+        "cycle_px": 110,
+    }
+    (lib.ASSETS / "characters" / f"{name}_anim.json").write_text(json.dumps(anim, indent="\t") + "\n")
+    print("wrote", sheet_path, sheet.size, "cell", res, "feet", origin)
+    return list(origin)
 
 
 def update_sheets(origins):
-    """Stores each sprite's feet pixel as art.sprite_origin in the sheets using it."""
+    """Points every character sheet using a class sprite at its animation, and
+    stores the static sprite's feet pixel."""
     for path in sorted((lib.ROOT / "data" / "characters").glob("*.json")):
         data = json.loads(path.read_text())
         sprite = data.get("art", {}).get("sprite", "")
         for name, origin in origins.items():
             if sprite.endswith(f"/characters/{name}.png"):
                 data["art"]["sprite_origin"] = origin
+                data["art"]["animation"] = f"res://assets/characters/{name}_anim.json"
                 path.write_text(json.dumps(data, indent="\t") + "\n")
-                print("updated", path.name, origin)
+                print("updated", path.name)
 
 
 def run(names=None):
     origins = {}
     for name in names or CHARACTERS:
-        origins[name] = render_sprite(name)
+        origins[name] = render_sheet(name)
     update_sheets(origins)

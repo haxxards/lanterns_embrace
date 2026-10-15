@@ -73,9 +73,10 @@
 		"portrait": "res://assets/portraits/garrick.png",
 		"sprite": "res://assets/characters/fighter.png",
 		"sprite_origin": [
-			32,
-			62
-		]
+			37,
+			64
+		],
+		"animation": "res://assets/characters/fighter_anim.json"
 	},
 	"bio": "A former caravan guard who keeps his word and his blade sharp."
 }

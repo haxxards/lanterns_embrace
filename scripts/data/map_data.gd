@@ -12,6 +12,7 @@ class Placement:
 	var cell: Vector2i            # offset [col, row] from the file ("at")
 	var anchor: Vector2i          # the same cell in axial coordinates
 	var cells: Array[Vector2i] = []  # axial hexes covered by the footprint
+	var look: int = 0             # which variant (look) of the prop
 	var extra: Dictionary = {}
 
 var id: String = ""
@@ -87,5 +88,6 @@ func _add_placement(props: Dictionary, type_id: String, cell: Vector2i, extra: D
 	p.cell = cell
 	p.anchor = Hex.offset_to_axial(cell)
 	p.cells = def.cells_at(cell)
+	p.look = int(extra["variant"]) if extra.has("variant") else def.look_index_for(cell)
 	p.extra = extra
 	placements.append(p)

@@ -356,7 +356,8 @@ def sand():
     ripples = ripples ** 1.5
     grain = np.clip(0.5 + lib.tile_noise(n, 402, 0.6) * 0.3, 0, 1)
     h = 0.55 * ripples + 0.25 * grain + 0.2 * np.clip(0.5 + lib.tile_noise(n, 405, 2.6) * 0.3, 0, 1)
-    col = soil(403, [(0, "#9a8156"), (0.5, "#b59c6c"), (1, "#cbb586")], fine=0.4)
+    # Damp river sand: muted grey-brown rather than beach yellow.
+    col = soil(403, [(0, "#6f6250"), (0.5, "#877a62"), (1, "#a09276")], fine=0.4)
     col *= (0.88 + 0.2 * ripples)[..., None]
     heightfield(h, col, amp=0.09, rough=0.95, res=420, name="Sand")
     scatter_pebbles(220, 404, size=(0.015, 0.045), colors=("#8a8070", "#a49a86", "#d8d0c0", "#6e665a"))

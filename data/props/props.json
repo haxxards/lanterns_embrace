@@ -3,8 +3,7 @@
 	"props": {
 		"tree_oak": {
 			"name": "Oak Tree",
-			"texture": "res://assets/props/tree_oak.png",
-			"origin": [86, 167],
+			"variants": [{"texture": "res://assets/props/tree_oak.png", "origin": [87, 168]}, {"texture": "res://assets/props/tree_oak_2.png", "origin": [88, 172]}, {"texture": "res://assets/props/tree_oak_3.png", "origin": [58, 193]}],
 			"footprint": [[0, 0]],
 			"blocks_movement": true,
 			"blocks_sight": true,
@@ -12,8 +11,7 @@
 		},
 		"tree_pine": {
 			"name": "Pine Tree",
-			"texture": "res://assets/props/tree_pine.png",
-			"origin": [69, 180],
+			"variants": [{"texture": "res://assets/props/tree_pine.png", "origin": [69, 180]}, {"texture": "res://assets/props/tree_pine_2.png", "origin": [77, 154]}],
 			"footprint": [[0, 0]],
 			"blocks_movement": true,
 			"blocks_sight": true,
@@ -21,8 +19,7 @@
 		},
 		"bush": {
 			"name": "Bramble",
-			"texture": "res://assets/props/bush.png",
-			"origin": [45, 55],
+			"variants": [{"texture": "res://assets/props/bush.png", "origin": [40, 51]}, {"texture": "res://assets/props/bush_2.png", "origin": [41, 51]}, {"texture": "res://assets/props/bush_3.png", "origin": [31, 56]}],
 			"footprint": [[0, 0]],
 			"blocks_movement": false,
 			"move_cost": 2.0,
@@ -31,8 +28,7 @@
 		},
 		"rock": {
 			"name": "Boulder",
-			"texture": "res://assets/props/rock.png",
-			"origin": [37, 39],
+			"variants": [{"texture": "res://assets/props/rock.png", "origin": [40, 41]}, {"texture": "res://assets/props/rock_2.png", "origin": [39, 40]}, {"texture": "res://assets/props/rock_3.png", "origin": [51, 39]}],
 			"footprint": [[0, 0]],
 			"blocks_movement": true,
 			"blocks_sight": false,
@@ -59,10 +55,8 @@
 		},
 		"house_small": {
 			"name": "Cottage",
-			"texture": "res://assets/props/house_small.png",
-			"origin": [242, 416],
+			"variants": [{"texture": "res://assets/props/house_small.png", "origin": [242, 416], "door_pixel": [278, 414]}, {"texture": "res://assets/props/house_small_2.png", "origin": [239, 387], "door_pixel": [203, 386]}, {"texture": "res://assets/props/house_small_3.png", "origin": [239, 399], "door_pixel": [346, 398]}],
 			"footprint_rect": [8, 6],
-			"door_pixel": [278, 414],
 			"blocks_movement": true,
 			"blocks_sight": true,
 			"minimap_color": "#9a4231"
@@ -86,6 +80,112 @@
 			"blocks_movement": false,
 			"blocks_sight": false,
 			"minimap_color": "#8a6038"
+		},
+		"tree_birch": {
+			"name": "Birch Tree",
+			"variants": [{"texture": "res://assets/props/tree_birch.png", "origin": [64, 193]}, {"texture": "res://assets/props/tree_birch_2.png", "origin": [81, 184]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": true,
+			"minimap_color": "#4f6a30"
+		},
+		"reeds": {
+			"name": "Reeds",
+			"variants": [{"texture": "res://assets/props/reeds.png", "origin": [31, 67]}, {"texture": "res://assets/props/reeds_2.png", "origin": [37, 71]}, {"texture": "res://assets/props/reeds_3.png", "origin": [34, 63]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": false,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#6a7a3a"
+		},
+		"fern": {
+			"name": "Ferns",
+			"variants": [{"texture": "res://assets/props/fern.png", "origin": [32, 40]}, {"texture": "res://assets/props/fern_2.png", "origin": [33, 38]}, {"texture": "res://assets/props/fern_3.png", "origin": [36, 43]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": false,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#3a5a28"
+		},
+		"flowers": {
+			"name": "Wildflowers",
+			"variants": [{"texture": "res://assets/props/flowers.png", "origin": [38, 38]}, {"texture": "res://assets/props/flowers_2.png", "origin": [35, 41]}, {"texture": "res://assets/props/flowers_3.png", "origin": [37, 42]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": false,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#6a8a3a"
+		},
+		"log": {
+			"name": "Fallen Log",
+			"variants": [{"texture": "res://assets/props/log.png", "origin": [59, 41]}, {"texture": "res://assets/props/log_2.png", "origin": [47, 43]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#4a3a28"
+		},
+		"stump": {
+			"name": "Tree Stump",
+			"variants": [{"texture": "res://assets/props/stump.png", "origin": [33, 36]}, {"texture": "res://assets/props/stump_2.png", "origin": [33, 36]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#5a4630"
+		},
+		"barrels": {
+			"name": "Barrels",
+			"variants": [{"texture": "res://assets/props/barrels.png", "origin": [34, 46]}, {"texture": "res://assets/props/barrels_2.png", "origin": [31, 46]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#6b4a2b"
+		},
+		"crates": {
+			"name": "Crates",
+			"variants": [{"texture": "res://assets/props/crates.png", "origin": [33, 52]}, {"texture": "res://assets/props/crates_2.png", "origin": [22, 54]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#8a6a42"
+		},
+		"hay": {
+			"name": "Hay Bales",
+			"variants": [{"texture": "res://assets/props/hay.png", "origin": [24, 31]}, {"texture": "res://assets/props/hay_2.png", "origin": [41, 44]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#b09a5a"
+		},
+		"lamp_post": {
+			"name": "Lamp Post",
+			"texture": "res://assets/props/lamp_post.png",
+			"origin": [15, 79],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"minimap_color": "#3a3a3a"
+		},
+		"market_stall": {
+			"name": "Market Stall",
+			"variants": [{"texture": "res://assets/props/market_stall.png", "origin": [98, 167]}, {"texture": "res://assets/props/market_stall_2.png", "origin": [98, 167]}],
+			"footprint_rect": [3, 2],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"minimap_color": "#a83a2a"
+		},
+		"cart": {
+			"name": "Handcart",
+			"texture": "res://assets/props/cart.png",
+			"origin": [93, 89],
+			"footprint_rect": [2, 1],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"minimap_color": "#6b4a2b"
 		}
 	}
 }

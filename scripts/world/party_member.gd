@@ -35,8 +35,16 @@ var hovered: bool = false:
 		hovered = value
 		queue_redraw()
 
+## Screen direction sectors (0 = east, clockwise) -> sheet row name and mirror.
+const FACINGS := [["e", false], ["se", false], ["s", false], ["se", true],
+		["e", true], ["ne", true], ["n", false], ["ne", false]]
+
 var _grid: HexGrid
 var _sprite: Sprite2D
+## Sprite-sheet animation (empty when the character only has a static sprite).
+var _anim: Dictionary = {}
+var _facing: int = 1  # south-east
+var _stride: float = 0.0
 var _moving: bool = false
 var _walk_time: float = 0.0
 ## Path hex currently walked towards in a straight line (null = pick one).
@@ -49,14 +57,55 @@ func setup(character: CharacterSheet, grid: HexGrid, start: Vector2i) -> void:
 	name = "Member_%s" % character.id
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	_sprite = Sprite2D.new()
-	_sprite.texture = Data.load_texture(character.sprite_path)
 	_sprite.centered = false
-	var size := _sprite.texture.get_size()
-	var origin: Vector2 = character.sprite_origin if character.sprite_origin != null \
-			else Vector2(size.x * 0.5, size.y - 6.0)
-	_sprite.offset = -origin
 	add_child(_sprite)
+	if not _setup_animation(character.animation_path):
+		_sprite.texture = Data.load_texture(character.sprite_path)
+		var size := _sprite.texture.get_size()
+		var origin: Vector2 = character.sprite_origin if character.sprite_origin != null \
+				else Vector2(size.x * 0.5, size.y - 6.0)
+		_sprite.offset = -origin
 	place_at(start)
+
+
+## Loads a sprite sheet: rows are facings, columns idle + walk frames.
+func _setup_animation(path: String) -> bool:
+	if path.is_empty():
+		return false
+	var d: Variant = JsonUtil.load_json(path)
+	if not d is Dictionary or not d.has("texture"):
+		return false
+	var tex := Data.load_texture(str(d["texture"]))
+	if tex == Data.missing_texture():
+		return false
+	_anim = d
+	_sprite.texture = tex
+	_sprite.hframes = int(d.get("columns", 1))
+	_sprite.vframes = (d.get("directions", ["se"]) as Array).size()
+	_sprite.offset = -JsonUtil.to_vec2(d.get("origin"), Vector2.ZERO)
+	_update_frame()
+	return true
+
+
+func is_animated() -> bool:
+	return not _anim.is_empty()
+
+
+## Shows the frame for the current facing and walk progress.
+func _update_frame() -> void:
+	if _anim.is_empty():
+		return
+	var facing: Array = FACINGS[_facing]
+	var rows: Array = _anim.get("directions", [])
+	var row := maxi(0, rows.find(facing[0]))
+	var col := int(_anim.get("idle_column", 0))
+	if _moving:
+		var walk: Array = _anim.get("walk_columns", [])
+		if not walk.is_empty():
+			var cycle := maxf(1.0, float(_anim.get("cycle_px", 100.0)))
+			col = int(walk[int(_stride / cycle * walk.size()) % walk.size()])
+	_sprite.frame = row * _sprite.hframes + col
+	_sprite.flip_h = facing[1]
 
 
 ## Teleports to `h`, cancelling any movement.
@@ -89,7 +138,8 @@ func is_moving() -> bool:
 
 ## World rectangle used for mouse picking (sprite plus the hex below it).
 func pick_rect() -> Rect2:
-	return Rect2(global_position + _sprite.offset, _sprite.texture.get_size()).grow(2.0)
+	var r := _sprite.get_rect()
+	return Rect2(global_position + r.position, r.size).grow(2.0)
 
 
 func _process(delta: float) -> void:
@@ -113,7 +163,10 @@ func _process(delta: float) -> void:
 		path = path.slice(path.find(_aim) + 1)
 		_aim = null
 	if _moving:
-		_sprite.position.y = -absf(sin(_walk_time * 11.0)) * 2.5
+		if is_animated():
+			_update_frame()
+		else:
+			_sprite.position.y = -absf(sin(_walk_time * 11.0)) * 2.5
 
 
 ## Moves towards `target` using up to `budget` pixels of movement. Returns the
@@ -122,11 +175,13 @@ func _process(delta: float) -> void:
 func _walk_towards(target: Vector2, budget: float) -> float:
 	var slow := maxf(1.0, _grid.move_cost(hex))
 	var dist := position.distance_to(target)
-	_face(target.x - position.x)
+	_face(target - position)
 	if dist * slow <= budget:
+		_stride += dist
 		position = target
 		_update_hex()
 		return budget - dist * slow
+	_stride += budget / slow
 	position = position.move_toward(target, budget / slow)
 	_update_hex()
 	return -1.0
@@ -184,12 +239,18 @@ func _finish_walk() -> void:
 	_moving = false
 	_sprite.position = Vector2.ZERO
 	destination = hex
+	_update_frame()
 	arrived.emit(self)
 
 
-func _face(dx: float) -> void:
-	if absf(dx) > 0.5:
-		_sprite.flip_h = dx < 0.0
+## Turns towards a movement direction (screen space).
+func _face(delta: Vector2) -> void:
+	if delta.length() < 0.5:
+		return
+	if is_animated():
+		_facing = posmod(roundi(delta.angle() / (PI / 4.0)), 8)
+	elif absf(delta.x) > 0.5:
+		_sprite.flip_h = delta.x < 0.0
 
 
 func _draw() -> void:

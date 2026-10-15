@@ -23,6 +23,13 @@ var terrain_warp: float = 0.45
 var terrain_edge_noise: float = 0.5
 var terrain_edge_sharpness: float = 4.0
 
+## Colour grade over the game view (see scripts/ui/color_grade.gdshader).
+var post_enabled: bool = true
+var post_contrast: float = 1.06
+var post_saturation: float = 1.06
+var post_warmth: float = 0.025
+var post_vignette: float = 0.32
+
 var camera_pan_speed: float = 900.0
 var camera_edge_pan: bool = true
 var camera_edge_margin: float = 10.0
@@ -57,6 +64,13 @@ func load_config(path: String) -> void:
 	terrain_warp = float(blend.get("warp", terrain_warp))
 	terrain_edge_noise = float(blend.get("edge_noise", terrain_edge_noise))
 	terrain_edge_sharpness = float(blend.get("edge_sharpness", terrain_edge_sharpness))
+
+	var post: Dictionary = cfg.get("post", {})
+	post_enabled = bool(post.get("enabled", post_enabled))
+	post_contrast = float(post.get("contrast", post_contrast))
+	post_saturation = float(post.get("saturation", post_saturation))
+	post_warmth = float(post.get("warmth", post_warmth))
+	post_vignette = float(post.get("vignette", post_vignette))
 
 	var cam: Dictionary = cfg.get("camera", {})
 	camera_pan_speed = float(cam.get("pan_speed", camera_pan_speed))

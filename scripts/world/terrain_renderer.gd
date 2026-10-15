@@ -29,6 +29,7 @@ func build(grid: HexGrid) -> void:
 	mat.shader = SHADER
 	mat.set_shader_parameter("terrain_textures", _build_texture_array())
 	mat.set_shader_parameter("slot_count", slot_textures.size())
+	mat.set_shader_parameter("animated_mask", _animated_mask())
 	mat.set_shader_parameter("noise", _noise_texture())
 	mat.set_shader_parameter("texture_world_size", float(TEXTURE_SIZE))
 	mat.set_shader_parameter("edge_noise", GameConfig.terrain_edge_noise)
@@ -67,6 +68,15 @@ func _assign_slots(grid: HexGrid) -> void:
 		_slot_of_terrain[t] = slot_of_texture[key]
 	if slot_textures.is_empty():
 		slot_textures.append(Data.missing_texture())
+
+
+## Bit mask of slots whose terrain is animated (water).
+func _animated_mask() -> int:
+	var mask := 0
+	for t: TerrainDef in _slot_of_terrain:
+		if t.animated:
+			mask |= 1 << int(_slot_of_terrain[t])
+	return mask
 
 
 ## Packs every terrain texture into one array (same size, RGBA8, mipmapped).

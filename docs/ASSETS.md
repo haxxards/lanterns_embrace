@@ -9,8 +9,8 @@ drop-in placeholder you can replace with your own art.
 | What | Made by | Notes |
 |---|---|---|
 | Terrain textures | `tools/art/blender/render_terrain.py` | Small 3D ground patches (grass blades, pebbles, leaves, cobbles, rock, rippled water) laid out to wrap at the edges, rendered straight down. |
-| Props and buildings | `tools/art/blender/render_props.py` | Trees with tens of thousands of leaf cards, timber-framed thatched cottage, two-storey slate-roofed inn with lit windows, well, bridge, rocks, signpost. |
-| Character sprites | `tools/art/blender/render_characters.py` | Simple 3D figures with class gear, rendered at slightly heroic scale. |
+| Props and buildings | `tools/art/blender/render_props.py` | Oaks, pines and birches (several shapes each) with tens of thousands of leaf cards; thatched, tiled and shingled cottages; a two-storey inn with lit windows; well, bridge, rocks, signpost; set dressing such as reeds, ferns, wildflowers, logs, stumps, barrels, crates, hay, lamp posts, market stalls and a cart. |
+| Character sprites | `tools/art/blender/render_characters.py` | Posable 3D figures with class gear. Each is rendered as a sprite sheet: 5 facings × (idle + 8-frame walk), mirrored in game for the other 3 facings. |
 | Portraits | `tools/art/generate_placeholder_art.py` | Still flat 2D placeholders (see below). |
 
 ## Re-rendering
@@ -24,10 +24,11 @@ python3.13 -m venv .venv-art
 .venv-art/bin/python tools/art/blender/render_all.py terrain:grass props:tree_oak characters
 ```
 
-Rendering a prop writes its anchor pixel (`origin`) and door pixel back into
-`data/props/props.json`. Rendering a character writes the feet pixel into
-`art.sprite_origin` of every character sheet that uses that sprite. You never edit those
-numbers by hand.
+Rendering a prop writes its looks (texture, anchor pixel `origin`, door pixel) back into
+`data/props/props.json`, as a `variants` list when there is more than one. Rendering a
+character writes its sprite sheet, a `<class>_anim.json` description, and the static
+sprite, and points every character sheet using that class at them (`art.animation`,
+`art.sprite_origin`). You never edit those numbers by hand.
 
 ### Conventions
 
@@ -65,15 +66,19 @@ are easy to spot.
 |---|---|---|---|
 | Terrain | `assets/terrain/*.png` | 512×512 (other sizes are resized) | Must be **seamless**. Sampled in world space at 1 texel per pixel and blended with neighbouring terrain by `terrain_blend.gdshader`. |
 | Props | `assets/props/*.png` | any | `origin` in `props.json` is the pixel placed on the anchor hex centre (trees: trunk base), or for buildings the centre of the front wall's base. Include the ground shadow. |
-| Character sprites | `assets/characters/*.png` | any | Facing slightly to screen-right, mirrored when walking left. `art.sprite_origin` = feet pixel (default: bottom-centre, 6 px up). Shadow and selection ring are drawn by code. |
+| Character sprites | `assets/characters/<class>.png` | any | Static fallback (south-east idle). `art.sprite_origin` = feet pixel. Shadow and selection ring are drawn by code. |
+| Character animation | `assets/characters/<class>_sheet.png` + `<class>_anim.json` | cells of any size | Rows = facings listed in `directions` (`s, se, e, ne, n`), columns = idle + walk frames. `origin` = feet pixel within a cell (keep it horizontally centred so mirroring works). `cycle_px` = pixels walked per walk cycle. |
 | Portraits | `assets/portraits/*.png` | 128×160 | Shown at 64×80 in the sidebar (cropped to fill). |
 
 Footprints:
 
 | Prop | Footprint |
 |---|---|
-| tree_oak, tree_pine, rock, sign, well | 1 hex (blocking) |
+| tree_oak, tree_pine, tree_birch, rock, sign, well, log, stump, barrels, crates, hay, lamp_post | 1 hex (blocking) |
 | bush | 1 hex, walkable but difficult |
+| reeds, fern, flowers | 1 hex, walkable (decoration) |
+| market_stall | 3×2 hexes |
+| cart | 2×1 hexes |
 | house_small (cottage) | 8×6 hexes, door from `door_pixel` |
 | house_large (inn) | 12×8 hexes, door from `door_pixel` |
 | bridge_wood | 8×2 hexes, ground layer, walkable |

@@ -29,12 +29,14 @@
 			"id": "water", "name": "Deep Water", "symbol": "~",
 			"texture": "res://assets/terrain/water.png",
 			"walkable": false, "move_cost": 1.0, "blocks_sight": false,
+			"animated": true,
 			"minimap_color": "#2b5a82"
 		},
 		{
 			"id": "shallows", "name": "Shallows (difficult)", "symbol": "-",
 			"texture": "res://assets/terrain/shallows.png",
 			"walkable": true, "move_cost": 2.0, "blocks_sight": false,
+			"animated": true,
 			"minimap_color": "#5c94a6"
 		},
 		{
@@ -47,6 +49,7 @@
 			"id": "bridge", "name": "Bridge deck", "symbol": "=",
 			"texture": "res://assets/terrain/water.png",
 			"walkable": true, "move_cost": 1.0, "blocks_sight": false,
+			"animated": true,
 			"minimap_color": "#8a6038"
 		},
 		{

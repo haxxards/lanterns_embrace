@@ -4,6 +4,8 @@ extends Node2D
 ## anchor hex centre, which is also the point used for y-sorting.
 
 var def: PropDef
+var look: PropDef.Look
+var look_index: int = 0
 var anchor: Vector2i
 var cells: Array[Vector2i] = []
 ## Per-instance data from the map file ("name", "title", "text"...).
@@ -24,6 +26,8 @@ var _sprite: Sprite2D
 
 func setup(placement: MapData.Placement, grid: HexGrid) -> void:
 	def = placement.def
+	look_index = placement.look
+	look = def.look(look_index)
 	anchor = placement.anchor
 	extra = placement.extra
 	cells = placement.cells.duplicate()
@@ -32,15 +36,15 @@ func setup(placement: MapData.Placement, grid: HexGrid) -> void:
 	# also their y-sort point; other props sit on their anchor hex.
 	position = PropDef.placement_point(def, cells, anchor, grid.radius)
 	_sprite = Sprite2D.new()
-	_sprite.texture = def.texture
+	_sprite.texture = look.texture
 	_sprite.centered = false
-	_sprite.offset = -def.origin
+	_sprite.offset = -look.origin
 	add_child(_sprite)
 
 
 ## Hex the entrance opens from (buildings), or null.
 func door_hex(grid: HexGrid) -> Variant:
-	return PropDef.door_hex(def, cells, anchor, grid.radius)
+	return PropDef.door_hex(def, cells, anchor, grid.radius, look_index)
 
 
 func _update_modulate() -> void:

@@ -52,7 +52,9 @@ func _load_props() -> void:
 	var defs: Dictionary = d.get("props", {})
 	for prop_id in defs:
 		var p := PropDef.from_dict(prop_id, defs[prop_id])
-		p.texture = load_texture(p.texture_path)
+		for l in p.looks:
+			l.texture = load_texture(l.texture_path)
+		p.texture = p.looks[0].texture
 		p.resolve_fade(GameConfig.hex_radius * 2.2)
 		props[prop_id] = p
 

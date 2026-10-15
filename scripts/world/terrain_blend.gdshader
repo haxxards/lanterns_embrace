@@ -26,6 +26,10 @@ uniform float edge_sharpness = 4.0;
 // Large-scale brightness variation and second-sample mixing, to hide tiling.
 uniform float macro_variation = 0.08;
 uniform float anti_tiling = 0.45;
+// Bit i set = slot i is water: its texture drifts and shimmers over time.
+uniform int animated_mask = 0;
+// Direction and speed the water surface drifts, in texture repeats per second.
+uniform vec2 flow = vec2(0.004, 0.018);
 
 varying vec2 world_pos;
 
@@ -47,8 +51,24 @@ float slot_weight(int i, vec4 s0, vec4 s1, vec4 s2) {
 	return pick(s2, c);
 }
 
+vec3 sample_water(int i, vec2 uv) {
+	// Two copies of the ripple texture drifting at different speeds and scales,
+	// gently warped: the crossing ripples read as moving, glinting water.
+	float t = TIME;
+	vec2 warp = vec2(sin(uv.y * 9.0 + t * 0.9), cos(uv.x * 8.0 + t * 0.7)) * 0.006;
+	vec3 a = texture(terrain_textures, vec3(uv - flow * t + warp, float(i))).rgb;
+	vec3 b = texture(terrain_textures, vec3(uv * 1.31 + vec2(0.41, 0.17) - flow * 1.6 * t - warp, float(i))).rgb;
+	vec3 base = mix(a, b, 0.5);
+	// Sparkle where both layers are bright.
+	float glint = smoothstep(0.55, 0.85, min(dot(a, vec3(0.333)), dot(b, vec3(0.333))) * 1.6);
+	return base + glint * 0.18;
+}
+
 vec3 sample_terrain(int i, vec2 wp) {
 	vec2 uv = wp / texture_world_size;
+	if (((animated_mask >> i) & 1) == 1) {
+		return sample_water(i, uv);
+	}
 	vec3 a = texture(terrain_textures, vec3(uv, float(i))).rgb;
 	// A second sample at another scale/offset, mixed in patches, breaks up
 	// the visible repeat of a single tiling texture.

@@ -38,6 +38,11 @@ var _message_body: Label
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	layer = 2  # above the colour grade (layer 1)
+	var grade := ColorGrade.new()
+	grade.name = "ColorGrade"
+	add_child(grade)
+	grade.setup(SIDEBAR_WIDTH)
 	_build()
 	Events.map_loaded.connect(_on_map_loaded)
 	Events.selection_changed.connect(_on_selection_changed)

@@ -10,6 +10,7 @@ data-driven form you can extend, not a finished game.
 
 ![Village overview](docs/images/phase1_overview.jpg)
 ![Close-up of the village square](docs/images/phase1_closeup.jpg)
+![The party crossing the bridge](docs/images/walk.gif)
 
 ## Status: Phase 1, movement MVP
 
@@ -46,7 +47,15 @@ This phase covers everything needed to load a map and evaluate moving a party ar
   buildings and characters are modelled procedurally in Blender and rendered with Cycles
   by scripts in this repo. Every image is a drop-in replacement (see
   [docs/ASSETS.md](docs/ASSETS.md)). The portraits are still flat 2D placeholders.
-- **40 automated tests**, run headless.
+  - **Animated characters:** a walk cycle in 8 facings (5 rendered, 3 mirrored), with
+    frames advanced by distance walked so feet don't slide.
+  - **Animated water:** the river and ford drift and glint.
+  - **Variety and set dressing:** several looks per prop type (three oaks, two pines,
+    birches, three cottage designs...), plus reeds, ferns, wildflowers, logs, stumps,
+    barrels, crates, hay, lamp posts, market stalls and a cart.
+  - **Colour grade:** a subtle warm grade and vignette over the game view (`post` in
+    `game_config.json`).
+- **41 automated tests**, run headless.
 
 ## Running it
 
@@ -97,6 +106,7 @@ All the feel-related numbers are in [`data/config/game_config.json`](data/config
 | `explore_move_speed` | Walking speed in pixels per second |
 | `show_grid_default` | Debug grid lines on at start (off: hexes only show for movement) |
 | `terrain_blend.*` | How terrain types blend: weight-map resolution, blur, edge warp and noise |
+| `post.*` | Colour grade: contrast, saturation, warmth, vignette (or `enabled: false`) |
 | `camera.*` | Pan speed, edge scrolling, zoom limits |
 
 ## Project layout
@@ -121,7 +131,8 @@ scripts/
                    Prop, camera, overlays
   ui/              HUD, portrait cards, minimap, theme
 tests/             Headless test runner, unit and integration tests
-tools/             make_character.py, art renderers (tools/art/blender), run_tests.sh
+tools/             make_character.py, art renderers (tools/art/blender), map generator
+                   (tools/maps), run_tests.sh
 ```
 
 ### How the pieces fit

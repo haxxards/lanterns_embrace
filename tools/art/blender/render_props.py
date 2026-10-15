@@ -30,19 +30,24 @@ def setup():
     return lib.oblique_root()
 
 
-def finish(name, root, door=None, extra_margin=(0, 0, 0, 0)):
-    """Frames everything under `root`, renders, and records origin/door pixels."""
+def finish(name, root, door=None, extra_margin=(0, 0, 0, 0), variant=0):
+    """Frames everything under `root`, renders, and records origin/door pixels.
+    Variant 0 is <name>.png, variant n is <name>_<n+1>.png."""
     objs = [o for o in bpy.context.scene.objects if o.type == 'MESH' and o.name != "ShadowCatcher"]
     cam, res = lib.frame_oblique(objs, margin_px=8, extra=extra_margin, shadows=True)
-    path = lib.ASSETS / "props" / f"{name}.png"
+    file_name = name if variant == 0 else f"{name}_{variant + 1}"
+    path = lib.ASSETS / "props" / f"{file_name}.png"
     lib.render(path, res=res, shadow_alpha=0.6)
     origin = lib.to_pixel(cam, root.matrix_world @ Vector((0, 0, 0)), res)
-    entry = {"origin": [round(origin[0]), round(origin[1])], "size": list(res)}
+    entry = {"texture": f"res://assets/props/{file_name}.png", "origin": [round(origin[0]), round(origin[1])]}
     if door is not None:
         dp = lib.to_pixel(cam, root.matrix_world @ Vector(door), res)
         entry["door_pixel"] = [round(dp[0]), round(dp[1])]
-    MANIFEST[name] = entry
-    print("wrote", path, entry)
+    looks = MANIFEST.setdefault(name, [])
+    while len(looks) <= variant:
+        looks.append(None)
+    looks[variant] = entry
+    print("wrote", path, res, entry)
 
 
 def footprint_depth(rows):
@@ -264,16 +269,33 @@ def tiled_roof_material(name, color, rows_per_m=6.0, cols_per_m=4.0, thatch=Fals
     brick.inputs["Color1"].default_value = (*(x * 0.8 for x in c), 1)
     brick.inputs["Color2"].default_value = (*(min(1, x * 1.15) for x in c), 1)
     brick.inputs["Mortar"].default_value = (*(x * 0.35 for x in c), 1)
+    brick.inputs["Bias"].default_value = 0.0
     noise = nt.nodes.new("ShaderNodeTexNoise")
-    noise.inputs["Scale"].default_value = 4.0
+    noise.inputs["Scale"].default_value = 1.2
+    noise.inputs["Detail"].default_value = 6.0
     nt.links.new(coord.outputs["Object"], noise.inputs["Vector"])
     mix = nt.nodes.new("ShaderNodeMix")
     mix.data_type = 'RGBA'
     mix.blend_type = 'OVERLAY'
-    lib.sock(mix.inputs, "Factor_Float").default_value = 0.35
+    lib.sock(mix.inputs, "Factor_Float").default_value = 0.6
     nt.links.new(brick.outputs["Color"], lib.sock(mix.inputs, "A_Color"))
     nt.links.new(noise.outputs["Color"], lib.sock(mix.inputs, "B_Color"))
-    nt.links.new(lib.sock(mix.outputs, "Result_Color"), bsdf.inputs["Base Color"])
+    # Lichen / moss spots.
+    spots = nt.nodes.new("ShaderNodeTexNoise")
+    spots.inputs["Scale"].default_value = 3.5
+    spots.inputs["Detail"].default_value = 8.0
+    nt.links.new(coord.outputs["Object"], spots.inputs["Vector"])
+    smask = nt.nodes.new("ShaderNodeMapRange")
+    smask.inputs["From Min"].default_value = 0.62
+    smask.inputs["From Max"].default_value = 0.75
+    smask.inputs["To Max"].default_value = 0.6
+    nt.links.new(spots.outputs["Fac"], smask.inputs["Value"])
+    lichen = nt.nodes.new("ShaderNodeMix")
+    lichen.data_type = 'RGBA'
+    nt.links.new(smask.outputs["Result"], lib.sock(lichen.inputs, "Factor_Float"))
+    nt.links.new(lib.sock(mix.outputs, "Result_Color"), lib.sock(lichen.inputs, "A_Color"))
+    lib.sock(lichen.inputs, "B_Color").default_value = (*lib.lin("#7a7a58"), 1)
+    nt.links.new(lib.sock(lichen.outputs, "Result_Color"), bsdf.inputs["Base Color"])
     bump = nt.nodes.new("ShaderNodeBump")
     bump.inputs["Strength"].default_value = 0.9
     bump.inputs["Distance"].default_value = 0.03
@@ -294,50 +316,71 @@ def iron_material():
 # Vegetation and small props
 # --------------------------------------------------------------------------
 
-def tree_oak():
+OAK_SHAPES = [
+    # seed, canopy height, horizontal spread, vertical spread, palette tint
+    (11, 4.2, 1.0, 1.0, 1.0),
+    (23, 3.9, 1.3, 0.8, 1.08),
+    (37, 4.6, 0.85, 1.25, 0.9),
+]
+
+
+def tree_oak(variant=0):
     root = setup()
-    r = np.random.default_rng(11)
+    seed, zc, wide, tall, tint = OAK_SHAPES[variant]
+    r = np.random.default_rng(seed)
     bark = bark_material()
-    lib.cylinder_between("Trunk", (0, 0, -0.1), (0.15, 0.05, 2.6), 0.26, 0.15, mat=bark, parent=root)
-    for k in range(6):
-        ang = k * math.pi / 3 + r.uniform(-0.3, 0.3)
-        end = (math.cos(ang) * 1.3, math.sin(ang) * 1.1, 3.4 + r.uniform(-0.2, 0.4))
-        lib.cylinder_between(f"Branch{k}", (0.1, 0.05, 2.3), end, 0.11, 0.05, mat=bark, parent=root, sides=8)
+    lean = (r.uniform(-0.25, 0.25), r.uniform(-0.15, 0.15))
+    top = (lean[0], lean[1], zc - 1.6)
+    lib.cylinder_between("Trunk", (0, 0, -0.1), top, 0.27, 0.15, mat=bark, parent=root)
+    n_branch = int(r.integers(5, 8))
+    for k in range(n_branch):
+        ang = k * 2 * math.pi / n_branch + r.uniform(-0.3, 0.3)
+        end = (top[0] + math.cos(ang) * 1.3 * wide, top[1] + math.sin(ang) * 1.1 * wide,
+               zc - 0.7 + r.uniform(-0.2, 0.5) * tall)
+        lib.cylinder_between(f"Branch{k}", (top[0], top[1], top[2] - 0.3), end, 0.11, 0.05, mat=bark,
+                             parent=root, sides=8)
     for k in range(4):
-        ang = k * math.pi / 2 + 0.4
+        ang = k * math.pi / 2 + r.uniform(0, 0.8)
         lib.cylinder_between(f"Root{k}", (0, 0, 0.25), (math.cos(ang) * 0.55, math.sin(ang) * 0.5, -0.05),
                              0.12, 0.04, mat=bark, parent=root, sides=8)
-    clusters = [((0.0, 0.0, 4.3), 1.55), ((-1.2, 0.3, 3.7), 1.2), ((1.25, -0.2, 3.8), 1.2),
-                ((0.3, 1.0, 4.0), 1.15), ((-0.4, -1.0, 3.6), 1.1), ((0.7, 0.4, 5.0), 1.0),
-                ((-0.8, 0.2, 4.9), 0.95), ((1.6, 0.8, 3.3), 0.8), ((-1.7, -0.6, 3.2), 0.8)]
-    # Dark inner mass so gaps read as deep foliage, not holes.
+    clusters = [((lean[0], lean[1], zc), 1.5)]
+    for k in range(int(r.integers(8, 12))):
+        a = r.uniform(0, 2 * math.pi)
+        d = r.uniform(0.6, 1.5)
+        clusters.append(((lean[0] + math.cos(a) * d * wide, lean[1] + math.sin(a) * d * wide * 0.9,
+                          zc + r.uniform(-0.9, 0.9) * tall), r.uniform(0.75, 1.25)))
     inner = lib.material("InnerLeaf", lib.lin("#1d3314"), rough=0.9)
     for i, (c, rad) in enumerate(clusters):
         lib.primitive("ico_sphere", f"Inner{i}", mat=inner, parent=root, subdivisions=2,
                       radius=rad * 0.72, location=c)
-    r2 = np.random.default_rng(13)
     for k in range(10):  # small extra lumps break up the round silhouette
-        c, rad = clusters[r2.integers(len(clusters))]
-        d = r2.normal(size=3)
+        c, rad = clusters[r.integers(len(clusters))]
+        d = r.normal(size=3)
         d /= np.linalg.norm(d)
-        clusters.append((tuple(np.array(c) + d * rad * 0.8), rad * r2.uniform(0.35, 0.55)))
-    leaf_cloud("Leaves", clusters, 30000, 12, parent=root)
+        clusters.append((tuple(np.array(c) + d * rad * 0.8), rad * r.uniform(0.35, 0.55)))
+    pal = [tuple(min(1.0, x * tint) for x in lib.hexcol(c)) for c in
+           ("#36572a", "#41632c", "#2c4a22", "#4f7032", "#5f7c38", "#6c8240")]
+    pal_hex = ["#%02x%02x%02x" % tuple(int(v * 255) for v in c) for c in pal]
+    leaf_cloud("Leaves", clusters, 30000, seed + 1, palette=pal_hex, parent=root)
     root.scale = (0.82, lib.DEPTH_STRETCH * 0.82, 0.82)
-    finish("tree_oak", root)
+    finish("tree_oak", root, variant=variant)
 
 
-def tree_pine():
+PINE_SHAPES = [(21, 7.8, 12, 1.0), (47, 6.6, 10, 1.1)]
+
+
+def tree_pine(variant=0):
     root = setup()
+    seed, height, tiers, girth = PINE_SHAPES[variant]
     bark = bark_material(color="#4d3b2c")
-    lib.cylinder_between("Trunk", (0, 0, -0.1), (0, 0, 7.8), 0.22, 0.04, mat=bark, parent=root)
-    r = np.random.default_rng(21)
+    lib.cylinder_between("Trunk", (0, 0, -0.1), (0, 0, height), 0.22, 0.04, mat=bark, parent=root)
+    r = np.random.default_rng(seed)
     verts, faces, cols = [], [], []
     pal = np.array([lib.lin(c) for c in ("#1f3a28", "#27442e", "#183022", "#2f4c32", "#355236")])
-    tiers = 12
     for t in range(tiers):
         frac = t / tiers
-        z0 = 1.2 + t * 0.55
-        rad = 2.0 * (1 - frac) ** 1.05 + 0.2
+        z0 = 1.2 + t * (height - 1.6) / tiers
+        rad = 2.0 * girth * (1 - frac) ** 1.05 + 0.2
         n_branch = int(9 + r.integers(0, 4) - frac * 4)
         for bi in range(n_branch):
             a = 2 * math.pi * (bi + r.uniform(-0.3, 0.3)) / n_branch + t * 0.5
@@ -361,21 +404,76 @@ def tree_pine():
     mat = lib.material("Needles", (1, 1, 1), rough=0.65, vcol=True)
     lib.mesh_object("Needles", verts, faces, colors=cols, mat=mat, parent=root)
     root.scale = (0.85, lib.DEPTH_STRETCH * 0.85, 0.85)
-    finish("tree_pine", root)
+    finish("tree_pine", root, variant=variant)
 
 
-def bush():
+def birch_bark():
+    """White bark with dark horizontal lenticels and knots."""
+    mat = bpy.data.materials.new("BirchBark")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    bsdf.inputs["Roughness"].default_value = 0.7
+    coord = nt.nodes.new("ShaderNodeTexCoord")
+    mapping = nt.nodes.new("ShaderNodeMapping")
+    mapping.inputs["Scale"].default_value = (14.0, 14.0, 2.0)
+    nt.links.new(coord.outputs["Object"], mapping.inputs["Vector"])
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 3.0
+    noise.inputs["Detail"].default_value = 4.0
+    nt.links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.62
+    ramp.color_ramp.elements[0].color = (*lib.lin("#e2ddd2"), 1)
+    ramp.color_ramp.elements[1].position = 0.68
+    ramp.color_ramp.elements[1].color = (*lib.lin("#2a2622"), 1)
+    nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    return mat
+
+
+def tree_birch(variant=0):
     root = setup()
-    clusters = [((0, 0, 0.55), 0.6), ((-0.5, 0.15, 0.42), 0.45), ((0.5, -0.1, 0.45), 0.45),
-                ((0.1, 0.4, 0.5), 0.4)]
+    seed = (71, 83)[variant]
+    r = np.random.default_rng(seed)
+    bark = birch_bark()
+    stems = [(0.0, 0.0)] if variant == 0 else [(-0.25, 0.05), (0.3, -0.05)]
+    clusters = []
+    for si, (sx, sy) in enumerate(stems):
+        lean = (sx * 2.2 + r.uniform(-0.3, 0.3), sy + r.uniform(-0.2, 0.2))
+        h = r.uniform(6.2, 7.2)
+        top = (lean[0], lean[1], h)
+        lib.cylinder_between(f"Stem{si}", (sx, sy, -0.1), top, 0.16, 0.05, mat=bark, parent=root)
+        for k in range(7):
+            z = r.uniform(3.0, h - 0.4)
+            t = z / h
+            base = (sx + (lean[0] - sx) * t, sy + (lean[1] - sy) * t, z)
+            a = r.uniform(0, 2 * math.pi)
+            end = (base[0] + math.cos(a) * 1.1, base[1] + math.sin(a) * 0.9, z + r.uniform(0.3, 0.9))
+            lib.cylinder_between(f"Twig{si}_{k}", base, end, 0.04, 0.015, mat=bark, parent=root, sides=6)
+            clusters.append((end, r.uniform(0.55, 0.85)))
+        clusters.append((top, 0.8))
+    leaf_cloud("Leaves", clusters, 16000, seed + 1, size=(0.04, 0.07),
+               palette=("#6f8f3a", "#82a046", "#5d7c32", "#97ae52", "#a8b85c"), parent=root, shell=(0.4, 1.0))
+    root.scale = (0.85, lib.DEPTH_STRETCH * 0.85, 0.85)
+    finish("tree_birch", root, variant=variant)
+
+
+def bush(variant=0):
+    root = setup()
+    r0 = np.random.default_rng(31 + variant * 17)
+    clusters = [((0, 0, 0.55), 0.6)]
+    for k in range(3 + variant):
+        a = r0.uniform(0, 2 * math.pi)
+        clusters.append(((math.cos(a) * 0.5, math.sin(a) * 0.35, r0.uniform(0.35, 0.55)), r0.uniform(0.35, 0.5)))
     inner = lib.material("InnerBush", lib.lin("#1d3314"), rough=0.9)
     for i, (c, rad) in enumerate(clusters):
         lib.primitive("ico_sphere", f"Inner{i}", mat=inner, parent=root, subdivisions=2, radius=rad * 0.7, location=c)
     leaf_cloud("Leaves", clusters, 4200, 31, size=(0.05, 0.09),
                palette=("#3a6428", "#4a7430", "#2f5522", "#58803a"), parent=root)
-    berry = lib.material("Berry", lib.lin("#9a1d24"), rough=0.3, spec=0.6)
-    r = np.random.default_rng(32)
-    for k in range(18):
+    berry = lib.material("Berry", lib.lin(("#9a1d24", "#e8e4f0", "#3a2a5a")[variant]), rough=0.3, spec=0.6)
+    r = np.random.default_rng(32 + variant)
+    for k in range((18, 40, 24)[variant]):
         c, rad = clusters[r.integers(len(clusters))]
         d = r.normal(size=3)
         d /= np.linalg.norm(d)
@@ -384,10 +482,10 @@ def bush():
             continue
         lib.primitive("uv_sphere", f"Berry{k}", mat=berry, parent=root, segments=8, ring_count=6, radius=0.035,
                       location=tuple(p))
-    finish("bush", root)
+    finish("bush", root, variant=variant)
 
 
-def rock():
+def rock(variant=0):
     root = setup()
     mat = bpy.data.materials.new("Rock")
     mat.use_nodes = True
@@ -420,15 +518,25 @@ def rock():
     bump.inputs["Strength"].default_value = 0.9
     nt.links.new(noise.outputs["Fac"], bump.inputs["Height"])
     nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
-    for name, loc, rad, scale, seed in (("Boulder", (0, 0, 0.12), 0.62, (1.2, 0.95, 0.7), 0.0),
-                                        ("Stone", (0.78, -0.3, 0.02), 0.25, (1.1, 0.9, 0.7), 3.0)):
+    rv = np.random.default_rng(5 + variant * 13)
+    pieces = [("Boulder", (0, 0, 0.12), 0.62, (1.2, 0.95, 0.7))]
+    if variant == 1:
+        pieces = [("Boulder", (-0.2, 0.1, 0.1), 0.55, (1.0, 0.9, 0.8)), ("Boulder2", (0.45, -0.15, 0.05), 0.4, (1.2, 1.0, 0.6))]
+    elif variant == 2:
+        pieces = [("Slab", (0, 0, 0.05), 0.7, (1.4, 1.0, 0.35))]
+    pieces.append(("Stone", (0.78, -0.3, 0.02), 0.22, (1.1, 0.9, 0.7)))
+    from mathutils import Matrix
+    for name, loc, rad, scale in pieces:
         obj = lib.primitive("ico_sphere", name, mat=mat, parent=root, subdivisions=5, radius=rad, location=loc)
+        obj.data.transform(Matrix.Rotation(rv.uniform(0, 6.28), 4, 'Z') @ Matrix.Rotation(rv.uniform(0, 6.28), 4, 'X'))
         obj.scale = scale
-        big = lib.displace(obj, strength=rad * 0.45, scale=rad * 0.9, depth=2)
-        big.texture.noise_basis = 'VORONOI_F2'
-        lib.displace(obj, strength=rad * 0.12, scale=rad * 0.25, depth=4)
-        obj.data.shade_smooth()
-    finish("rock", root)
+        big = lib.displace(obj, strength=rad * 0.5, scale=rad * 0.6, depth=2)
+        big.texture.noise_basis = 'VORONOI_CRACKLE'
+        lib.displace(obj, strength=rad * 0.15, scale=rad * 0.2, depth=4)
+        dec = obj.modifiers.new("Facets", 'DECIMATE')
+        dec.ratio = 0.06
+        obj.data.shade_flat()
+    finish("rock", root, variant=variant)
 
 
 def sign():
@@ -553,46 +661,82 @@ def gable_walls(name, width, depth, wall_top, ridge_z, mat, parent):
         lib.mesh_object(f"{name}{x:.1f}", verts, [(0, 1, 2)], mat=mat, parent=parent)
 
 
-def cottage():
+COTTAGE_STYLES = [
+    # Thatch over plaster and timber.
+    dict(roof="thatch", walls="plaster", timber="#4a3322", door_bay=3, chimney=0.16, pitch=47,
+         shutters="#4d5a3a", extras=()),
+    # Terracotta tiles over rubble stone, flower boxes.
+    dict(roof="tile", walls="stone", timber="#3e2c1e", door_bay=2, chimney=0.8, pitch=38,
+         shutters="#6a3a2a", extras=("flowers",)),
+    # Weathered shingles over dark timber framing, lantern and woodpile.
+    dict(roof="shingle", walls="plaster", timber="#2e2218", door_bay=4, chimney=0.25, pitch=42,
+         shutters="#3a4a5a", extras=("lantern", "woodpile")),
+]
+
+
+def flower_box(name, x, z, w, parent, y):
+    box_mat = wood_material(name + "Wood", "#5a3d22")
+    lib.box(name, (w, 0.22, 0.2), (x, y - 0.14, z), mat=box_mat, parent=parent, bevel=0.01)
+    leaf = lib.material(name + "Leaf", lib.lin("#3a6428"), rough=0.7)
+    r = np.random.default_rng(abs(hash(name)) % 1000)
+    cols = [lib.material(f"{name}Bloom{i}", lib.lin(c), rough=0.5) for i, c in
+            enumerate(("#c8323a", "#e8c040", "#f0ece0", "#c060a0"))]
+    for k in range(int(w * 22)):
+        px = x + r.uniform(-w / 2 + 0.05, w / 2 - 0.05)
+        lib.primitive("ico_sphere", f"{name}L{k}", mat=leaf, parent=parent, subdivisions=1, radius=0.06,
+                      location=(px, y - 0.15 + r.uniform(-0.05, 0.05), z + 0.12 + r.uniform(0, 0.08)))
+        if r.random() < 0.6:
+            lib.primitive("ico_sphere", f"{name}F{k}", mat=cols[r.integers(len(cols))], parent=parent,
+                          subdivisions=1, radius=0.035,
+                          location=(px, y - 0.2 + r.uniform(-0.05, 0.05), z + 0.2 + r.uniform(0, 0.08)))
+
+
+def cottage(variant=0):
+    st = COTTAGE_STYLES[variant]
     root = setup()
     cols, rows = 8, 6
     width = cols * lib.HEX_M - 0.4
     depth = footprint_depth(rows)
     wall_top = 2.9
-    plaster = plaster_material()
-    timber = wood_material("Timber", "#4a3322")
+    plaster = plaster_material("Plaster%d" % variant, ("#d8cdb0", "#d0c4a4", "#cfc6ae")[variant])
+    timber = wood_material("Timber", st["timber"])
     stone = stone_material("Plinth", "#7d776c", scale=3.5)
-    # Body: stone plinth and plastered walls.
-    lib.box("Plinth", (width, depth, 0.5), (0, depth / 2, 0.25), mat=stone, parent=root)
-    lib.box("Walls", (width - 0.1, depth - 0.1, wall_top - 0.5), (0, depth / 2, 0.5 + (wall_top - 0.5) / 2),
-            mat=plaster, parent=root)
-    # Timber framing on the front face.
     front = -0.02
-    lib.box("Sill", (width, 0.16, 0.2), (0, front, 0.55), mat=timber, parent=root, bevel=0.02)
-    lib.box("TopBeam", (width, 0.16, 0.22), (0, front, wall_top - 0.11), mat=timber, parent=root, bevel=0.02)
+    if st["walls"] == "stone":
+        walls = stone_material("StoneWalls", "#8a8274", scale=2.4)
+        lib.box("Walls", (width, depth, wall_top), (0, depth / 2, wall_top / 2), mat=walls, parent=root)
+        lib.box("TopBeam", (width, 0.16, 0.22), (0, front, wall_top - 0.11), mat=timber, parent=root, bevel=0.02)
+    else:
+        lib.box("Plinth", (width, depth, 0.5), (0, depth / 2, 0.25), mat=stone, parent=root)
+        lib.box("Walls", (width - 0.1, depth - 0.1, wall_top - 0.5), (0, depth / 2, 0.5 + (wall_top - 0.5) / 2),
+                mat=plaster, parent=root)
+        lib.box("Sill", (width, 0.16, 0.2), (0, front, 0.55), mat=timber, parent=root, bevel=0.02)
+        lib.box("TopBeam", (width, 0.16, 0.22), (0, front, wall_top - 0.11), mat=timber, parent=root, bevel=0.02)
     bays = 6
     bay_w = width / bays
-    door_bay = 3
-    for b in range(bays + 1):
-        x = -width / 2 + b * bay_w
-        lib.box(f"Post{b}", (0.2, 0.16, wall_top - 0.55), (x, front, 0.55 + (wall_top - 0.55) / 2), mat=timber,
-                parent=root, bevel=0.02)
+    door_bay = st["door_bay"]
+    if st["walls"] != "stone":
+        for b in range(bays + 1):
+            x = -width / 2 + b * bay_w
+            lib.box(f"Post{b}", (0.2, 0.16, wall_top - 0.55), (x, front, 0.55 + (wall_top - 0.55) / 2), mat=timber,
+                    parent=root, bevel=0.02)
     glass = lib.material("Glass", lib.lin("#28323a"), rough=0.08, spec=0.9, emission=lib.lin("#ffb35a"),
-                         emission_strength=0.15)
-    shutter = wood_material("Shutter", "#4d5a3a")
+                         emission_strength=0.25 if variant else 0.15)
+    shutter = wood_material("Shutter", st["shutters"])
     for b in range(bays):
         cx = -width / 2 + (b + 0.5) * bay_w
         if b == door_bay:
             continue
-        # Diagonal braces under the window.
-        for side in (-1, 1):
-            a = Vector((cx + side * bay_w * 0.45, front, 0.65))
-            c = Vector((cx + side * 0.25, front, 1.2))
-            lib.cylinder_between(f"Brace{b}{side}", a, c, 0.07, mat=timber, parent=root, sides=4)
+        if st["walls"] != "stone":
+            for side in (-1, 1):
+                a = Vector((cx + side * bay_w * 0.45, front, 0.65))
+                c = Vector((cx + side * 0.25, front, 1.2))
+                lib.cylinder_between(f"Brace{b}{side}", a, c, 0.07, mat=timber, parent=root, sides=4)
         window(f"Win{b}", cx, 1.75, 0.8, 0.75, root, timber, glass, shutter, timber, y=front)
-    # Door with frame and stone step.
+        if "flowers" in st["extras"]:
+            flower_box(f"Box{b}", cx, 1.2, 1.0, root, front)
     door_x = -width / 2 + (door_bay + 0.5) * bay_w
-    door = wood_material("Door", "#5a3a20")
+    door = wood_material("Door", ("#5a3a20", "#3e5a3a", "#6a3a28")[variant])
     lib.box("DoorFrame", (1.2, 0.18, 2.15), (door_x, front - 0.01, 1.57), mat=timber, parent=root, bevel=0.02)
     lib.box("Door", (0.95, 0.12, 1.95), (door_x, front - 0.05, 1.5), mat=door, parent=root, bevel=0.01)
     iron = iron_material()
@@ -600,19 +744,45 @@ def cottage():
         lib.box(f"Hinge{z}", (0.6, 0.02, 0.05), (door_x - 0.12, front - 0.12, z), mat=iron, parent=root)
     lib.box("Step", (1.5, 0.5, 0.18), (door_x, -0.2, 0.09), mat=stone_material("Step", "#8e897e", scale=2.0),
             parent=root, bevel=0.03)
-    # Thatched roof, gable ends and ridge.
-    thatch = tiled_roof_material("Thatch", "#8c7752", thatch=True)
-    ridge_z = roof_slopes("Thatch", width, depth, wall_top, 47, 0.55, thatch, root, thickness=0.4)
+    if "lantern" in st["extras"]:
+        flame = lib.material("Flame", lib.lin("#ffcc66"), emission=lib.lin("#ffb040"), emission_strength=10.0)
+        lib.box("LampArm", (0.06, 0.4, 0.06), (door_x + 0.85, front - 0.2, 2.3), mat=iron, parent=root)
+        lib.box("Lamp", (0.18, 0.18, 0.28), (door_x + 0.85, front - 0.4, 2.1), mat=flame, parent=root)
+        lib.box("LampCap", (0.26, 0.26, 0.07), (door_x + 0.85, front - 0.4, 2.27), mat=iron, parent=root)
+    if "woodpile" in st["extras"]:
+        logs = bark_material("Logs", "#5a4630")
+        ends = wood_material("LogEnds", "#a8875a", grain=False)
+        r = np.random.default_rng(91)
+        x0 = -width / 2 + 0.4
+        for row in range(4):
+            for k in range(7 - row):
+                x = x0 + (k + row * 0.5) * 0.26
+                z = 0.13 + row * 0.22
+                lib.cylinder_between(f"Log{row}_{k}", (x, front - 0.1, z), (x, front - 0.75, z),
+                                     0.12 + r.uniform(-0.02, 0.02), mat=logs, parent=root, sides=10)
+                lib.primitive("cylinder", f"LogEnd{row}_{k}", mat=ends, parent=root, vertices=10, radius=0.11,
+                              depth=0.01, location=(x, front - 0.76, z)).rotation_euler = (math.radians(90), 0, 0)
+    # Roof.
+    if st["roof"] == "thatch":
+        roof = tiled_roof_material("Thatch", "#8c7752", thatch=True)
+        ridge_z = roof_slopes("Roof", width, depth, wall_top, st["pitch"], 0.55, roof, root, thickness=0.4)
+        lib.cylinder_between("Ridge", (-width / 2 - 0.5, depth / 2, ridge_z + 0.3),
+                             (width / 2 + 0.5, depth / 2, ridge_z + 0.3), 0.32,
+                             mat=tiled_roof_material("Ridge", "#7d6a40", thatch=True), parent=root, sides=14)
+    else:
+        color = "#8a4430" if st["roof"] == "tile" else "#5e554a"
+        roof = tiled_roof_material("Roof", color, rows_per_m=7.0 if st["roof"] == "tile" else 7.5,
+                                   cols_per_m=5.0 if st["roof"] == "tile" else 2.2)
+        ridge_z = roof_slopes("Roof", width, depth, wall_top, st["pitch"], 0.45, roof, root, thickness=0.22)
+        lib.cylinder_between("Ridge", (-width / 2 - 0.45, depth / 2, ridge_z + 0.18),
+                             (width / 2 + 0.45, depth / 2, ridge_z + 0.18), 0.14,
+                             mat=tiled_roof_material("RidgeCap", color, rows_per_m=2.0), parent=root, sides=10)
     gable_walls("Gable", width - 0.1, depth, wall_top, ridge_z, plaster, root)
-    lib.cylinder_between("Ridge", (-width / 2 - 0.5, depth / 2, ridge_z + 0.3),
-                                 (width / 2 + 0.5, depth / 2, ridge_z + 0.3), 0.32,
-                                 mat=tiled_roof_material("Ridge", "#7d6a40", thatch=True), parent=root, sides=14)
-    # Chimney.
     chim = stone_material("Chimney", "#837c70", scale=4.0)
-    lib.box("Chimney", (0.9, 0.9, 2.8), (-width / 2 + 2.0, depth * 0.65, ridge_z - 0.2), mat=chim, parent=root)
-    lib.box("ChimneyCap", (1.05, 1.05, 0.14), (-width / 2 + 2.0, depth * 0.65, ridge_z + 1.25), mat=chim,
-            parent=root, bevel=0.02)
-    finish("house_small", root, door=(door_x, 0, 0.05))
+    cx = -width / 2 + width * st["chimney"]
+    lib.box("Chimney", (0.9, 0.9, 2.8), (cx, depth * 0.65, ridge_z - 0.2), mat=chim, parent=root)
+    lib.box("ChimneyCap", (1.05, 1.05, 0.14), (cx, depth * 0.65, ridge_z + 1.25), mat=chim, parent=root, bevel=0.02)
+    finish("house_small", root, door=(door_x, 0, 0.05), variant=variant)
 
 
 def inn():
@@ -701,28 +871,404 @@ def inn():
     finish("house_large", root, door=(door_x, 0, 0.05))
 
 
+
+# --------------------------------------------------------------------------
+# Set dressing
+# --------------------------------------------------------------------------
+
+def strips(name, items, mat_rough=0.6, parent=None):
+    """Many tapered strips (blades, fronds). items: list of (points[n,3], widths[n], colors[n,3])."""
+    verts, faces, cols = [], [], []
+    for pts, widths, cl in items:
+        pts = np.asarray(pts, dtype=float)
+        n = len(pts)
+        for k in range(n):
+            d = pts[min(k + 1, n - 1)] - pts[max(k - 1, 0)]
+            side = np.cross(d, [0.0, 0.0, 1.0])
+            if np.linalg.norm(side) < 1e-6:
+                side = np.array([1.0, 0, 0])
+            side /= np.linalg.norm(side)
+            base = len(verts)
+            verts += [pts[k] - side * widths[k] / 2, pts[k] + side * widths[k] / 2]
+            cols += [cl[k], cl[k]]
+            if k > 0:
+                faces.append((base - 2, base - 1, base + 1, base))
+    mat = lib.material(name + "_mat", (1, 1, 1), rough=mat_rough, vcol=True, spec=0.3)
+    return lib.mesh_object(name, verts, faces, colors=cols, mat=mat, parent=parent)
+
+
+def reeds(variant=0):
+    root = setup()
+    r = np.random.default_rng(101 + variant)
+    pal = [np.array(lib.lin(c)) for c in ("#7a9a44", "#8aa64a", "#a0ac5a", "#b8b06a", "#6a8a3a")]
+    items = []
+    n = 130 + variant * 25
+    cattail = lib.material("Cattail", lib.lin("#5a3a20"), rough=0.8)
+    for k in range(n):
+        a = r.uniform(0, 2 * math.pi)
+        d = r.uniform(0, 0.55) ** 0.7
+        base = np.array([math.cos(a) * d, math.sin(a) * d * 0.8, 0.0])
+        h = r.uniform(0.7, 1.5)
+        lean = np.array([r.normal(0, 0.15), r.normal(0, 0.1), 0])
+        pts = [base + lean * (t ** 2) * h + np.array([0, 0, t * h]) for t in np.linspace(0, 1, 6)]
+        c = pal[r.integers(len(pal))] * r.uniform(0.75, 1.1)
+        cl = [c * (0.55 + 0.45 * t) for t in np.linspace(0, 1, 6)]
+        items.append((pts, np.linspace(0.05, 0.008, 6), cl))
+        if r.random() < 0.15:
+            top = pts[-2]
+            lib.cylinder_between(f"Cat{k}", top - np.array([0, 0, 0.18]), top + np.array([0, 0, 0.04]),
+                                 0.035, mat=cattail, parent=root, sides=8)
+    strips("Reeds", items, parent=root)
+    finish("reeds", root, variant=variant)
+
+
+def fern(variant=0):
+    root = setup()
+    r = np.random.default_rng(201 + variant)
+    pal = [np.array(lib.lin(c)) for c in ("#3f6a28", "#4f7a30", "#5f8a36", "#36602a")]
+    items = []
+    fronds = 9 + variant * 2
+    for f in range(fronds):
+        a = 2 * math.pi * f / fronds + r.uniform(-0.2, 0.2)
+        L = r.uniform(0.55, 0.9)
+        rise = r.uniform(0.35, 0.6)
+        c = pal[r.integers(len(pal))] * r.uniform(0.85, 1.1)
+        dirv = np.array([math.cos(a), math.sin(a) * 0.85, 0])
+        side = np.array([-dirv[1], dirv[0], 0])
+        spine = [dirv * L * t + np.array([0, 0, rise * math.sin(t * math.pi * 0.75) * 0.9]) for t in np.linspace(0, 1, 9)]
+        items.append((spine, np.full(9, 0.015), [c * 0.7] * 9))
+        for k in range(1, 9):
+            t = k / 9
+            leaf_len = 0.16 * (1 - t) + 0.04
+            for sgn in (-1, 1):
+                p0 = spine[k]
+                p1 = p0 + side * sgn * leaf_len + dirv * leaf_len * 0.4 - np.array([0, 0, 0.03])
+                items.append(([p0, (p0 + p1) / 2, p1], np.array([0.035, 0.03, 0.005]), [c, c * 1.05, c * 1.1]))
+    strips("Fern", items, parent=root)
+    finish("fern", root, variant=variant)
+
+
+def flowers(variant=0):
+    root = setup()
+    r = np.random.default_rng(301 + variant)
+    heads = [("#c8302a", "#e04a32"), ("#f0ece0", "#e8c838"), ("#7a5ab8", "#4a6ac8")][variant]
+    stems = []
+    green = np.array(lib.lin("#4a6a2c"))
+    mats = [lib.material(f"Petal{i}", lib.lin(c), rough=0.5) for i, c in enumerate(heads)]
+    for k in range(55):
+        a = r.uniform(0, 2 * math.pi)
+        d = r.uniform(0, 0.7) ** 0.8
+        base = np.array([math.cos(a) * d, math.sin(a) * d * 0.8, 0])
+        h = r.uniform(0.25, 0.55)
+        tip = base + np.array([r.normal(0, 0.05), r.normal(0, 0.05), h])
+        stems.append(([base, (base + tip) / 2, tip], np.array([0.012, 0.01, 0.006]), [green * 0.7, green, green]))
+        lib.primitive("ico_sphere", f"Head{k}", mat=mats[r.integers(len(mats))], parent=root, subdivisions=1,
+                      radius=r.uniform(0.035, 0.055), location=tuple(tip))
+    for k in range(80):  # grass between the flowers
+        a = r.uniform(0, 2 * math.pi)
+        d = r.uniform(0, 0.75)
+        base = np.array([math.cos(a) * d, math.sin(a) * d * 0.8, 0])
+        h = r.uniform(0.15, 0.35)
+        tip = base + np.array([r.normal(0, 0.08), r.normal(0, 0.08), h])
+        stems.append(([base, tip], np.array([0.02, 0.003]), [green * 0.6, green * 1.2]))
+    strips("Stems", stems, parent=root)
+    finish("flowers", root, variant=variant)
+
+
+def log(variant=0):
+    root = setup()
+    bark = bark_material("LogBark", "#4f4030")
+    ends = wood_material("LogEnd", "#9a7a50", grain=False)
+    ang = (0.0, math.radians(32))[variant]
+    L, rad = (2.8, 2.2)[variant], (0.3, 0.24)[variant]
+    a = Vector((-math.cos(ang) * L / 2, -math.sin(ang) * L / 2, rad * 0.85))
+    b = Vector((math.cos(ang) * L / 2, math.sin(ang) * L / 2, rad * 0.8))
+    lib.cylinder_between("Log", a, b, rad, rad * 0.85, mat=bark, parent=root, sides=16)
+    for p, rr in ((a, rad), (b, rad * 0.85)):
+        cap = lib.primitive("cylinder", "Cap", mat=ends, parent=root, vertices=16, radius=rr * 0.95, depth=0.02,
+                            location=tuple(p))
+        cap.rotation_euler = (b - a).to_track_quat('Z', 'Y').to_euler()
+    moss = lib.material("Moss", lib.lin("#3e5a24"), rough=0.95, noise_var=0.3, noise_scale=30, bump=0.8, bump_scale=90)
+    r = np.random.default_rng(401 + variant)
+    for k in range(22):
+        t = r.uniform(0.1, 0.9)
+        ang = r.uniform(-1.0, 1.0)
+        p = a + (b - a) * t + Vector((0, math.sin(ang) * rad * 0.8, math.cos(ang) * rad * 0.82))
+        m = lib.primitive("ico_sphere", f"Moss{k}", mat=moss, parent=root, subdivisions=2,
+                          radius=rad * r.uniform(0.12, 0.25), location=tuple(p))
+        m.scale = (1.5, 1.2, 0.5)
+    stub_end = a + (b - a) * 0.4 + Vector((0.1, 0.35, 0.5))
+    lib.cylinder_between("Stub", a + (b - a) * 0.4 + Vector((0, 0, rad * 0.5)), stub_end, 0.08, 0.04, mat=bark,
+                         parent=root, sides=8)
+    finish("log", root, variant=variant)
+
+
+def stump(variant=0):
+    root = setup()
+    bark = bark_material("StumpBark", "#4a3a2a")
+    lib.cylinder_between("Stump", (0, 0, -0.05), (0, 0, 0.55), 0.42, 0.36, mat=bark, parent=root, sides=18)
+    rings = bpy.data.materials.new("Rings")
+    rings.use_nodes = True
+    nt = rings.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    wave = nt.nodes.new("ShaderNodeTexWave")
+    wave.wave_type = 'RINGS'
+    wave.inputs["Scale"].default_value = 6.0
+    wave.inputs["Distortion"].default_value = 3.0
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    # Weathered, greyed cut face (fresh pale wood looks too bright from above).
+    ramp.color_ramp.elements[0].color = (*lib.lin("#5e4c38"), 1)
+    ramp.color_ramp.elements[1].color = (*lib.lin("#8a7658"), 1)
+    nt.links.new(wave.outputs["Fac"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    lib.primitive("cylinder", "Top", mat=rings, parent=root, vertices=18, radius=0.355, depth=0.02, location=(0, 0, 0.555))
+    for k in range(5):
+        a = k * 2 * math.pi / 5 + 0.3
+        lib.cylinder_between(f"Root{k}", (0, 0, 0.3), (math.cos(a) * 0.7, math.sin(a) * 0.6, -0.05), 0.16, 0.05,
+                             mat=bark, parent=root, sides=8)
+    if variant == 1:
+        axe_h = wood_material("AxeHandle", "#7a5a36")
+        lib.cylinder_between("Axe", (0.05, 0, 0.56), (0.45, -0.25, 1.2), 0.025, mat=axe_h, parent=root, sides=8)
+        lib.box("AxeHead", (0.2, 0.04, 0.12), (0.05, 0.0, 0.6), mat=iron_material(), parent=root)
+    finish("stump", root, variant=variant)
+
+
+def barrel_mesh(name, loc, mat, hoop, parent, h=0.9, r=0.33, lying=False):
+    from render_characters import loft
+    secs = [(t * h, r * (0.86 + 0.14 * math.sin(math.pi * t)), r * (0.86 + 0.14 * math.sin(math.pi * t)), 0, 0)
+            for t in np.linspace(0, 1, 9)]
+    b = loft(name, secs, mat, parent, sides=20)
+    for t in (0.12, 0.88):
+        rr = r * (0.86 + 0.14 * math.sin(math.pi * t)) + 0.008
+        hoop_o = lib.primitive("torus", name + f"Hoop{t}", mat=hoop, parent=parent, major_radius=rr, minor_radius=0.018,
+                               location=(0, 0, t * h))
+        hoop_o.parent = b
+        hoop_o.location = (0, 0, t * h)
+    b.location = loc
+    if lying:
+        b.rotation_euler = (math.radians(90), 0, math.radians(25))
+        b.location = (loc[0], loc[1] + h / 2, loc[2] + r)
+    return b
+
+
+def barrels(variant=0):
+    root = setup()
+    wood = wood_material("Staves", "#6b4a2b")
+    hoop = iron_material()
+    if variant == 0:
+        for i, (x, y) in enumerate(((-0.38, 0.1), (0.38, 0.12), (0.0, -0.3))):
+            barrel_mesh(f"Barrel{i}", (x, y, 0), wood, hoop, root)
+    else:
+        barrel_mesh("Barrel0", (-0.3, 0.1, 0), wood, hoop, root)
+        barrel_mesh("Barrel1", (0.35, -0.2, 0), wood, hoop, root, lying=True)
+    finish("barrels", root, variant=variant)
+
+
+def crates(variant=0):
+    root = setup()
+    wood = wood_material("CrateWood", "#8a6a42")
+    dark = wood_material("CrateFrame", "#5a4128")
+    r = np.random.default_rng(601 + variant)
+    stacks = [((-0.35, 0.1, 0), 0.6), ((0.35, 0.05, 0), 0.6), ((-0.05, 0.1, 0.6), 0.55)] if variant == 0 else \
+             [((0, 0.1, 0), 0.7), ((0.55, -0.25, 0), 0.45), ((0.05, 0.12, 0.7), 0.5)]
+    for i, (p, s) in enumerate(stacks):
+        rot = r.uniform(-0.2, 0.2)
+        c = lib.box(f"Crate{i}", (s, s, s), (p[0], p[1], p[2] + s / 2), mat=wood, parent=root,
+                    rotation=(0, 0, rot), bevel=0.015)
+        for dz in (-s / 2 + 0.04, s / 2 - 0.04):
+            band = lib.box(f"Band{i}{dz}", (s + 0.02, s + 0.02, 0.06), (0, 0, dz), mat=dark, parent=c, bevel=0.005)
+            band.parent = c
+    finish("crates", root, variant=variant)
+
+
+def hay(variant=0):
+    root = setup()
+    straw = tiled_roof_material("Hay", "#b09a5a", thatch=True)
+    twine = lib.material("Twine", lib.lin("#6a5030"), rough=0.9)
+    bales = [((0, 0, 0), 0)] if variant == 0 else [((-0.45, 0, 0), 0.1), ((0.45, 0.05, 0), -0.08), ((0, 0.02, 0.5), 0.05)]
+    for i, (p, rot) in enumerate(bales):
+        lib.box(f"Bale{i}", (0.9, 0.5, 0.48), (p[0], p[1], p[2] + 0.24), mat=straw, parent=root,
+                rotation=(0, 0, rot), bevel=0.06, segments=3)
+        for dx in (-0.25, 0.25):
+            lib.box(f"Twine{i}{dx}", (0.03, 0.52, 0.5), (p[0] + dx, p[1], p[2] + 0.24), mat=twine, parent=root,
+                    rotation=(0, 0, rot))
+    finish("hay", root, variant=variant)
+
+
+def lamp_post():
+    root = setup()
+    stone = stone_material("LampBase", "#8a8478", scale=5)
+    lib.box("Base", (0.4, 0.4, 0.3), (0, 0, 0.15), mat=stone, parent=root, bevel=0.03)
+    iron = iron_material()
+    lib.cylinder_between("Pole", (0, 0, 0.3), (0, 0, 2.6), 0.05, 0.04, mat=iron, parent=root, sides=10)
+    lib.cylinder_between("Arm", (0, 0, 2.5), (0.35, 0, 2.55), 0.025, mat=iron, parent=root, sides=8)
+    flame = lib.material("LampFlame", lib.lin("#ffd070"), emission=lib.lin("#ffb040"), emission_strength=14.0)
+    lib.box("Lantern", (0.22, 0.22, 0.32), (0.35, 0, 2.3), mat=flame, parent=root)
+    lib.box("LanternCap", (0.3, 0.3, 0.08), (0.35, 0, 2.49), mat=iron, parent=root, bevel=0.01)
+    for dx in (-0.11, 0.11):
+        for dy in (-0.11, 0.11):
+            lib.box(f"Bar{dx}{dy}", (0.02, 0.02, 0.34), (0.35 + dx, dy, 2.3), mat=iron, parent=root)
+    finish("lamp_post", root)
+
+
+def awning_material(name, a, b):
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    bsdf.inputs["Roughness"].default_value = 0.9
+    coord = nt.nodes.new("ShaderNodeTexCoord")
+    wave = nt.nodes.new("ShaderNodeTexWave")
+    wave.bands_direction = 'X'
+    wave.inputs["Scale"].default_value = 1.6
+    wave.inputs["Distortion"].default_value = 0.0
+    nt.links.new(coord.outputs["Object"], wave.inputs["Vector"])
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.interpolation = 'CONSTANT'
+    ramp.color_ramp.elements[0].color = (*lib.lin(a), 1)
+    ramp.color_ramp.elements[1].position = 0.5
+    ramp.color_ramp.elements[1].color = (*lib.lin(b), 1)
+    nt.links.new(wave.outputs["Fac"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    return mat
+
+
+def market_stall(variant=0):
+    root = setup()
+    cols, rows = 3, 2
+    width = cols * lib.HEX_M - 0.3
+    depth = footprint_depth(rows)
+    post = wood_material("StallPost", "#5a4128")
+    for x in (-width / 2 + 0.1, width / 2 - 0.1):
+        for y in (0.95, depth - 0.15):
+            h = 2.35 if y < 1.5 else 2.85
+            lib.box(f"Post{x:.1f}{y:.1f}", (0.1, 0.1, h), (x, y, h / 2), mat=post, parent=root)
+    counter = wood_material("Counter", "#7a5a36")
+    lib.box("Counter", (width - 0.2, 0.7, 0.9), (0, 0.5, 0.45), mat=counter, parent=root, bevel=0.02)
+    cloth = awning_material("Awning", *(("#8a3a2e", "#d8ccb0"), ("#3a5070", "#d8ccb0"))[variant])
+    from mathutils import Vector as V
+    p = [V((-width / 2 - 0.2, 0.95, 2.35)), V((width / 2 + 0.2, 0.95, 2.35)),
+         V((width / 2 + 0.2, depth + 0.15, 2.85)), V((-width / 2 - 0.2, depth + 0.15, 2.85))]
+    lib.mesh_object("Awning", p, [(0, 1, 2, 3)], mat=cloth, parent=root)
+    # Scalloped valance along the front edge.
+    n_sc = 14
+    verts, faces = [], []
+    for k in range(n_sc):
+        x0 = -width / 2 - 0.2 + (width + 0.4) * k / n_sc
+        x1 = -width / 2 - 0.2 + (width + 0.4) * (k + 1) / n_sc
+        base = len(verts)
+        verts += [(x0, 0.94, 2.35), (x1, 0.94, 2.35), (x1, 0.94, 2.17), ((x0 + x1) / 2, 0.94, 2.08), (x0, 0.94, 2.17)]
+        faces.append(tuple(range(base, base + 5)))
+    lib.mesh_object("Valance", verts, faces, mat=cloth, parent=root)
+    r = np.random.default_rng(701 + variant)
+    if variant == 0:
+        goods = [lib.material(f"Fruit{i}", lib.lin(c), rough=0.4) for i, c in
+                 enumerate(("#c8302a", "#e8a030", "#8ab040", "#a03060"))]
+        basket = wood_material("Basket", "#a8875a", grain=False)
+        for k in range(5):
+            x = -width / 2 + 0.5 + k * (width - 1.0) / 4
+            lib.primitive("cylinder", f"Basket{k}", mat=basket, parent=root, vertices=14, radius=0.22, depth=0.14,
+                          location=(x, 0.45, 0.97))
+            m = goods[k % len(goods)]
+            for j in range(9):
+                lib.primitive("uv_sphere", f"Fruit{k}_{j}", mat=m, parent=root, segments=10, ring_count=6,
+                              radius=0.06, location=(x + r.uniform(-0.12, 0.12), 0.45 + r.uniform(-0.12, 0.12),
+                                                     1.05 + r.uniform(0, 0.06)))
+    else:
+        clay = [lib.material(f"Clay{i}", lib.lin(c), rough=0.6) for i, c in enumerate(("#a8603a", "#8a5030", "#c08050"))]
+        for k in range(8):
+            x = -width / 2 + 0.4 + k * (width - 0.8) / 7
+            pot = lib.primitive("uv_sphere", f"Pot{k}", mat=clay[k % 3], parent=root, segments=14, ring_count=8,
+                                radius=r.uniform(0.12, 0.18), location=(x, 0.45, 1.05))
+            pot.scale = (1, 1, 1.25)
+    crate = wood_material("StallCrate", "#8a6a42")
+    for k, x in enumerate((-width / 2 - 0.1, width / 2 + 0.15)):
+        lib.box(f"SideCrate{k}", (0.5, 0.5, 0.5), (x, 0.2, 0.25), mat=crate, parent=root, bevel=0.015)
+    finish("market_stall", root, variant=variant)
+
+
+def cart():
+    root = setup()
+    wood = wood_material("CartWood", "#6b4a2b")
+    width = 2 * lib.HEX_M - 0.2
+    lib.box("Bed", (width - 0.6, 1.2, 0.08), (0.1, 0.7, 0.75), mat=wood, parent=root, bevel=0.01)
+    for y in (0.12, 1.28):
+        lib.box(f"Side{y}", (width - 0.6, 0.06, 0.4), (0.1, y, 0.98), mat=wood, parent=root, bevel=0.01)
+    lib.box("Back", (0.06, 1.2, 0.4), (width / 2 - 0.2, 0.7, 0.98), mat=wood, parent=root)
+    for y in (0.3, 1.1):
+        lib.cylinder_between(f"Shaft{y}", (-width / 2 + 0.3, y, 0.78), (-width / 2 - 0.9, y, 0.45), 0.04,
+                             mat=wood, parent=root, sides=8)
+    iron = iron_material()
+    for y in (-0.02, 1.42):
+        wheel = lib.primitive("torus", f"Wheel{y}", mat=wood, parent=root, major_radius=0.5, minor_radius=0.05,
+                              location=(0.2, y, 0.52))
+        wheel.rotation_euler = (math.radians(90), 0, 0)
+        rim = lib.primitive("torus", f"Rim{y}", mat=iron, parent=root, major_radius=0.54, minor_radius=0.02,
+                            location=(0.2, y, 0.52))
+        rim.rotation_euler = (math.radians(90), 0, 0)
+        for k in range(8):
+            a = k * math.pi / 4
+            lib.cylinder_between(f"Spoke{y}{k}", (0.2, y, 0.52), (0.2 + math.cos(a) * 0.48, y, 0.52 + math.sin(a) * 0.48),
+                                 0.02, mat=wood, parent=root, sides=6)
+    sack = lib.material("Sack", lib.lin("#b0a078"), rough=0.95, noise_var=0.2, bump=0.4, bump_scale=60)
+    for k, (x, y) in enumerate(((-0.2, 0.5), (0.35, 0.8), (0.05, 0.95))):
+        s = lib.primitive("uv_sphere", f"Sack{k}", mat=sack, parent=root, segments=16, ring_count=10, radius=0.3,
+                          location=(x, y, 1.0))
+        s.scale = (1.2, 0.9, 0.75)
+        s.data.shade_smooth()
+    finish("cart", root)
+
+
+
+def variants(fn, n):
+    return [lambda i=i: fn(i) for i in range(n)]
+
+
 ALL = {
-    "tree_oak": tree_oak,
-    "tree_pine": tree_pine,
-    "bush": bush,
-    "rock": rock,
-    "sign": sign,
-    "well": well,
-    "bridge_wood": bridge_wood,
-    "house_small": cottage,
-    "house_large": inn,
+    "tree_oak": variants(tree_oak, len(OAK_SHAPES)),
+    "tree_pine": variants(tree_pine, len(PINE_SHAPES)),
+    "tree_birch": variants(tree_birch, 2),
+    "bush": variants(bush, 3),
+    "rock": variants(rock, 3),
+    "sign": [sign],
+    "well": [well],
+    "bridge_wood": [bridge_wood],
+    "house_small": variants(cottage, len(COTTAGE_STYLES)),
+    "house_large": [inn],
+    "reeds": variants(reeds, 3),
+    "fern": variants(fern, 3),
+    "flowers": variants(flowers, 3),
+    "log": variants(log, 2),
+    "stump": variants(stump, 2),
+    "barrels": variants(barrels, 2),
+    "crates": variants(crates, 2),
+    "hay": variants(hay, 2),
+    "lamp_post": [lamp_post],
+    "market_stall": variants(market_stall, 2),
+    "cart": [cart],
 }
 
 
 def write_manifest():
-    """Writes rendered origins / door pixels back into data/props/props.json."""
+    """Writes rendered looks (texture, origin, door pixel) into data/props/props.json.
+    One look is stored at the top level; several go in a "variants" list."""
     path = lib.ROOT / "data" / "props" / "props.json"
     data = json.loads(path.read_text())
-    for name, entry in MANIFEST.items():
-        if name in data["props"]:
-            data["props"][name]["origin"] = entry["origin"]
-            if "door_pixel" in entry:
-                data["props"][name]["door_pixel"] = entry["door_pixel"]
+    for name, looks in MANIFEST.items():
+        if name not in data["props"] or any(look is None for look in looks):
+            continue
+        entry = data["props"][name]
+        for key in ("texture", "origin", "door_pixel", "variants"):
+            entry.pop(key, None)
+        if len(looks) == 1:
+            new = dict(looks[0])
+        else:
+            new = {"variants": looks}
+        # Keep "name" first, then the looks, then the remaining fields.
+        ordered = {"name": entry.pop("name", name)}
+        ordered.update(new)
+        ordered.update(entry)
+        data["props"][name] = ordered
     out = ['{', '\t"schema_version": %d,' % data.get("schema_version", 1), '\t"props": {']
     items = list(data["props"].items())
     for i, (k, v) in enumerate(items):
@@ -739,5 +1285,6 @@ def write_manifest():
 
 def run(names=None):
     for name in names or ALL:
-        ALL[name]()
+        for fn in ALL[name]:
+            fn()
     write_manifest()

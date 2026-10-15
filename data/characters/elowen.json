@@ -81,9 +81,10 @@
 		"portrait": "res://assets/portraits/elowen.png",
 		"sprite": "res://assets/characters/wizard.png",
 		"sprite_origin": [
-			17,
-			70
-		]
+			27,
+			84
+		],
+		"animation": "res://assets/characters/wizard_anim.json"
 	},
 	"bio": "An elven scholar chasing rumours of a lantern that never goes out."
 }

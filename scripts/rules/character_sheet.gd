@@ -20,6 +20,8 @@ var armor_class: int = 10
 var speed_ft: int = 30
 var portrait_path: String = ""
 var sprite_path: String = ""
+## Optional sprite-sheet description (facings x walk frames), see docs/ASSETS.md.
+var animation_path: String = ""
 ## Pixel in the sprite that sits on the hex centre (the character's feet).
 var sprite_origin: Variant = null
 var errors: PackedStringArray = PackedStringArray()
@@ -57,6 +59,7 @@ static func from_dict(d: Dictionary, path: String = "") -> CharacterSheet:
 	var art: Dictionary = d.get("art", {})
 	s.portrait_path = str(art.get("portrait", ""))
 	s.sprite_path = str(art.get("sprite", ""))
+	s.animation_path = str(art.get("animation", ""))
 	if art.has("sprite_origin"):
 		s.sprite_origin = JsonUtil.to_vec2(art["sprite_origin"])
 	return s

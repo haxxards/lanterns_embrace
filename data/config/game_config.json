@@ -17,6 +17,14 @@
 		"edge_sharpness": 4.0
 	},
 
+	"post": {
+		"enabled": true,
+		"contrast": 1.06,
+		"saturation": 1.06,
+		"warmth": 0.025,
+		"vignette": 0.32
+	},
+
 	"camera": {
 		"pan_speed": 900,
 		"edge_pan": true,

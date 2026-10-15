@@ -12,12 +12,38 @@ extends RefCounted
 const LAYER_ENTITIES := "entities"  # y-sorted with characters
 const LAYER_GROUND := "ground"      # flat on the ground, under characters
 
+
+## One look of a prop: its image, pivot and (for buildings) door. A prop type
+## can have several looks ("variants"); each placed instance picks one.
+class Look:
+	var texture_path: String = ""
+	var texture: Texture2D
+	## Pixel in the texture placed on the anchor hex centre, or for rect
+	## footprints on the bottom-centre of the footprint.
+	var origin: Vector2 = Vector2.ZERO
+	var has_door: bool = false
+	## Entrance pixel in the texture; the door hex is the footprint hex nearest to it.
+	var door_pixel: Vector2 = Vector2.ZERO
+
+	static func from_dict(d: Dictionary, fallback: Look = null) -> Look:
+		var l := Look.new()
+		l.texture_path = str(d.get("texture", fallback.texture_path if fallback else ""))
+		l.origin = JsonUtil.to_vec2(d.get("origin"), fallback.origin if fallback else Vector2.ZERO)
+		if d.has("door_pixel"):
+			l.has_door = true
+			l.door_pixel = JsonUtil.to_vec2(d["door_pixel"])
+		elif fallback:
+			l.has_door = fallback.has_door
+			l.door_pixel = fallback.door_pixel
+		return l
+
+
 var id: String = ""
 var display_name: String = ""
+var looks: Array[Look] = []
+## Shortcuts to the first look (single-look props use only these).
 var texture_path: String = ""
 var texture: Texture2D
-## Pixel in the texture placed on the anchor hex centre, or for rect
-## footprints on the bottom-centre of the footprint.
 var origin: Vector2 = Vector2.ZERO
 var footprint: Array[Vector2i] = []
 var footprint_rect: Vector2i = Vector2i.ZERO
@@ -31,10 +57,9 @@ var interaction: String = ""
 ## Turn see-through when a party member walks behind it. Defaults to true
 ## for tall sprites (trees, buildings); override with "fade_when_occluding".
 var fade_when_occluding: bool = true
-## Entrance, as a pixel in the texture (the door hex is the footprint hex
-## nearest to it). Interiors (Phase 2) are entered from here.
+## True if the prop has an entrance (any look defines a door pixel).
+## Interiors (Phase 2) are entered from the door hex.
 var has_door: bool = false
-var door_pixel: Vector2 = Vector2.ZERO
 var minimap_color: Color = Color(0.3, 0.3, 0.3)
 
 var _fade_override: Variant = null
@@ -44,8 +69,16 @@ static func from_dict(prop_id: String, d: Dictionary) -> PropDef:
 	var p := PropDef.new()
 	p.id = prop_id
 	p.display_name = str(d.get("name", prop_id.capitalize()))
-	p.texture_path = str(d.get("texture", ""))
-	p.origin = JsonUtil.to_vec2(d.get("origin"), Vector2.ZERO)
+	var base := Look.from_dict(d)
+	for v in d.get("variants", []):
+		if v is Dictionary:
+			p.looks.append(Look.from_dict(v, base))
+	if p.looks.is_empty():
+		p.looks.append(base)
+	p.texture_path = p.looks[0].texture_path
+	p.origin = p.looks[0].origin
+	for l in p.looks:
+		p.has_door = p.has_door or l.has_door
 	p.footprint_rect = JsonUtil.to_vec2i(d.get("footprint_rect"), Vector2i.ZERO)
 	var cells := {}
 	var radius := int(d.get("footprint_radius", -1))
@@ -63,13 +96,24 @@ static func from_dict(prop_id: String, d: Dictionary) -> PropDef:
 	p.blocks_sight = bool(d.get("blocks_sight", false))
 	p.move_cost = maxf(0.1, float(d.get("move_cost", 1.0)))
 	p.interaction = str(d.get("interaction", ""))
-	if d.has("door_pixel"):
-		p.has_door = true
-		p.door_pixel = JsonUtil.to_vec2(d["door_pixel"])
 	p.minimap_color = JsonUtil.parse_color(d.get("minimap_color"), p.minimap_color)
 	if d.has("fade_when_occluding"):
 		p._fade_override = bool(d["fade_when_occluding"])
 	return p
+
+
+## Look `i` (wraps around, so any index is valid).
+func look(i: int) -> Look:
+	return looks[posmod(i, looks.size())]
+
+
+## Look picked for an instance at offset cell `cell` when the map doesn't say:
+## a stable hash, so the same map always looks the same.
+func look_index_for(cell: Vector2i) -> int:
+	if looks.size() <= 1:
+		return 0
+	var h := (cell.x * 73856093) ^ (cell.y * 19349663)
+	return posmod(h, looks.size())
 
 
 func is_rect() -> bool:
@@ -108,10 +152,12 @@ static func placement_point(def: PropDef, cells: Array[Vector2i], anchor: Vector
 
 
 ## Footprint hex the door opens from (nearest to the door pixel), or null.
-static func door_hex(def: PropDef, cells: Array[Vector2i], anchor: Vector2i, radius: float) -> Variant:
-	if not def.has_door or cells.is_empty():
+static func door_hex(def: PropDef, cells: Array[Vector2i], anchor: Vector2i, radius: float,
+		look_index: int = 0) -> Variant:
+	var l := def.look(look_index)
+	if not l.has_door or cells.is_empty():
 		return null
-	var door_world := placement_point(def, cells, anchor, radius) - def.origin + def.door_pixel
+	var door_world := placement_point(def, cells, anchor, radius) - l.origin + l.door_pixel
 	var best: Variant = null
 	var best_d := INF
 	for h in cells:
@@ -128,5 +174,9 @@ func resolve_fade(tall_threshold: float) -> void:
 		fade_when_occluding = _fade_override
 	elif layer == LAYER_GROUND:
 		fade_when_occluding = false
-	elif texture:
-		fade_when_occluding = texture.get_size().y > tall_threshold
+	else:
+		var tallest := 0.0
+		for l in looks:
+			if l.texture:
+				tallest = maxf(tallest, l.texture.get_size().y)
+		fade_when_occluding = tallest > tall_threshold
