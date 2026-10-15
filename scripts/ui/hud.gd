@@ -1,8 +1,9 @@
 class_name Hud
 extends CanvasLayer
-## In-game HUD: party sidebar (minimap + portraits), hover info, pause banner,
-## toasts, sign/message box and the controls help. Built in code so the
-## layout is easy to read and change in one place.
+## In-game HUD: party sidebar (minimap + portraits + purse), hover info, pause
+## banner, toasts, sign/message box, controls help, and the modal screens
+## (inventory, Esc menu, save/load). Built in code so the layout is easy to
+## read and change in one place. The game pauses while a modal screen is open.
 
 const SIDEBAR_WIDTH := 232.0
 const HELP_TEXT := """[b]Controls[/b]
@@ -10,7 +11,9 @@ Left click ground  –  move selected
 Left click member / portrait  –  select   (Shift: add)
 Left drag  –  box select        Ctrl+A  –  select all
 1-%d  –  select member        Right click  –  deselect
-Left click a sign  –  walk over and read it
+Left click a sign / chest / door  –  read / open / go in
+I  –  inventory        Esc  –  menu (save, load)
+F5  –  quicksave        F9  –  quickload
 WASD / arrows / screen edge / middle drag  –  pan
 Mouse wheel, + / -  –  zoom        C  –  centre on selection
 Space  –  pause / resume        G  –  toggle grid
@@ -34,6 +37,14 @@ var _toast_tween: Tween
 var _message_panel: PanelContainer
 var _message_title: Label
 var _message_body: Label
+var _gold_label: Label
+var _inventory: InventoryScreen
+var _menu: GameMenu
+var _save_load: SaveLoadScreen
+## Pause state from before the first modal screen opened (restored on close).
+var _paused_before_modal: Variant = null
+## Screenshot of the game view taken when the menu opens (save thumbnail).
+var _snapshot: Image
 
 
 func _ready() -> void:
@@ -49,8 +60,11 @@ func _ready() -> void:
 	Events.hover_info_changed.connect(_on_hover_info)
 	Events.message_requested.connect(show_message)
 	Events.toast_requested.connect(show_toast)
-	Events.pause_changed.connect(func(p: bool) -> void: _pause_banner.visible = p)
+	Events.pause_changed.connect(func(_p: bool) -> void: _update_pause_banner())
 	Events.party_order_issued.connect(func() -> void: _message_panel.visible = false)
+	Events.container_opened.connect(_on_container_opened)
+	GameState.gold_changed.connect(func(g: int) -> void: _gold_label.text = "Gold  %d" % g)
+	SaveManager.game_loaded.connect(func(_slot: String) -> void: _close_all_modals())
 
 
 func bind(w: World) -> void:
@@ -63,8 +77,31 @@ func _unhandled_input(event: InputEvent) -> void:
 		_help_panel.visible = not _help_panel.visible
 	elif event.is_action_pressed("toggle_debug"):
 		_info_panel.visible = not _info_panel.visible
-	elif event.is_action_pressed("ui_cancel") and _message_panel.visible:
-		_message_panel.visible = false
+	elif event.is_action_pressed("toggle_inventory"):
+		if _inventory.visible:
+			_inventory.close()
+		elif not _menu.visible and not _save_load.visible:
+			open_inventory()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("quicksave"):
+		quicksave()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("quickload"):
+		quickload()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_cancel"):
+		# Esc closes the top-most thing, or opens the menu.
+		if _message_panel.visible:
+			_message_panel.visible = false
+		elif _save_load.visible:
+			_save_load.close()
+		elif _inventory.visible:
+			_inventory.close()
+		elif _menu.visible:
+			_menu.visible = false
+			_on_modal_closed()
+		else:
+			open_menu()
 		get_viewport().set_input_as_handled()
 
 
@@ -86,6 +123,116 @@ func show_toast(text: String) -> void:
 	_toast_tween.tween_interval(1.4)
 	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.5)
 	_toast_tween.tween_callback(_toast.hide)
+
+
+## Inventory of the selection's leader (or the first member).
+func open_inventory() -> void:
+	if world == null or world.party.members.is_empty():
+		return
+	var m: PartyMember = world.party.leader() if world.party.leader() else world.party.members[0]
+	_enter_modal()
+	_inventory.open(m.sheet)
+
+
+func open_menu() -> void:
+	# Grab the game view for the save thumbnail before the menu covers it.
+	_snapshot = await _capture_view()
+	_enter_modal()
+	_menu.visible = true
+	Audio.play_sfx("ui_open")
+
+
+func quicksave() -> void:
+	if world == null or world.map == null:
+		return
+	var img := _snapshot if _modal_open() else await _capture_view()
+	if SaveManager.save_game(SaveManager.QUICKSAVE, "Quicksave", world, img):
+		show_toast("Quicksaved.")
+
+
+func quickload() -> void:
+	if not SaveManager.has_save(SaveManager.QUICKSAVE):
+		show_toast("No quicksave yet (F5 makes one).")
+		return
+	if SaveManager.load_game(SaveManager.QUICKSAVE):
+		show_toast("Quickloaded.")
+
+
+## Screenshot of the map area (without the sidebar), or null when headless.
+func _capture_view() -> Image:
+	if DisplayServer.get_name() == "headless":
+		return null  # nothing is drawn, and frame_post_draw never fires
+	await RenderingServer.frame_post_draw
+	var tex := get_viewport().get_texture()
+	var img: Image = tex.get_image() if tex else null
+	if img == null or img.is_empty():
+		return null
+	var w := img.get_width() - int(SIDEBAR_WIDTH * img.get_width() / get_viewport().get_visible_rect().size.x)
+	return img.get_region(Rect2i(0, 0, maxi(1, w), img.get_height()))
+
+
+func _modal_open() -> bool:
+	return _inventory.visible or _menu.visible or _save_load.visible
+
+
+## The "PAUSED" banner is only for the player's own pause, not for menus.
+func _update_pause_banner() -> void:
+	_pause_banner.visible = get_tree().paused and _paused_before_modal == null
+
+
+func _enter_modal() -> void:
+	if not _modal_open() and _paused_before_modal == null:
+		_paused_before_modal = get_tree().paused
+		world.set_paused(true)
+	_update_pause_banner()
+
+
+func _on_modal_closed() -> void:
+	if _modal_open() or _paused_before_modal == null:
+		return
+	var was: bool = _paused_before_modal
+	_paused_before_modal = null
+	world.set_paused(was)
+	_update_pause_banner()
+
+
+func _close_all_modals() -> void:
+	_inventory.close()
+	_save_load.close()
+	_menu.visible = false
+	_on_modal_closed()
+
+
+func _on_container_opened(container: ContainerState, title: String, opener: CharacterSheet) -> void:
+	_enter_modal()
+	_inventory.open(opener, container, title)
+
+
+func _on_menu_resume() -> void:
+	_menu.visible = false
+	_on_modal_closed()
+
+
+func _on_menu_save() -> void:
+	_menu.visible = false
+	var default := "%s, %s" % [world.map.display_name, Time.get_date_string_from_system()]
+	_save_load.open(true, default)
+
+
+func _on_menu_load() -> void:
+	_menu.visible = false
+	_save_load.open(false)
+
+
+func _on_save_requested(slot: String, label: String) -> void:
+	if SaveManager.save_game(slot, label, world, _snapshot):
+		show_toast("Game saved.")
+	_save_load.close()
+
+
+func _on_load_requested(slot: String) -> void:
+	if not SaveManager.load_game(slot):
+		show_toast("That save could not be loaded.")
 
 
 # --- signal handlers ------------------------------------------------------------
@@ -114,6 +261,9 @@ func _rebuild_cards() -> void:
 func _on_selection_changed(selected: Array) -> void:
 	for c in _cards:
 		c.set_selected(selected.has(c.member))
+	# Clicking portraits while the inventory is open switches whose it shows.
+	if _inventory.visible and not selected.is_empty():
+		_inventory.show_sheet((selected[0] as PartyMember).sheet)
 
 
 func _on_card_pressed(card: PortraitCard, shift: bool) -> void:
@@ -163,6 +313,7 @@ func _build() -> void:
 	_build_left_column()
 	_build_top_banners()
 	_build_message_box()
+	_build_modals()
 
 
 func _build_sidebar() -> void:
@@ -191,10 +342,18 @@ func _build_sidebar() -> void:
 	vbox.add_child(_minimap)
 
 	vbox.add_child(HSeparator.new())
+	var party_row := HBoxContainer.new()
+	vbox.add_child(party_row)
 	_party_label = Label.new()
 	_party_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 	_party_label.add_theme_font_size_override("font_size", 12)
-	vbox.add_child(_party_label)
+	_party_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	party_row.add_child(_party_label)
+	_gold_label = Label.new()
+	_gold_label.add_theme_color_override("font_color", UiTheme.GOLD)
+	_gold_label.add_theme_font_size_override("font_size", 12)
+	_gold_label.text = "Gold  %d" % GameState.gold
+	party_row.add_child(_gold_label)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -210,9 +369,11 @@ func _build_sidebar() -> void:
 	buttons.add_theme_constant_override("h_separation", 6)
 	buttons.add_theme_constant_override("v_separation", 6)
 	vbox.add_child(buttons)
+	_add_button(buttons, "Inventory", open_inventory)
+	_add_button(buttons, "Menu", open_menu)
 	_add_button(buttons, "Select all", func() -> void: world.party.select_all())
-	_add_button(buttons, "Grid", func() -> void: world.grid_lines.visible = not world.grid_lines.visible)
 	_add_button(buttons, "Pause", func() -> void: world.set_paused(not get_tree().paused))
+	_add_button(buttons, "Grid", func() -> void: world.grid_lines.visible = not world.grid_lines.visible)
 	_add_button(buttons, "Help", func() -> void: _help_panel.visible = not _help_panel.visible)
 
 
@@ -319,10 +480,41 @@ func _build_message_box() -> void:
 	vbox.add_child(close)
 
 
+## Inventory, menu and save/load screens, centred over the map area.
+func _build_modals() -> void:
+	var center := CenterContainer.new()
+	center.name = "ModalLayer"
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.offset_right = -SIDEBAR_WIDTH
+	_root.add_child(center)
+	_inventory = InventoryScreen.new()
+	_inventory.name = "Inventory"
+	_inventory.closed.connect(_on_modal_closed)
+	center.add_child(_inventory)
+	_menu = GameMenu.new()
+	_menu.name = "GameMenu"
+	_menu.resume_requested.connect(_on_menu_resume)
+	_menu.save_requested.connect(_on_menu_save)
+	_menu.load_requested.connect(_on_menu_load)
+	_menu.quicksave_requested.connect(quicksave)
+	_menu.quickload_requested.connect(quickload)
+	center.add_child(_menu)
+	_save_load = SaveLoadScreen.new()
+	_save_load.name = "SaveLoad"
+	_save_load.closed.connect(_on_modal_closed)
+	_save_load.save_requested.connect(_on_save_requested)
+	_save_load.load_requested.connect(_on_load_requested)
+	center.add_child(_save_load)
+	# The message box stays above the modal screens.
+	_root.move_child(_root.get_node("MessageLayer"), -1)
+
+
 func _add_button(parent: Control, text: String, action: Callable) -> void:
 	var b := Button.new()
 	b.text = text
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.focus_mode = Control.FOCUS_NONE
 	b.pressed.connect(action)
+	b.pressed.connect(Audio.play_sfx.bind("ui_click"))
 	parent.add_child(b)

@@ -43,6 +43,9 @@
 			"longsword",
 			"rapier",
 			"shortsword"
+		],
+		"tools": [
+			"thieves_tools"
 		]
 	},
 	"equipment": {

@@ -1,0 +1,30 @@
+{
+	"schema_version": 1,
+	"id": "millbrook_miller",
+	"name": "Miller's Cottage",
+	"background_color": "#0b0907",
+	"fog": false,
+	"music": "hearth",
+	"ambience": "fireplace",
+	"backdrop": {"texture": "res://assets/interiors/cottage_plaster.png", "origin": [79, 120]},
+	"spawns": {"party": [4, 4]},
+	"entries": {"door": [4, 4]},
+	"terrain": [
+		"________",
+		"________",
+		"________",
+		"________",
+		"________",
+		"________"
+	],
+	"props": [
+		{"type": "bed", "at": [5, 0]},
+		{"type": "dresser", "at": [7, 0], "id": "drawers", "name": "Chest of Drawers", "items": [{"item": "apple", "qty": 5}, {"item": "rations", "qty": 2}], "gold": 12},
+		{"type": "rug", "at": [0, 1]},
+		{"type": "table", "at": [2, 2]},
+		{"type": "chest", "at": [0, 4], "id": "chest", "name": "Old Chest", "variant": 1, "items": [{"item": "leather_boots", "qty": 1}, {"item": "torch", "qty": 3}]},
+		{"type": "crates", "at": [7, 3]},
+		{"type": "barrels", "at": [7, 4]},
+		{"type": "door_exit", "at": [4, 5], "name": "Way out", "map": "res://data/maps/millbrook_outskirts.json", "entry": "millbrook_miller"}
+	]
+}

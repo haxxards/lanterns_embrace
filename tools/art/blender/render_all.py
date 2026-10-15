@@ -2,7 +2,7 @@
 """Renders the game's art with Blender (as a Python module).
 
 Setup (once):  python3.13 -m venv .venv-art && .venv-art/bin/pip install bpy==5.2.2 numpy pillow
-Usage:         .venv-art/bin/python tools/art/blender/render_all.py [terrain] [props] [characters]
+Usage:         .venv-art/bin/python tools/art/blender/render_all.py [terrain] [props] [characters] [items] [interiors]
                .venv-art/bin/python tools/art/blender/render_all.py terrain:grass props:tree_oak
 
 Outputs overwrite the PNGs under assets/ (same paths, so they stay drop-in), and
@@ -14,10 +14,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import render_characters  # noqa: E402
+import render_interiors  # noqa: E402
+import render_items  # noqa: E402
 import render_props  # noqa: E402
 import render_terrain  # noqa: E402
 
-GROUPS = {"terrain": render_terrain, "props": render_props, "characters": render_characters}
+GROUPS = {"terrain": render_terrain, "props": render_props, "characters": render_characters,
+          "items": render_items, "interiors": render_interiors}
 
 
 def main(argv):

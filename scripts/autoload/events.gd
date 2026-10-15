@@ -18,3 +18,7 @@ signal camera_focus_requested(world_position: Vector2)
 signal party_order_issued
 ## Real-time pause toggled.
 signal pause_changed(paused: bool)
+## A container was opened by `opener` (shows it on the inventory screen).
+signal container_opened(container: ContainerState, title: String, opener: CharacterSheet)
+## Leave this map for another (door, exit). Main performs the change.
+signal map_change_requested(map_path: String, entry: String)

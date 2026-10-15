@@ -8,6 +8,21 @@
 	"feet_per_hex": 5,
 	"explore_move_speed": 165,
 	"show_grid_default": false,
+	"backpack_slots": 16,
+	"save_slots": 8,
+
+	"fog_of_war": {
+		"enabled": true,
+		"sight_radius": 9,
+		"explored_dim": 0.35
+	},
+
+	"audio_volume_db": {
+		"Master": 0.0,
+		"Music": -8.0,
+		"SFX": -2.0,
+		"Ambience": -6.0
+	},
 
 	"terrain_blend": {
 		"splat_px": 12,

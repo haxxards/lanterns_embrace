@@ -21,7 +21,8 @@ The starting party is the list of ids in `data/party/starting_party.json`. Anyth
 ## Creating sheets with Python
 
 `tools/make_character.py` fills in the derived numbers (HP, AC, saves, starting kit) from
-small 5e SRD class and ancestry tables:
+small 5e SRD class and ancestry tables. Every item it hands out exists in
+`data/items/items.json`, and `--validate` checks item ids too:
 
 ```sh
 # exact scores (str,dex,con,int,wis,cha)
@@ -62,13 +63,13 @@ keys).
 | `abilities` ● | object | `str dex con int wis cha`, each 1–30. |
 | `hit_points` ● | object | `{ "max": int, "current": int }` |
 | `hit_die` | string | e.g. `"d10"` (used for levelling later). |
-| `armor_class` | int | Final AC. Will be derived from equipment in Phase 2. |
+| `armor_class` | int | Written for reference: the game recomputes AC from equipment (see [ITEMS.md](ITEMS.md)) and keeps this field up to date when saving. |
 | `speed_ft` | int | Walking speed. Combat movement = `speed_ft / feet_per_hex` hexes. |
 | `size` | string | `small` / `medium`. |
-| `proficiencies` | object | `saving_throws`, `skills`, `armor`, `weapons` (string lists). |
-| `equipment` | object | Slot → item id: `main_hand`, `off_hand`, `armor` (Phase 2). |
-| `inventory` | array | `[{ "item": id, "qty": n }]` (Phase 2). |
-| `gold` | int | Starting gold (Phase 2). |
+| `proficiencies` | object | `saving_throws`, `skills`, `armor` (`light`, `medium`, `heavy`, `shields`), `weapons` (`simple`, `martial` or item ids), `tools` (`thieves_tools`). |
+| `equipment` | object | Slot → item id (or `{ "item", "qty" }`), `null` when empty. Slots: `helmet`, `amulet`, `armor`, `cloak`, `gloves`, `main_hand`, `off_hand`, `ring_1`, `ring_2`, `boots`. |
+| `inventory` | array | Backpack slots in order: `{ "item": id, "qty": n }` or `null` for an empty slot. The backpack has `backpack_slots` slots (16). |
+| `gold` | int | Gold the character brings. It goes into the party's shared purse when they join. |
 | `spells` | object | `ability`, `cantrips`, `known`, `slots` (`{"1": 2}`) (Phase 4). |
 | `features` | array | Class feature ids (Phase 4). |
 | `art.portrait` | string | Portrait image, `res://` or any readable path. |

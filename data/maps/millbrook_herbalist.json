@@ -1,0 +1,29 @@
+{
+	"schema_version": 1,
+	"id": "millbrook_herbalist",
+	"name": "Herbalist's Cottage",
+	"background_color": "#0b0907",
+	"fog": false,
+	"music": "hearth",
+	"ambience": "fireplace",
+	"backdrop": {"texture": "res://assets/interiors/cottage_stone.png", "origin": [79, 120]},
+	"spawns": {"party": [3, 4]},
+	"entries": {"door": [3, 4]},
+	"terrain": [
+		"________",
+		"________",
+		"________",
+		"________",
+		"________",
+		"________"
+	],
+	"props": [
+		{"type": "cupboard", "at": [3, 0], "variant": 1, "id": "remedies", "name": "Shelf of Remedies", "items": [{"item": "potion_of_healing", "qty": 2}, {"item": "potion_of_greater_healing", "qty": 1}]},
+		{"type": "cupboard", "at": [4, 0], "variant": 1, "id": "jars", "name": "Shelf of Jars", "items": [{"item": "apple", "qty": 3}, {"item": "leather_gloves", "qty": 1}]},
+		{"type": "table", "at": [2, 2]},
+		{"type": "dresser", "at": [7, 2], "id": "drawers", "name": "Chest of Drawers", "items": [{"item": "rations", "qty": 1}], "gold": 5},
+		{"type": "bed", "at": [0, 4]},
+		{"type": "barrels", "at": [7, 4]},
+		{"type": "door_exit", "at": [3, 5], "name": "Way out", "map": "res://data/maps/millbrook_outskirts.json", "entry": "millbrook_herbalist"}
+	]
+}

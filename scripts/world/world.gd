@@ -7,6 +7,8 @@ extends Node2D
 ##   left click member    select it (Shift: add/remove)
 ##   left drag            box-select members (Shift: add)
 ##   left click sign      leader walks over and reads it
+##   left click chest     leader walks over and opens it
+##   left click door      the party gathers at the door and goes in
 ##   right click          clear selection
 
 const DRAG_THRESHOLD := 8.0
@@ -18,6 +20,8 @@ var props: Array[Prop] = []
 var props_by_hex: Dictionary = {}  # Vector2i -> Prop
 
 var terrain: TerrainRenderer
+## Pre-rendered picture of the whole map (interiors), used instead of terrain.
+var backdrop: Sprite2D
 var ground_props: Node2D
 var grid_lines: GridLines
 var cursor: CursorOverlay
@@ -25,6 +29,7 @@ var entities: Node2D
 var selection_box: SelectionBox
 var camera: GameCamera
 var party: PartyController
+var fog: FogOfWar
 
 var _hover_hex: Vector2i = NO_HEX
 var _hover_prop: Prop = null
@@ -43,6 +48,12 @@ func _ready() -> void:
 	terrain.name = "Terrain"
 	terrain.z_index = -10
 	add_child(terrain)
+	backdrop = Sprite2D.new()
+	backdrop.name = "Backdrop"
+	backdrop.centered = false
+	backdrop.z_index = -10
+	backdrop.visible = false
+	add_child(backdrop)
 	ground_props = Node2D.new()
 	ground_props.name = "GroundProps"
 	ground_props.z_index = -9
@@ -60,6 +71,10 @@ func _ready() -> void:
 	entities.name = "Entities"
 	entities.y_sort_enabled = true
 	add_child(entities)
+	fog = FogOfWar.new()
+	fog.name = "Fog"
+	fog.z_index = 40
+	add_child(fog)
 	selection_box = SelectionBox.new()
 	selection_box.name = "SelectionBox"
 	selection_box.z_index = 50
@@ -75,8 +90,9 @@ func _ready() -> void:
 	Events.selection_changed.connect(func(_s: Array) -> void: _refresh_hover(true))
 
 
-## Loads a map file and places the current GameState party on it.
-func load_map(path: String) -> bool:
+## Loads a map file and places the current GameState party on it: at `entry`
+## (see entry_hex), or on GameState.pending_positions after loading a save.
+func load_map(path: String, entry: String = "") -> bool:
 	_clear()
 	map = Data.load_map(path)
 	if map.width == 0 or map.height == 0:
@@ -91,19 +107,64 @@ func load_map(path: String) -> bool:
 		_spawn_prop(placement)
 	grid.rebuild_pathfinding()
 
-	terrain.build(grid)
+	var view_bounds := grid.world_bounds()
+	if map.backdrop_path.is_empty():
+		terrain.visible = true
+		backdrop.visible = false
+		terrain.build(grid)
+	else:
+		terrain.visible = false
+		backdrop.visible = true
+		backdrop.texture = Data.load_texture(map.backdrop_path)
+		backdrop.offset = -map.backdrop_origin
+		view_bounds = view_bounds.merge(Rect2(backdrop.offset, backdrop.texture.get_size()))
 	grid_lines.build(grid)
 	cursor.grid = grid
 	cursor.party = party
 	party.grid = grid
 	RenderingServer.set_default_clear_color(map.background_color)
 
-	party.spawn_party(GameState.party, map.party_spawn)
-	camera.set_bounds(grid.world_bounds())
-	camera.center_on(grid.hex_to_world(map.party_spawn), true)
+	var spawn := entry_hex(entry)
+	party.spawn_party(GameState.party, spawn, GameState.pending_positions)
+	GameState.pending_positions.clear()
+	for m in party.members:
+		m.hex_entered.connect(func(_m: PartyMember, _h: Vector2i) -> void: fog.mark_dirty())
+	fog.setup(grid, map.id, map.fog, party.members)
+	camera.set_bounds(view_bounds)
+	var focus: Vector2 = GameState.pending_camera if GameState.pending_camera is Vector2 \
+			else grid.hex_to_world(spawn)
+	GameState.pending_camera = null
+	camera.center_on(focus, true)
 	GameState.current_map_path = path
+	GameState.current_entry = entry
+	Audio.play_music(map.music)
+	Audio.play_ambience(map.ambience)
 	Events.map_loaded.emit(map.id)
 	return true
+
+
+## Where the party arrives: a named entry from the map file, else the ground
+## in front of the door of the prop with that "id", else the map's spawn.
+func entry_hex(entry: String) -> Vector2i:
+	if entry.is_empty():
+		return map.party_spawn
+	if map.entries.has(entry):
+		return map.entries[entry]
+	for p in props:
+		if p.state_id() == entry:
+			var h: Variant = p.entry_hex(grid)
+			if h != null:
+				return h
+	push_warning("Map %s has no entry '%s'; using the party spawn" % [map.id, entry])
+	return map.party_spawn
+
+
+## Hex of every party member, by character id (for saving).
+func party_positions() -> Dictionary:
+	var out := {}
+	for m in party.members:
+		out[m.sheet.id] = m.hex
+	return out
 
 
 func _clear() -> void:
@@ -127,6 +188,13 @@ func _spawn_prop(placement: MapData.Placement) -> void:
 			push_warning("Prop %s overlaps %s" % [prop.name, props_by_hex[cell].name])
 		grid.add_prop_cell(cell, placement.def)
 		props_by_hex[cell] = prop
+	if prop.interaction() == "container":
+		# Contents live in GameState so they persist; the map only seeds them.
+		var state := GameState.get_container(map.id, prop.state_id())
+		if state == null:
+			state = ContainerState.from_placement(placement.extra)
+			GameState.set_container(map.id, prop.state_id(), state)
+		prop.container = state
 	if placement.def.layer == PropDef.LAYER_GROUND:
 		ground_props.add_child(prop)
 	else:
@@ -226,12 +294,24 @@ func focus_selection() -> void:
 
 
 ## Interactable prop under the cursor: sprite rectangle first, then footprint.
+## Props still under black fog can't be picked.
 func _interactable_at(world_pos: Vector2) -> Prop:
+	var best: Prop = null
 	for p in props:
-		if p.is_interactable() and p.sprite_rect().has_point(world_pos):
-			return p
+		if p.is_interactable() and p.sprite_rect().has_point(world_pos) and _seen(p):
+			if best == null or p.position.y > best.position.y:  # front-most wins
+				best = p
+	if best:
+		return best
 	var under: Prop = props_by_hex.get(grid.world_to_hex(world_pos))
-	return under if under and under.is_interactable() else null
+	return under if under and under.is_interactable() and _seen(under) else null
+
+
+func _seen(p: Prop) -> bool:
+	for c in p.cells:
+		if fog.is_explored(c):
+			return true
+	return false
 
 
 # --- hover feedback ----------------------------------------------------------------
@@ -295,6 +375,8 @@ func _refresh_hover(force: bool = false) -> void:
 		info["walkable"] = grid.is_walkable(h)
 		info["move_cost"] = grid.move_cost(h)
 	var any_prop: Prop = props_by_hex.get(h)
+	if any_prop and not _seen(any_prop):
+		any_prop = null
 	if prop:
 		info["prop"] = prop.display_name()
 	elif any_prop:

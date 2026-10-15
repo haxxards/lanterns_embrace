@@ -1,0 +1,77 @@
+{
+	"cottage_plaster": {
+		"texture": "res://assets/interiors/cottage_plaster.png",
+		"origin": [
+			79,
+			120
+		],
+		"size": [
+			8,
+			6
+		],
+		"exit": [
+			4,
+			5
+		]
+	},
+	"inn_hall": {
+		"texture": "res://assets/interiors/inn_hall.png",
+		"origin": [
+			79,
+			120
+		],
+		"size": [
+			12,
+			8
+		],
+		"exit": [
+			5,
+			7
+		]
+	},
+	"cottage_stone": {
+		"texture": "res://assets/interiors/cottage_stone.png",
+		"origin": [
+			79,
+			120
+		],
+		"size": [
+			8,
+			6
+		],
+		"exit": [
+			3,
+			5
+		]
+	},
+	"cottage_timber": {
+		"texture": "res://assets/interiors/cottage_timber.png",
+		"origin": [
+			79,
+			120
+		],
+		"size": [
+			8,
+			6
+		],
+		"exit": [
+			5,
+			5
+		]
+	},
+	"smithy": {
+		"texture": "res://assets/interiors/smithy.png",
+		"origin": [
+			79,
+			120
+		],
+		"size": [
+			8,
+			6
+		],
+		"exit": [
+			3,
+			5
+		]
+	}
+}

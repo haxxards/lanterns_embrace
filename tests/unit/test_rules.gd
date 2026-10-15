@@ -35,7 +35,7 @@ func test_character_sheet_round_trip() -> void:
 		"class": "cleric", "level": 3, "xp": 900,
 		"abilities": {"str": 14, "dex": 8, "con": 16, "int": 10, "wis": 16, "cha": 11},
 		"hit_points": {"max": 20, "current": 17}, "armor_class": 18, "speed_ft": 25,
-		"inventory": [{"item": "rope", "qty": 1}],
+		"inventory": [{"item": "torch", "qty": 3}],
 		"art": {"portrait": "res://assets/portraits/odran.png", "sprite": "res://assets/characters/cleric.png"},
 	}
 	var s := CharacterSheet.from_dict(d)
@@ -45,7 +45,7 @@ func test_character_sheet_round_trip() -> void:
 	check_eq(s.speed_hexes(5), 5, "25 ft = 5 hexes")
 	var out := s.to_dict()
 	check_eq(out["hit_points"]["current"], 17, "hp kept")
-	check_eq(out["inventory"], d["inventory"], "unknown fields preserved")
+	check_eq(out["inventory"], d["inventory"], "inventory preserved")
 
 
 func test_character_sheet_reports_errors() -> void:

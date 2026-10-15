@@ -1,0 +1,27 @@
+{
+	"_comment": "Named sounds. Game code asks for a name; point it at any .ogg/.wav to replace it. A list picks one at random each time. See docs/AUDIO.md.",
+	"sfx": {
+		"ui_click": "res://assets/audio/sfx/ui_click.ogg",
+		"ui_open": "res://assets/audio/sfx/ui_open.ogg",
+		"item_pickup": "res://assets/audio/sfx/item_pickup.ogg",
+		"item_drop": "res://assets/audio/sfx/item_drop.ogg",
+		"equip": "res://assets/audio/sfx/equip.ogg",
+		"equip_armor": "res://assets/audio/sfx/equip_armor.ogg",
+		"coins": "res://assets/audio/sfx/coins.ogg",
+		"potion": "res://assets/audio/sfx/potion.ogg",
+		"chest_open": "res://assets/audio/sfx/chest_open.ogg",
+		"door_open": "res://assets/audio/sfx/door_open.ogg",
+		"locked": "res://assets/audio/sfx/locked.ogg",
+		"unlock": "res://assets/audio/sfx/unlock.ogg",
+		"save": "res://assets/audio/sfx/save.ogg",
+		"error": "res://assets/audio/sfx/error.ogg"
+	},
+	"music": {
+		"village": "res://assets/audio/music/village.ogg",
+		"hearth": "res://assets/audio/music/hearth.ogg"
+	},
+	"ambience": {
+		"outdoors": "res://assets/audio/ambience/outdoors.ogg",
+		"fireplace": "res://assets/audio/ambience/fireplace.ogg"
+	}
+}

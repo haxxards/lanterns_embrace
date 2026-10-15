@@ -1,0 +1,28 @@
+{
+	"schema_version": 1,
+	"id": "millbrook_smithy",
+	"name": "Smithy",
+	"background_color": "#0b0907",
+	"fog": false,
+	"music": "hearth",
+	"ambience": "fireplace",
+	"backdrop": {"texture": "res://assets/interiors/smithy.png", "origin": [79, 120]},
+	"spawns": {"party": [3, 4]},
+	"entries": {"door": [3, 4]},
+	"terrain": [
+		"________",
+		"________",
+		"________",
+		"________",
+		"________",
+		"________"
+	],
+	"props": [
+		{"type": "chest", "at": [0, 1], "id": "chest", "name": "Tool Chest", "items": [{"item": "warhammer", "qty": 1}, {"item": "chain_shirt", "qty": 1}, {"item": "iron_helm", "qty": 1}]},
+		{"type": "anvil", "at": [4, 2]},
+		{"type": "chest", "at": [7, 2], "id": "locked_chest", "name": "Locked Chest", "variant": 1, "locked": true, "lock_dc": 12, "items": [{"item": "shortbow", "qty": 1}, {"item": "arrows", "qty": 20}]},
+		{"type": "barrels", "at": [0, 3]},
+		{"type": "crates", "at": [7, 4]},
+		{"type": "door_exit", "at": [3, 5], "name": "Way out", "map": "res://data/maps/millbrook_outskirts.json", "entry": "millbrook_smithy"}
+	]
+}

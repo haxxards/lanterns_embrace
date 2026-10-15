@@ -90,6 +90,12 @@ CLASSES = {
                    features=["arcane_recovery"], sprite="wizard"),
 }
 
+# Extra starting items per class (item ids from data/items/items.json).
+CLASS_KIT = {
+    "cleric": ["holy_symbol"], "paladin": ["holy_symbol"], "rogue": ["thieves_tools"],
+    "wizard": ["spellbook"], "ranger": ["shortbow"], "bard": ["lantern"],
+}
+
 # SRD ancestries: walking speed in feet and size.
 ANCESTRIES = {
     "human": dict(speed=30, size="medium"),
@@ -184,6 +190,8 @@ def build_sheet(args):
                  "armor": c["armor"]}
     if c["shield"]:
         equipment["off_hand"] = "shield"
+    inventory = [{"item": "potion_of_healing", "qty": 1}, {"item": "rations", "qty": 2}]
+    inventory += [{"item": i, "qty": 1} for i in CLASS_KIT.get(cls, [])]
     sprite = args.sprite or f"res://assets/characters/{c['sprite']}.png"
     portrait = args.portrait or "res://assets/portraits/default.png"
     return {
@@ -206,9 +214,10 @@ def build_sheet(args):
             "skills": [s.strip() for s in args.skills.split(",")] if args.skills else [],
             "armor": c["armor_prof"],
             "weapons": c["weapon_prof"],
+            "tools": ["thieves_tools"] if cls in ("rogue", "bard") else [],
         },
         "equipment": equipment,
-        "inventory": [],
+        "inventory": inventory,
         "gold": args.gold,
         "spells": {"ability": c["spell_ability"], "cantrips": [], "known": [], "slots": {}},
         "features": c["features"],
@@ -246,7 +255,23 @@ def validate(path):
         if isinstance(res, str) and res.startswith("res://"):
             if not (ROOT / res[len("res://"):]).exists():
                 errors.append(f"art.{key} file not found: {res}")
+    known = known_items()
+    for slot, value in (data.get("equipment") or {}).items():
+        item_id = value.get("item") if isinstance(value, dict) else value
+        if item_id and item_id not in known:
+            errors.append(f"equipment.{slot}: unknown item '{item_id}'")
+    for entry in data.get("inventory") or []:
+        if entry and entry.get("item") not in known:
+            errors.append(f"inventory: unknown item '{entry.get('item')}'")
     return errors
+
+
+def known_items():
+    """Item ids from data/items/items.json (the game's item list)."""
+    try:
+        return set(json.loads((ROOT / "data/items/items.json").read_text())["items"])
+    except (OSError, KeyError, json.JSONDecodeError):
+        return set()
 
 
 def main():

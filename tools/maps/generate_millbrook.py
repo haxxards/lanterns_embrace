@@ -123,19 +123,27 @@ def place(kind, cells, at, margin=1, allowed='.f#,:', **extra):
         reserved.update(ring)
     e = {"type": kind, "at": list(at)}; e.update(extra); props.append(e)
 
-def building(kind, at, cols, rows, door_col, name):
+# Door position across the front, as a fraction of the width, per look
+# (see COTTAGE_STYLES / inn in tools/art/blender/render_props.py).
+DOOR_FRACTION = {("house_small", 0): 3.5 / 6, ("house_small", 1): 2.5 / 6, ("house_small", 2): 4.5 / 6,
+                 ("house_large", 0): 4.5 / 9}
+
+def building(kind, at, cols, rows, variant, name, building_id):
+    """A house with an interior map (tools/maps/generate_interiors.py writes it)."""
+    door_col = at[0] + int(DOOR_FRACTION[(kind, variant)] * cols)
     cells = rect_cells(at, cols, rows)
-    place(kind, cells, at, margin=2, name=name)
+    place(kind, cells, at, margin=2, name=name, variant=variant, id=building_id,
+          interior=f"res://data/maps/{building_id}.json", entry="door")
     # keep ground in front of the door clear and paved
     dr = at[1] + rows
     paint_road([(door_col, dr), (door_col + 1, dr), (door_col, dr + 1)])
     return (door_col, dr)
 
-inn_door = building("house_large", (59, 15), 12, 8, 64, "The Lantern & Thistle")
-a_door = building("house_small", (47, 21), 8, 6, 52, "Miller's Cottage")
-b_door = building("house_small", (75, 20), 8, 6, 80, "Reeve's House")
-c_door = building("house_small", (46, 40), 8, 6, 51, "Herbalist's Cottage")
-d_door = building("house_small", (66, 40), 8, 6, 71, "Smithy")
+inn_door = building("house_large", (59, 15), 12, 8, 0, "The Lantern & Thistle", "millbrook_inn")
+a_door = building("house_small", (47, 21), 8, 6, 0, "Miller's Cottage", "millbrook_miller")
+b_door = building("house_small", (75, 20), 8, 6, 2, "Reeve's House", "millbrook_reeve")
+c_door = building("house_small", (46, 40), 8, 6, 1, "Herbalist's Cottage", "millbrook_herbalist")
+d_door = building("house_small", (66, 40), 8, 6, 1, "Smithy", "millbrook_smithy")
 # paths from doors to the square
 paint_road(line(a_door, (58, 28)) + line((a_door[0], a_door[1]+1), (58, 29)))
 paint_road(line(b_door, (71, 27)) + line((b_door[0], b_door[1]+1), (71, 28)))
@@ -169,6 +177,9 @@ for kind, cell in (("crates", (57, 21)), ("hay", (56, 19)), ("barrels", (46, 26)
     dress(kind, cell)
 for cell in ((58, 23), (71, 23), (58, 36), (71, 36), (33, 29)):
     dress("lamp_post", cell)
+# A crate of apples by the market that can be opened (a container outdoors).
+dress("crates", (70, 29), interaction="container", id="apple_crate", name="Crate of Apples",
+      items=[{"item": "apple", "qty": 8}])
 for at, variant in (((66, 25), 0), ((67, 33), 1)):
     cells = rect_cells(at, 3, 2)
     for (c, r) in cells:
@@ -221,7 +232,8 @@ data_rows_t = [''.join(row) for row in T]
 data_rows_p = [''.join(row) for row in P]
 out = ROOT / "data/maps/millbrook_outskirts.json"
 L = ['{', '\t"schema_version": 1,', '\t"id": "millbrook_outskirts",', '\t"name": "Millbrook Outskirts",',
-     '\t"background_color": "#141a10",', f'\t"spawns": {{"party": {json.dumps(list(spawn))}}},', '\t"terrain": [']
+     '\t"background_color": "#141a10",', '\t"music": "village",', '\t"ambience": "outdoors",',
+     f'\t"spawns": {{"party": {json.dumps(list(spawn))}}},', '\t"terrain": [']
 L += [f'\t\t{json.dumps(r)}' + (',' if i < H-1 else '') for i, r in enumerate(data_rows_t)]
 L += ['\t],', '\t"prop_legend": {"T": "tree_oak", "P": "tree_pine", "B": "tree_birch", "b": "bush", "o": "rock", "r": "reeds", "n": "fern", "w": "flowers", "L": "log", "s": "stump"},', '\t"prop_layer": [']
 L += [f'\t\t{json.dumps(r)}' + (',' if i < H-1 else '') for i, r in enumerate(data_rows_p)]

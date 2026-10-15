@@ -50,6 +50,11 @@ recreates every crop from `tools/art/portraits/portraits.json`.
 `default.png` (the fallback silhouette) was drawn for this project.
 
 
+## Audio
+
+All sounds, music and ambience in `assets/audio/` were synthesised for this project by
+`tools/audio/generate_placeholder_audio.py`. No recordings or samples are included.
+
 ## Engine
 
 Built with [Godot Engine](https://godotengine.org) (MIT licence).

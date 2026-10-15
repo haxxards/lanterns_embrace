@@ -1,0 +1,29 @@
+{
+	"schema_version": 1,
+	"id": "millbrook_reeve",
+	"name": "Reeve's House",
+	"background_color": "#0b0907",
+	"fog": false,
+	"music": "hearth",
+	"ambience": "fireplace",
+	"backdrop": {"texture": "res://assets/interiors/cottage_timber.png", "origin": [79, 120]},
+	"spawns": {"party": [5, 4]},
+	"entries": {"door": [5, 4]},
+	"terrain": [
+		"________",
+		"________",
+		"________",
+		"________",
+		"________",
+		"________"
+	],
+	"props": [
+		{"type": "cupboard", "at": [0, 0], "id": "cupboard", "name": "Cupboard", "items": [{"item": "rations", "qty": 3}, {"item": "torch", "qty": 2}]},
+		{"type": "bed", "at": [4, 0]},
+		{"type": "chest", "at": [7, 1], "id": "strongbox", "name": "Reeve's Strongbox", "locked": true, "lock_dc": 15, "key": "reeve_key", "items": [{"item": "ring_of_protection", "qty": 1}, {"item": "garnet", "qty": 2}], "gold": 60},
+		{"type": "rug", "at": [2, 2]},
+		{"type": "table", "at": [1, 3]},
+		{"type": "dresser", "at": [7, 3], "id": "desk", "name": "Reeve's Drawers", "items": [{"item": "reeve_key", "qty": 1}, {"item": "silver_amulet", "qty": 1}], "gold": 8},
+		{"type": "door_exit", "at": [5, 5], "name": "Way out", "map": "res://data/maps/millbrook_outskirts.json", "entry": "millbrook_reeve"}
+	]
+}

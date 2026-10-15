@@ -59,7 +59,8 @@
 			"footprint_rect": [8, 6],
 			"blocks_movement": true,
 			"blocks_sight": true,
-			"minimap_color": "#9a4231"
+			"minimap_color": "#9a4231",
+			"interaction": "enter"
 		},
 		"house_large": {
 			"name": "Inn",
@@ -69,7 +70,8 @@
 			"door_pixel": [361, 559],
 			"blocks_movement": true,
 			"blocks_sight": true,
-			"minimap_color": "#4b5d73"
+			"minimap_color": "#4b5d73",
+			"interaction": "enter"
 		},
 		"bridge_wood": {
 			"name": "Footbridge",
@@ -186,6 +188,98 @@
 			"blocks_movement": true,
 			"blocks_sight": false,
 			"minimap_color": "#6b4a2b"
+		},
+		"chest": {
+			"name": "Chest",
+			"variants": [{"texture": "res://assets/props/chest.png", "origin": [27, 37]}, {"texture": "res://assets/props/chest_2.png", "origin": [27, 37]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"interaction": "container",
+			"fade_when_occluding": false,
+			"minimap_color": "#6b4a2b"
+		},
+		"dresser": {
+			"name": "Chest of Drawers",
+			"texture": "res://assets/props/dresser.png",
+			"origin": [29, 53],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"interaction": "container",
+			"fade_when_occluding": false,
+			"minimap_color": "#5e3f25"
+		},
+		"cupboard": {
+			"name": "Cupboard",
+			"variants": [{"texture": "res://assets/props/cupboard.png", "origin": [32, 78]}, {"texture": "res://assets/props/cupboard_2.png", "origin": [32, 78]}],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"interaction": "container",
+			"fade_when_occluding": false,
+			"minimap_color": "#4e3520"
+		},
+		"table": {
+			"name": "Table",
+			"texture": "res://assets/props/table.png",
+			"origin": [43, 93],
+			"footprint_rect": [2, 2],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#6b4a2b"
+		},
+		"bed": {
+			"name": "Bed",
+			"texture": "res://assets/props/bed.png",
+			"origin": [46, 68],
+			"footprint_rect": [2, 1],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#7a2e24"
+		},
+		"bar_counter": {
+			"name": "Bar",
+			"texture": "res://assets/props/bar_counter.png",
+			"origin": [110, 76],
+			"footprint_rect": [4, 1],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#4e3420"
+		},
+		"anvil": {
+			"name": "Anvil",
+			"texture": "res://assets/props/anvil.png",
+			"origin": [28, 35],
+			"footprint": [[0, 0]],
+			"blocks_movement": true,
+			"blocks_sight": false,
+			"fade_when_occluding": false,
+			"minimap_color": "#3a3836"
+		},
+		"rug": {
+			"name": "Rug",
+			"texture": "res://assets/props/rug.png",
+			"origin": [73, 83],
+			"footprint_rect": [3, 2],
+			"layer": "ground",
+			"blocks_movement": false,
+			"blocks_sight": false,
+			"minimap_color": "#7a3a2a"
+		},
+		"door_exit": {
+			"name": "Door",
+			"texture": "res://assets/props/door_exit.png",
+			"origin": [26, 20],
+			"footprint": [[0, 0]],
+			"layer": "ground",
+			"blocks_movement": false,
+			"blocks_sight": false,
+			"interaction": "exit",
+			"minimap_color": "#c8b890"
 		}
 	}
 }

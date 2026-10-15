@@ -1,5 +1,5 @@
 extends Node
-## Loads and indexes static game data: terrain, props and character sheets.
+## Loads and indexes static game data: terrain, props, items and character sheets.
 ##
 ## Content is plain JSON under res://data so it can be authored outside Godot.
 ## Textures referenced by data are loaded through load_texture(), which also
@@ -7,10 +7,12 @@ extends Node
 
 const TERRAIN_PATH := "res://data/terrain/terrain.json"
 const PROPS_PATH := "res://data/props/props.json"
+const ITEMS_PATH := "res://data/items/items.json"
 
 var terrain: Dictionary = {}            # id -> TerrainDef
 var terrain_by_symbol: Dictionary = {}  # symbol -> TerrainDef
 var props: Dictionary = {}              # id -> PropDef
+var items: Dictionary = {}              # id -> ItemDef
 var characters: Dictionary = {}         # id -> CharacterSheet (template, never mutated)
 
 var _texture_cache: Dictionary = {}
@@ -25,6 +27,7 @@ func reload() -> void:
 	_texture_cache.clear()
 	_load_terrain()
 	_load_props()
+	_load_items()
 	_load_characters()
 
 
@@ -57,6 +60,18 @@ func _load_props() -> void:
 		p.texture = p.looks[0].texture
 		p.resolve_fade(GameConfig.hex_radius * 2.2)
 		props[prop_id] = p
+
+
+func _load_items() -> void:
+	items.clear()
+	var d: Variant = JsonUtil.load_json(ITEMS_PATH)
+	if not d is Dictionary:
+		return
+	var defs: Dictionary = d.get("items", {})
+	for item_id in defs:
+		var it := ItemDef.from_dict(item_id, defs[item_id])
+		it.icon = load_texture(it.icon_path)
+		items[item_id] = it
 
 
 ## Loads every sheet from GameConfig.character_dirs. Later directories win,

@@ -24,6 +24,19 @@ var background_color: Color = Color(0.08, 0.1, 0.06)
 var terrain: Array[TerrainDef] = []
 var placements: Array[Placement] = []
 var party_spawn: Vector2i = Vector2i.ZERO  # axial
+## Named arrival points (axial), e.g. "door" inside a building. Buildings on
+## the map also act as entries: an entry named after a prop's "id" is the
+## ground in front of its door.
+var entries: Dictionary = {}
+## Names from data/audio/audio.json ("" = silence).
+var music: String = ""
+var ambience: String = ""
+## False turns fog of war off for this map (small interiors).
+var fog: bool = true
+## Optional pre-rendered picture of the whole map (interiors) drawn instead of
+## blended terrain. `backdrop_origin` is its pixel at the centre of hex [0, 0].
+var backdrop_path: String = ""
+var backdrop_origin: Vector2 = Vector2.ZERO
 var errors: PackedStringArray = PackedStringArray()
 
 
@@ -75,6 +88,16 @@ static func load_file(path: String, terrain_by_symbol: Dictionary, props: Dictio
 
 	var spawns: Dictionary = d.get("spawns", {})
 	m.party_spawn = Hex.offset_to_axial(JsonUtil.to_vec2i(spawns.get("party"), Vector2i.ZERO))
+	var entries: Dictionary = d.get("entries", {})
+	for entry_name in entries:
+		m.entries[str(entry_name)] = Hex.offset_to_axial(JsonUtil.to_vec2i(entries[entry_name]))
+	m.music = str(d.get("music", ""))
+	m.ambience = str(d.get("ambience", ""))
+	m.fog = bool(d.get("fog", true))
+	var backdrop: Variant = d.get("backdrop")
+	if backdrop is Dictionary:
+		m.backdrop_path = str(backdrop.get("texture", ""))
+		m.backdrop_origin = JsonUtil.to_vec2(backdrop.get("origin"))
 	return m
 
 

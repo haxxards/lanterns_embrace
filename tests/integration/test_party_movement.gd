@@ -162,7 +162,7 @@ func test_redirect_mid_walk_keeps_path_contiguous() -> void:
 func test_sign_interaction_shows_message() -> void:
 	var sign: Prop = null
 	for p in world.props:
-		if p.is_interactable():
+		if p.interaction() == "read":
 			sign = p
 			break
 	check(sign != null, "map has a sign")

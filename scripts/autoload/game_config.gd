@@ -30,6 +30,21 @@ var post_saturation: float = 1.06
 var post_warmth: float = 0.025
 var post_vignette: float = 0.32
 
+## Backpack slots per character.
+var backpack_slots: int = 16
+
+## Fog of war (see scripts/world/fog_of_war.gd).
+var fog_enabled: bool = true
+var fog_sight_radius: int = 9
+## How dark explored-but-not-currently-seen ground is (0 = BG-style, fully clear).
+var fog_explored_dim: float = 0.35
+
+## Save slots shown in the save/load menus (plus the quicksave).
+var save_slots: int = 8
+
+## Volumes in decibels per audio bus (see scripts/autoload/audio.gd).
+var audio_volume_db: Dictionary = {"Master": 0.0, "Music": -8.0, "SFX": -2.0, "Ambience": -6.0}
+
 var camera_pan_speed: float = 900.0
 var camera_edge_pan: bool = true
 var camera_edge_margin: float = 10.0
@@ -71,6 +86,18 @@ func load_config(path: String) -> void:
 	post_saturation = float(post.get("saturation", post_saturation))
 	post_warmth = float(post.get("warmth", post_warmth))
 	post_vignette = float(post.get("vignette", post_vignette))
+
+	backpack_slots = maxi(1, int(cfg.get("backpack_slots", backpack_slots)))
+
+	var fog: Dictionary = cfg.get("fog_of_war", {})
+	fog_enabled = bool(fog.get("enabled", fog_enabled))
+	fog_sight_radius = maxi(1, int(fog.get("sight_radius", fog_sight_radius)))
+	fog_explored_dim = clampf(float(fog.get("explored_dim", fog_explored_dim)), 0.0, 1.0)
+
+	save_slots = maxi(1, int(cfg.get("save_slots", save_slots)))
+	var audio: Dictionary = cfg.get("audio_volume_db", {})
+	for bus in audio:
+		audio_volume_db[str(bus)] = float(audio[bus])
 
 	var cam: Dictionary = cfg.get("camera", {})
 	camera_pan_speed = float(cam.get("pan_speed", camera_pan_speed))

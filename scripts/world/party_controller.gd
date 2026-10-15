@@ -12,16 +12,22 @@ var entities: Node2D
 var members: Array[PartyMember] = []
 ## Selected members, always kept in party (portrait) order.
 var selected: Array[PartyMember] = []
+## A door or exit the party is gathering at; fires once everyone has stopped.
+var _waiting_transition: Prop = null
 
 
-func spawn_party(sheets: Array[CharacterSheet], spawn: Vector2i) -> void:
+## Places the party around `spawn`, or on saved hexes ({member id: hex}).
+func spawn_party(sheets: Array[CharacterSheet], spawn: Vector2i, positions: Dictionary = {}) -> void:
 	for m in members:
 		m.queue_free()
 	members.clear()
 	selected.clear()
+	_waiting_transition = null
 	var taken := {}
 	for sheet in sheets:
-		var slot: Variant = _nearest_free(spawn, taken, spawn)
+		var saved: Variant = positions.get(sheet.id)
+		var slot: Variant = saved if saved != null and grid.is_walkable(saved) and not taken.has(saved) \
+				else _nearest_free(spawn, taken, spawn)
 		if slot == null:
 			push_error("No free hex near spawn %s for %s" % [spawn, sheet.display_name])
 			continue
@@ -109,8 +115,18 @@ func _set_selection(list: Array) -> void:
 func move_selected_to(target: Vector2i) -> bool:
 	if selected.is_empty():
 		return false
-	var group: Array[PartyMember] = selected.duplicate()
-	var taken := _hexes_held_by_others(group)
+	_waiting_transition = null
+	var any_moved := _move_group(selected.duplicate(), target, _hexes_held_by_others(selected))
+	if any_moved:
+		Events.party_order_issued.emit()
+	else:
+		Events.toast_requested.emit("Can't reach that.")
+	return any_moved
+
+
+## Moves `group` to free hexes around `target`, nearest first. Returns true if
+## anyone could move.
+func _move_group(group: Array[PartyMember], target: Vector2i, taken: Dictionary) -> bool:
 	var candidates := grid.walkable_near(target, FORMATION_RADIUS)
 	var any_moved := false
 	for m in group:
@@ -121,18 +137,16 @@ func move_selected_to(target: Vector2i) -> bool:
 		m.pending_interaction = null
 		m.follow_path(grid.find_path(m.hex, dest))
 		any_moved = true
-	if any_moved:
-		Events.party_order_issued.emit()
-	else:
-		Events.toast_requested.emit("Can't reach that.")
 	return any_moved
 
 
 ## Walks the leader next to `prop` and triggers its interaction on arrival.
+## For doors and exits the whole party gathers there first.
 func interact_with(prop: Prop) -> bool:
 	var actor := leader()
 	if actor == null:
 		return false
+	_waiting_transition = null
 	var taken := _hexes_held_by_others([actor])
 	var best_path: Array[Vector2i] = []
 	var best_hex: Variant = null
@@ -158,6 +172,12 @@ func interact_with(prop: Prop) -> bool:
 	Events.party_order_issued.emit()
 	actor.follow_path(best_path)
 	actor.pending_interaction = prop
+	if prop.is_transition():
+		var others: Array[PartyMember] = []
+		for m in members:
+			if m != actor:
+				others.append(m)
+		_move_group(others, best_hex, {best_hex: true})
 	return true
 
 
@@ -197,4 +217,18 @@ func _on_member_arrived(m: PartyMember) -> void:
 	var prop := m.pending_interaction
 	m.pending_interaction = null
 	if prop != null and is_instance_valid(prop) and prop.is_adjacent_to(m.hex):
-		prop.interact(m)
+		if prop.is_transition():
+			_waiting_transition = prop
+		else:
+			prop.interact(m)
+	if _waiting_transition != null and is_instance_valid(_waiting_transition) and not _anyone_moving():
+		var door := _waiting_transition
+		_waiting_transition = null
+		door.interact(m)
+
+
+func _anyone_moving() -> bool:
+	for m in members:
+		if m.is_moving():
+			return true
+	return false

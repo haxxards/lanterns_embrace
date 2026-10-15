@@ -136,6 +136,12 @@ func is_moving() -> bool:
 	return _moving
 
 
+## Exploration speed relative to normal: heavy armour without the Strength
+## for it, or carrying too much, slows a member down.
+func speed_factor() -> float:
+	return clampf(float(sheet.effective_speed_ft()) / maxf(1.0, float(sheet.speed_ft)), 0.25, 1.0)
+
+
 ## World rectangle used for mouse picking (sprite plus the hex below it).
 func pick_rect() -> Rect2:
 	var r := _sprite.get_rect()
@@ -146,7 +152,7 @@ func _process(delta: float) -> void:
 	if not _moving:
 		return
 	_walk_time += delta
-	var budget := GameConfig.explore_move_speed * delta
+	var budget := GameConfig.explore_move_speed * delta * speed_factor()
 	while budget > 0.0:
 		if path.is_empty():
 			# Settle on the centre of the hex we ended in.

@@ -2,61 +2,107 @@
 	"schema_version": 1,
 	"terrain": [
 		{
-			"id": "grass", "name": "Grass", "symbol": ".",
+			"id": "grass",
+			"name": "Grass",
+			"symbol": ".",
 			"texture": "res://assets/terrain/grass.png",
-			"walkable": true, "move_cost": 1.0, "blocks_sight": false,
+			"walkable": true,
+			"move_cost": 1.0,
+			"blocks_sight": false,
 			"minimap_color": "#557a35"
 		},
 		{
-			"id": "grass_dark", "name": "Forest Floor", "symbol": "f",
+			"id": "grass_dark",
+			"name": "Forest Floor",
+			"symbol": "f",
 			"texture": "res://assets/terrain/grass_dark.png",
-			"walkable": true, "move_cost": 1.0, "blocks_sight": false,
+			"walkable": true,
+			"move_cost": 1.0,
+			"blocks_sight": false,
 			"minimap_color": "#33502a"
 		},
 		{
-			"id": "dirt_road", "name": "Dirt Road", "symbol": ",",
+			"id": "dirt_road",
+			"name": "Dirt Road",
+			"symbol": ",",
 			"texture": "res://assets/terrain/dirt_road.png",
-			"walkable": true, "move_cost": 1.0, "blocks_sight": false,
+			"walkable": true,
+			"move_cost": 1.0,
+			"blocks_sight": false,
 			"minimap_color": "#8a6f4b"
 		},
 		{
-			"id": "sand", "name": "Riverbank", "symbol": ":",
+			"id": "sand",
+			"name": "Riverbank",
+			"symbol": ":",
 			"texture": "res://assets/terrain/sand.png",
-			"walkable": true, "move_cost": 1.0, "blocks_sight": false,
+			"walkable": true,
+			"move_cost": 1.0,
+			"blocks_sight": false,
 			"minimap_color": "#c8b07c"
 		},
 		{
-			"id": "water", "name": "Deep Water", "symbol": "~",
+			"id": "water",
+			"name": "Deep Water",
+			"symbol": "~",
 			"texture": "res://assets/terrain/water.png",
-			"walkable": false, "move_cost": 1.0, "blocks_sight": false,
+			"walkable": false,
+			"move_cost": 1.0,
+			"blocks_sight": false,
 			"animated": true,
 			"minimap_color": "#2b5a82"
 		},
 		{
-			"id": "shallows", "name": "Shallows (difficult)", "symbol": "-",
+			"id": "shallows",
+			"name": "Shallows (difficult)",
+			"symbol": "-",
 			"texture": "res://assets/terrain/shallows.png",
-			"walkable": true, "move_cost": 2.0, "blocks_sight": false,
+			"walkable": true,
+			"move_cost": 2.0,
+			"blocks_sight": false,
 			"animated": true,
 			"minimap_color": "#5c94a6"
 		},
 		{
-			"id": "cobblestone", "name": "Cobblestone", "symbol": "#",
+			"id": "cobblestone",
+			"name": "Cobblestone",
+			"symbol": "#",
 			"texture": "res://assets/terrain/cobblestone.png",
-			"walkable": true, "move_cost": 1.0, "blocks_sight": false,
+			"walkable": true,
+			"move_cost": 1.0,
+			"blocks_sight": false,
 			"minimap_color": "#8c877f"
 		},
 		{
-			"id": "bridge", "name": "Bridge deck", "symbol": "=",
+			"id": "bridge",
+			"name": "Bridge deck",
+			"symbol": "=",
 			"texture": "res://assets/terrain/water.png",
-			"walkable": true, "move_cost": 1.0, "blocks_sight": false,
+			"walkable": true,
+			"move_cost": 1.0,
+			"blocks_sight": false,
 			"animated": true,
 			"minimap_color": "#8a6038"
 		},
 		{
-			"id": "rock", "name": "Rock Outcrop", "symbol": "^",
+			"id": "rock",
+			"name": "Rock Outcrop",
+			"symbol": "^",
 			"texture": "res://assets/terrain/rock.png",
-			"walkable": false, "move_cost": 1.0, "blocks_sight": true,
+			"walkable": false,
+			"move_cost": 1.0,
+			"blocks_sight": true,
 			"minimap_color": "#5d5c60"
+		},
+		{
+			"id": "floor",
+			"name": "Floor",
+			"symbol": "_",
+			"texture": "res://assets/terrain/bridge_planks.png",
+			"walkable": true,
+			"move_cost": 1.0,
+			"blocks_sight": false,
+			"minimap_color": "#7a5636"
 		}
 	]
 }

@@ -12,6 +12,9 @@ track, and every file is a drop-in placeholder you can replace with your own art
 | Terrain textures | `tools/art/blender/render_terrain.py` | Small 3D ground patches (grass blades, pebbles, leaves, cobbles, rock, rippled water) laid out to wrap at the edges, rendered straight down. |
 | Props and buildings | `tools/art/blender/render_props.py` | Oaks, pines and birches (several shapes each) with tens of thousands of leaf cards; thatched, tiled and shingled cottages; a two-storey inn with lit windows; well, bridge, rocks, signpost; set dressing such as reeds, ferns, wildflowers, logs, stumps, barrels, crates, hay, lamp posts, market stalls and a cart. |
 | Character sprites | `tools/art/blender/render_characters.py` | Posable 3D figures with class gear. Each is rendered as a sprite sheet: 5 facings × (idle + 8-frame walk), mirrored in game for the other 3 facings. |
+| Item icons | `tools/art/blender/render_items.py` | 64×64 icons of small procedural models (blades, armour, potions, coins...) under a studio light rig, with a soft drop shadow. |
+| Interiors | `tools/art/blender/render_interiors.py` | Room backdrops (floorboards or flagstones, back wall with hearth or forge and lit windows, side walls leaning out as a cutaway) and furniture props: chests, drawers, cupboards, tables, beds, the bar, an anvil, a rug, the exit mat. |
+| Sounds and music | `tools/audio/generate_placeholder_audio.py` | Synthesised placeholders, see [AUDIO.md](AUDIO.md). |
 | Portraits | `tools/art/portraits/make_portraits.py` | Crops of CC0 public-domain paintings from the Met (see below). |
 
 ## Re-rendering
@@ -21,15 +24,18 @@ Blender is used as a Python module (`bpy`). It needs **Python 3.13**:
 ```sh
 python3.13 -m venv .venv-art
 .venv-art/bin/pip install bpy==5.2.2 numpy pillow
-.venv-art/bin/python tools/art/blender/render_all.py                 # everything (~20 min on 4 cores)
+.venv-art/bin/python tools/art/blender/render_all.py                 # everything (~45 min on 4 cores)
 .venv-art/bin/python tools/art/blender/render_all.py terrain:grass props:tree_oak characters
+.venv-art/bin/python tools/art/blender/render_all.py items interiors:chest interiors:inn_hall
 ```
 
 Rendering a prop writes its looks (texture, anchor pixel `origin`, door pixel) back into
 `data/props/props.json`, as a `variants` list when there is more than one. Rendering a
 character writes its sprite sheet, a `<class>_anim.json` description, and the static
 sprite, and points every character sheet using that class at them (`art.animation`,
-`art.sprite_origin`). You never edit those numbers by hand.
+`art.sprite_origin`). Rendering a room writes `assets/interiors/backdrops.json` (the pixel
+of hex [0, 0] and where the exit is), which `tools/maps/generate_interiors.py` turns into
+the interior maps. You never edit those numbers by hand.
 
 ### Conventions
 
@@ -41,6 +47,10 @@ sprite, and points every character sheet using that class at them (`art.animatio
   shadows stay compact, and baked shadows are lightened to 60% so they read as soft
   ground shadows. Terrain uses a lower sun for more relief.
 - **Terrain:** 512×512 px, seamless, 1 texel per world pixel.
+- **Interiors:** the same camera and scale. A room's floor covers exactly the hexes of
+  its map (a cottage is 8×6 hexes, as outside). Interiors use a dimmer, warmer key light
+  plus local lights (hearth, windows, forge), and furniture is rendered under the same
+  light so it matches the room.
 
 ## Portraits
 
@@ -86,6 +96,9 @@ are easy to spot.
 | Character sprites | `assets/characters/<class>.png` | any | Static fallback (south-east idle). `art.sprite_origin` = feet pixel. Shadow and selection ring are drawn by code. |
 | Character animation | `assets/characters/<class>_sheet.png` + `<class>_anim.json` | cells of any size | Rows = facings listed in `directions` (`s, se, e, ne, n`), columns = idle + walk frames. `origin` = feet pixel within a cell (keep it horizontally centred so mirroring works). `cycle_px` = pixels walked per walk cycle. |
 | Portraits | `assets/portraits/*.png` | 4:5, 256×320 recommended | Shown at 64×80 in the sidebar (cropped to fill) and larger on the inventory screen. |
+| Item icons | `assets/items/*.png` | 64×64 | Transparent background; drawn inside the 56 px inventory slots. |
+| Room backdrops | `assets/interiors/*.png` | any | The whole room in one picture. `backdrop.origin` in the map = the pixel on the centre of hex [0, 0]. |
+| Sounds | `assets/audio/**.ogg` | Ogg Vorbis or WAV | Named in `data/audio/audio.json`. Music and ambience loop. |
 
 Footprints:
 
@@ -95,6 +108,12 @@ Footprints:
 | bush | 1 hex, walkable but difficult |
 | reeds, fern, flowers | 1 hex, walkable (decoration) |
 | market_stall | 3×2 hexes |
+| chest, dresser, cupboard, anvil | 1 hex (blocking; the first three are containers) |
+| table | 2×2 hexes (with benches) |
+| bed | 2×1 hexes |
+| bar_counter | 4×1 hexes |
+| rug | 3×2 hexes, ground layer, walkable |
+| door_exit | 1 hex, ground layer, walkable (an interior's way out) |
 | cart | 2×1 hexes |
 | house_small (cottage) | 8×6 hexes, door from `door_pixel` |
 | house_large (inn) | 12×8 hexes, door from `door_pixel` |
@@ -102,4 +121,5 @@ Footprints:
 
 Building art must cover its footprint: the walls are `cols × 1.524 m` wide, and roof
 eaves may overhang by up to a hex in total. A test checks this. `bridge_planks.png`
-(old 2D) is a spare texture for interior floors in Phase 2.
+(old 2D) is the texture of the `floor` terrain, which is never drawn because interiors
+use backdrops; it only matters if you build an interior without one.

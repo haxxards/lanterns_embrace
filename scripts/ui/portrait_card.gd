@@ -2,6 +2,7 @@ class_name PortraitCard
 extends PanelContainer
 ## Sidebar card for one party member: portrait, name, HP, quick stats.
 ## Click selects (Shift adds), double-click centres the camera on them.
+## Dropping an item from the inventory screen on a card gives it to them.
 
 signal pressed(card: PortraitCard, shift: bool)
 signal double_pressed(card: PortraitCard)
@@ -16,6 +17,7 @@ var _style_selected: StyleBoxFlat
 var _style_hover: StyleBoxFlat
 var _hp_bar: ProgressBar
 var _hp_label: Label
+var _stats_label: Label
 var _hovered: bool = false
 var _selected: bool = false
 
@@ -69,8 +71,10 @@ func setup(m: PartyMember, i: int) -> void:
 	_hp_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_hp_bar.add_child(_hp_label)
 
-	col.add_child(_label("AC %d   Speed %d ft" % [m.sheet.armor_class, m.sheet.speed_ft], 11, UiTheme.TEXT_DIM))
+	_stats_label = _label("", 11, UiTheme.TEXT_DIM)
+	col.add_child(_stats_label)
 
+	m.sheet.changed.connect(refresh)
 	mouse_entered.connect(_on_hover_changed.bind(true))
 	mouse_exited.connect(_on_hover_changed.bind(false))
 	refresh()
@@ -86,6 +90,23 @@ func refresh() -> void:
 	_hp_bar.max_value = s.hp_max
 	_hp_bar.value = s.hp_current
 	_hp_label.text = "HP %d / %d" % [s.hp_current, s.hp_max]
+	_stats_label.text = "AC %d   Speed %d ft" % [s.armor_class, s.effective_speed_ft()]
+
+
+func _exit_tree() -> void:
+	if member != null and is_instance_valid(member) and member.sheet.changed.is_connected(refresh):
+		member.sheet.changed.disconnect(refresh)
+
+
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	return data is Dictionary and data.has("ref")
+
+
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	var err := InventoryOps.give(data["ref"], member.sheet)
+	if not err.is_empty():
+		Audio.play_sfx("error")
+		Events.toast_requested.emit(err)
 
 
 func _gui_input(event: InputEvent) -> void:

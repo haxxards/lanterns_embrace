@@ -77,34 +77,80 @@ func test_starting_party_respects_max_size() -> void:
 	check(GameState.party.size() <= GameConfig.max_party_size, "party within max size")
 
 
-func test_sample_map_is_sound() -> void:
-	var m := Data.load_map(GameConfig.starting_map_path)
-	check(m.errors.is_empty(), "map errors: %s" % ", ".join(m.errors))
-	check(m.width > 0 and m.height > 0, "map has size")
+func test_every_map_is_sound() -> void:
+	var paths := JsonUtil.list_json_files("res://data/maps")
+	check(paths.size() >= 6, "outdoor map plus five interiors")
+	for path in paths:
+		_check_map(path)
+
+
+func _check_map(path: String) -> void:
+	var m := Data.load_map(path)
+	check(m.errors.is_empty(), "%s errors: %s" % [path, ", ".join(m.errors)])
+	check(m.width > 0 and m.height > 0, "%s has size" % path)
+	if not m.backdrop_path.is_empty():
+		check(Data.load_texture(m.backdrop_path) != Data.missing_texture(), "%s backdrop exists" % path)
+	var g := _map_grid(m)
+	var footprint_owner := {}
+	for pl in m.placements:
+		for cell in pl.cells:
+			check(g.in_bounds(cell), "%s: %s at %s stays on the map" % [m.id, pl.def.id, pl.cell])
+			if pl.def.blocks_movement:
+				check(not footprint_owner.has(cell), "%s: %s overlaps another prop at %s" % [m.id, pl.def.id, cell])
+				footprint_owner[cell] = pl
+	check(g.is_walkable(m.party_spawn), "%s: spawn is walkable" % m.id)
+	for entry in m.entries:
+		check(g.is_walkable(m.entries[entry]), "%s: entry '%s' is walkable" % [m.id, entry])
+	for pl in m.placements:
+		var kind := str(pl.extra.get("interaction", pl.def.interaction))
+		if kind.is_empty():
+			continue
+		var target: Vector2i = pl.anchor
+		if pl.def.has_door:
+			target = PropDef.door_hex(pl.def, pl.cells, pl.anchor, GameConfig.hex_radius, pl.look)
+		var reachable := not pl.def.blocks_movement and g.is_reachable(m.party_spawn, target)
+		for n in Hex.neighbors(target):
+			if not pl.cells.has(n) and g.is_reachable(m.party_spawn, n):
+				reachable = true
+				break
+		check(reachable, "%s: %s at %s can be reached from spawn" % [m.id, pl.def.id, pl.cell])
+		for it in pl.extra.get("items", []):
+			check(Data.items.has(str(it.get("item"))), "%s: %s holds unknown item %s" % [m.id, pl.def.id, it])
+		if kind == "container" and pl.extra.has("key"):
+			check(Data.items.has(str(pl.extra["key"])), "%s: key item %s exists" % [m.id, pl.extra["key"]])
+
+
+func _map_grid(m: MapData) -> HexGrid:
 	var g := HexGrid.new()
 	g.setup(m.width, m.height, GameConfig.hex_radius)
 	for r in m.height:
 		for c in m.width:
 			g.set_terrain(Hex.offset_to_axial(Vector2i(c, r)), m.terrain[r * m.width + c])
-	var footprint_owner := {}
 	for pl in m.placements:
 		for cell in pl.cells:
-			check(g.in_bounds(cell), "%s at %s stays on the map" % [pl.def.id, pl.cell])
-			if pl.def.blocks_movement:
-				check(not footprint_owner.has(cell), "%s overlaps another prop at %s" % [pl.def.id, cell])
-				footprint_owner[cell] = pl
 			g.add_prop_cell(cell, pl.def)
 	g.rebuild_pathfinding()
-	check(g.is_walkable(m.party_spawn), "spawn is walkable")
-	for pl in m.placements:
-		if pl.def.interaction.is_empty() and not pl.def.has_door:
+	return g
+
+
+## Phase 1 promised that a building is as large inside as outside: every
+## building's interior map is exactly its footprint, and its exit leads back
+## to that building.
+func test_interiors_match_their_buildings() -> void:
+	var outside := Data.load_map(GameConfig.starting_map_path)
+	var count := 0
+	for pl in outside.placements:
+		if not pl.extra.has("interior"):
 			continue
-		var target: Vector2i = pl.anchor
-		if pl.def.has_door:
-			target = PropDef.door_hex(pl.def, pl.cells, pl.anchor, GameConfig.hex_radius, pl.look)
-		var reachable := false
-		for n in Hex.neighbors(target):
-			if not pl.cells.has(n) and g.is_reachable(m.party_spawn, n):
-				reachable = true
-				break
-		check(reachable, "%s at %s can be reached from spawn" % [pl.def.id, pl.cell])
+		count += 1
+		var inside := Data.load_map(str(pl.extra["interior"]))
+		check_eq(Vector2i(inside.width, inside.height), pl.def.footprint_rect, "%s interior size" % pl.extra.get("name"))
+		check(inside.entries.has(str(pl.extra.get("entry", "door"))), "%s has its entry" % inside.id)
+		var exits := 0
+		for ip in inside.placements:
+			if str(ip.extra.get("interaction", ip.def.interaction)) == "exit":
+				exits += 1
+				check_eq(str(ip.extra.get("map")), GameConfig.starting_map_path, "%s exit map" % inside.id)
+				check_eq(str(ip.extra.get("entry")), str(pl.extra.get("id")), "%s exit leads to its building" % inside.id)
+		check_eq(exits, 1, "%s has one exit" % inside.id)
+	check_eq(count, 5, "five buildings with interiors")
