@@ -13,6 +13,9 @@ data-driven form you can extend, not a finished game.
 ![Inventory and paper doll with a shelf of remedies open](docs/images/phase2_inventory.jpg)
 ![The party crossing the bridge](docs/images/walk.gif)
 
+New to Godot, or want to know how this is put together before extending it? Start with
+**[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md)**.
+
 ## Status: Phase 2, items and places
 
 ### Phase 2: items and places
@@ -167,7 +170,7 @@ data/
   items/           items.json: every item (docs/ITEMS.md)
   audio/           audio.json: sound names -> files (docs/AUDIO.md)
   maps/            The village and five interiors (terrain rows + props), see docs/MAPS.md
-docs/              Format references (characters, maps, items, assets, audio)
+docs/              GODOT_GUIDE.md, plus format references (characters, maps, items, assets, audio)
 scenes/main.tscn   Entry scene: World + HUD
 scripts/
   autoload/        GameConfig, Data (registry), GameState, Events (signal hub), Audio,
@@ -202,6 +205,8 @@ tools/             make_character.py, art renderers (tools/art/blender), portrai
 - Items: `ItemDef` is a type from items.json, `ItemStack` a quantity of one, `Inventory` a
   row of slots. `InventoryOps` applies the rules for every move, for the UI and the tests.
 
+[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) walks through all of this in more depth.
+
 ## Extending
 
 - **New party member:** run `python3 tools/make_character.py --id ... --class ...` and add
@@ -229,7 +234,8 @@ fails that test.
 
 ## Roadmap
 
-This order follows the plan agreed before Phase 1.
+This order follows the plan agreed before Phase 1. See the end of
+[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phases 3 and 4 plug into the code.
 
 1. ~~**Foundation:** hex grid, pathfinding, party selection and movement, camera, minimap, sample map~~
 2. ~~**Items and places:** item and equipment data, inventory and paper doll, chests and
