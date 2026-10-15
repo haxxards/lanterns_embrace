@@ -1,0 +1,22 @@
+{
+	"_comment": "Portraits cropped from public-domain paintings released under CC0 by The Metropolitan Museum of Art (Open Access). 'crop' = [face centre x, face centre y, crop height], as fractions of the painting; the crop is 4:5 with the face 40% down. Run make_portraits.py after editing.",
+	"size": [256, 320],
+	"portraits": [
+		{"id": "garrick", "met_id": 33284, "title": "Portrait of Walter Devereux, First Earl of Essex", "artist": "British painter", "date": "1572", "crop": [0.47, 0.175, 0.44]},
+		{"id": "elowen", "met_id": 435861, "title": "Saint Catherine of Alexandria", "artist": "Bernardo Cavallino", "date": "ca. 1645", "crop": [0.385, 0.295, 0.40]},
+		{"id": "odran", "met_id": 436260, "title": "Study Head of an Old Man with a White Beard", "artist": "Anthony van Dyck", "date": "ca. 1617-20", "crop": [0.52, 0.31, 0.62]},
+		{"id": "wren", "met_id": 436626, "title": "Boy with a Lute", "artist": "Frans Hals", "date": "ca. 1625", "crop": [0.45, 0.37, 0.5]},
+		{"id": "npc_veteran", "met_id": 437416, "title": "Man in Armor (Mars?)", "artist": "Rembrandt (style of)", "date": "17th century", "crop": [0.53, 0.33, 0.55]},
+		{"id": "npc_pickpocket", "met_id": 436838, "title": "The Fortune-Teller", "artist": "Georges de La Tour", "date": "probably 1630s", "crop": [0.62, 0.22, 0.44]},
+		{"id": "npc_elder", "met_id": 437055, "title": "Portrait of an Old Man", "artist": "Hans Memling", "date": "ca. 1475", "crop": [0.55, 0.33, 0.72]},
+		{"id": "npc_merchant", "met_id": 440840, "title": "Portrait of an Old Man", "artist": "Hugo van der Goes", "date": "ca. 1470-75", "crop": [0.56, 0.43, 0.92]},
+		{"id": "npc_priest", "met_id": 459088, "title": "Saint Jerome as Scholar", "artist": "El Greco", "date": "ca. 1610", "crop": [0.52, 0.27, 0.5]},
+		{"id": "npc_monk", "met_id": 435896, "title": "Portrait of a Carthusian", "artist": "Petrus Christus", "date": "1446", "crop": [0.6, 0.45, 0.6]},
+		{"id": "npc_sage", "met_id": 437421, "title": "Study Head of an Old Man", "artist": "Rembrandt (style of)", "date": "17th century", "crop": [0.42, 0.42, 0.62]},
+		{"id": "npc_noble", "met_id": 437413, "title": "Man in a Red Cloak", "artist": "Rembrandt (style of)", "date": "17th century", "crop": [0.53, 0.37, 0.6]},
+		{"id": "npc_villager", "met_id": 435984, "title": "Sibylle", "artist": "Camille Corot", "date": "ca. 1870", "crop": [0.47, 0.3, 0.5]},
+		{"id": "npc_young_knight", "met_id": 435778, "title": "Sir John Shurley of Isfield", "artist": "British painter", "date": "1588", "crop": [0.43, 0.17, 0.42]},
+		{"id": "npc_warrior", "met_id": 437389, "title": "Bellona", "artist": "Rembrandt", "date": "1633", "crop": [0.48, 0.32, 0.42]},
+		{"id": "npc_bard", "met_id": 439933, "title": "Lute Player", "artist": "Valentin de Boulogne", "date": "ca. 1625-26", "crop": [0.5, 0.26, 0.42]}
+	]
+}

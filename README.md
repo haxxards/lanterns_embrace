@@ -46,7 +46,9 @@ This phase covers everything needed to load a map and evaluate moving a party ar
 - **Pre-rendered 3D art**, made the way classic isometric RPGs did it: terrain, trees,
   buildings and characters are modelled procedurally in Blender and rendered with Cycles
   by scripts in this repo. Every image is a drop-in replacement (see
-  [docs/ASSETS.md](docs/ASSETS.md)). The portraits are still flat 2D placeholders.
+  [docs/ASSETS.md](docs/ASSETS.md)).
+  - **Painted portraits:** crops of public-domain Old Master paintings, released as CC0
+    by The Metropolitan Museum of Art, plus a dozen spare portraits for future NPCs.
   - **Animated characters:** a walk cycle in 8 facings (5 rendered, 3 mirrored), with
     frames advanced by distance walked so feet don't slide.
   - **Animated water:** the river and ford drift and glint.
@@ -131,8 +133,8 @@ scripts/
                    Prop, camera, overlays
   ui/              HUD, portrait cards, minimap, theme
 tests/             Headless test runner, unit and integration tests
-tools/             make_character.py, art renderers (tools/art/blender), map generator
-                   (tools/maps), run_tests.sh
+tools/             make_character.py, art renderers (tools/art/blender), portrait cropper
+                   (tools/art/portraits), map generator (tools/maps), run_tests.sh
 ```
 
 ### How the pieces fit
@@ -193,4 +195,5 @@ Out of scope for now: character creation and cutscenes.
 ## Credits
 
 See [CREDITS.md](CREDITS.md). Rules numbers come from the 5e System Reference Document
-5.1 (CC-BY-4.0). All art was generated for this project by the scripts in `tools/art/`.
+5.1 (CC-BY-4.0). The world art was generated for this project by the scripts in
+`tools/art/`; the portraits are CC0 paintings from The Metropolitan Museum of Art.
