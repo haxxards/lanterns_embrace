@@ -17,8 +17,11 @@ data-driven form you can extend, not a finished game.
 ![Inventory and paper doll with a shelf of remedies open](docs/images/phase2_inventory.jpg)
 ![The party crossing the bridge](docs/images/walk.gif)
 
-New to Godot, or want to know how this is put together before extending it? Start with
-**[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md)**.
+New to the project and want to study how it is made? Start with
+**[docs/START_HERE.md](docs/START_HERE.md)**, a step-by-step checklist that takes you through
+the code and data in order and has a "where do I find..." table. It leans on
+**[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md)**, which explains how everything works, with
+Godot explained along the way.
 
 ## Status: Phase 4 (first half), combat
 
@@ -268,7 +271,8 @@ data/
   creatures/       creatures.json: hostile creatures' stat blocks (docs/COMBAT.md)
   dialogue/        One conversation graph per speaker (docs/DIALOGUE.md)
   quests/          quests.json: quest stages, journal entries and XP
-docs/              GODOT_GUIDE.md, plus format references (characters, maps, items, assets, audio)
+docs/              START_HERE.md (study checklist), GODOT_GUIDE.md, plus format references
+                   (maps, items, characters, dialogue, NPCs and quests, combat, assets, audio)
 scenes/main.tscn   Entry scene: World + HUD
 scripts/
   autoload/        GameConfig, Data (registry), GameState, Events (signal hub), Audio,

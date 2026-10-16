@@ -3,10 +3,13 @@
 A guided tour of Lantern's Embrace for someone who wants to follow along with what has
 been built and learn enough Godot to extend it. It explains the Godot ideas the project
 relies on, how the pieces of this codebase fit together, how to add content without
-writing code, and what to learn before tackling the next phases (NPCs, dialogue, combat).
+writing code, and what to learn before tackling the next phases.
 
 Everything here refers to real files in the repository. Paths are relative to the project
 root (`res://` in Godot terms).
+
+Studying the project from scratch? [START_HERE.md](START_HERE.md) is a checklist that walks
+you through this guide and the code in a sensible order, one stop at a time.
 
 **Contents**
 
@@ -510,8 +513,9 @@ JSON at a new file. [ASSETS.md](ASSETS.md) lists sizes and pivots.
 
 ## 11. A reading order for the code
 
-Roughly 9,400 lines of GDScript (and 2,500 of tests). In this order, each file only depends on ones you have
-already read:
+Roughly 9,400 lines of GDScript (and 2,500 of tests). In this order, each file only depends
+on ones you have already read. ([START_HERE.md](START_HERE.md) turns this into a checklist,
+with what to notice in each file, questions and small experiments.)
 
 1. `project.godot`: autoloads and input actions.
 2. `scripts/core/hex.gd`, then `hex_grid.gd`: the grid everything stands on.
