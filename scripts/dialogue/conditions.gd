@@ -10,7 +10,10 @@ extends RefCounted
 ##   {"gold": 10}                                   the purse holds at least this much
 ##   {"member": "odran"}                            this character is in the party, alive
 ##   {"speaker": "wren"}                            this character is doing the talking
-##   {"hurt": true}  {"fallen": true}               someone is wounded / someone has fallen
+##   {"hurt": true}                                 someone (not dead) is below full hit points
+##   {"fallen": true}                               someone is at 0 hit points (down or dead)
+##   {"dead": true}                                 someone is dead
+##   {"defeated": "group"}                          that encounter group has been beaten
 ##   {"visited": "node"}                            this dialogue node was seen before
 ##   {"all": [...]}  {"any": [...]}  {"not": {...}}
 ##
@@ -66,6 +69,10 @@ static func _check_key(key: String, value: Variant, d: Dictionary, speaker: Char
 			return GameState.anyone_hurt() == bool(value)
 		"fallen":
 			return GameState.anyone_fallen() == bool(value)
+		"dead":
+			return GameState.anyone_dead() == bool(value)
+		"defeated":
+			return bool(GameState.flags.get("defeated:%s" % value, false))
 		"visited":
 			return bool(GameState.flags.get("seen:%s:%s" % [dialogue_id, value], false))
 		"all":

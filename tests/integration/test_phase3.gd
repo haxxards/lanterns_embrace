@@ -189,9 +189,15 @@ func test_game_over_when_everyone_falls() -> void:
 
 func test_the_fallen_stay_behind() -> void:
 	var wren := world.party.members[3]
-	wren.sheet.damage(999)
+	wren.sheet.damage(wren.sheet.hp_current)
 	world.party.select_all()
-	check(not wren.selected, "the fallen can't be selected")
+	check(not wren.selected, "the unconscious can't be selected")
 	check_eq(world.party.living().size(), 3, "three still standing")
+	check(not wren.sheet.dead, "knocked out, not dead")
 	wren.sheet.heal(1)
-	check(wren.is_alive(), "back on their feet")
+	check(wren.is_alive(), "healing wakes them")
+	wren.sheet.die()
+	wren.sheet.heal(5)
+	check(not wren.is_alive(), "the dead can't be healed")
+	wren.sheet.revive(1)
+	check(wren.is_alive() and wren.sheet.hp_current == 1, "a temple's raise dead brings them back")

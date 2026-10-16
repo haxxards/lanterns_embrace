@@ -251,6 +251,33 @@ for r in range(H):
             elif x < 0.085: P[r][c] = 'w'
             elif x < 0.0865: P[r][c] = 's'
         elif t == ':' and x < 0.05: P[r][c] = 'o'
+# Hostile creatures (data/creatures/creatures.json), placed after the scatter
+# so they don't change it. A pack of wolves holds the clearing in the
+# north-west woods ("Mind the wolves", says the signpost).
+creatures = []
+def creature(kind, cell, group, spawn_id, wander=1):
+    for (c, r) in [cell] + nbrs(*cell):
+        if inb(c, r) and P[r][c] == ' ' and T[r][c] in '.f:,':
+            P[r][c] = '@'
+            creatures.append({"id": spawn_id, "type": kind, "at": [c, r], "group": group, "wander": wander})
+            return
+    raise AssertionError((spawn_id, cell))
+creature("wolf", (13, 8), "woods_wolves", "wolf_1", 2)
+creature("wolf", (15, 9), "woods_wolves", "wolf_2", 2)
+creature("wolf", (14, 11), "woods_wolves", "wolf_3", 2)
+
+# The east road leaves for the hills: a waymarker at its end leads to the Old
+# Temple Road (tools/maps/generate_old_temple_road.py). Placed after the
+# scatter, clearing any bush or tree that landed on it.
+WAY = (82, 29)
+for (c, r) in [WAY] + nbrs(*WAY):
+    if inb(c, r) and P[r][c] not in '@':
+        P[r][c] = ' '
+P[WAY[1]][WAY[0]] = '@'
+props.append({"type": "waymarker", "at": list(WAY), "name": "Road to the Hills",
+              "map": "res://data/maps/old_temple_road.json", "entry": "west"})
+EAST_ENTRY = (80, 30)
+
 for r in range(H):
     for c in range(W):
         if P[r][c] == '@': P[r][c] = ' '
@@ -260,11 +287,14 @@ data_rows_p = [''.join(row) for row in P]
 out = ROOT / "data/maps/millbrook_outskirts.json"
 L = ['{', '\t"schema_version": 1,', '\t"id": "millbrook_outskirts",', '\t"name": "Millbrook Outskirts",',
      '\t"background_color": "#141a10",', '\t"music": "village",', '\t"ambience": "outdoors",',
-     f'\t"spawns": {{"party": {json.dumps(list(spawn))}}},', '\t"terrain": [']
+     f'\t"spawns": {{"party": {json.dumps(list(spawn))}}},',
+     f'\t"entries": {{"east_road": {json.dumps(list(EAST_ENTRY))}}},', '\t"terrain": [']
 L += [f'\t\t{json.dumps(r)}' + (',' if i < H-1 else '') for i, r in enumerate(data_rows_t)]
 L += ['\t],', '\t"prop_legend": {"T": "tree_oak", "P": "tree_pine", "B": "tree_birch", "b": "bush", "o": "rock", "r": "reeds", "n": "fern", "w": "flowers", "L": "log", "s": "stump"},', '\t"prop_layer": [']
 L += [f'\t\t{json.dumps(r)}' + (',' if i < H-1 else '') for i, r in enumerate(data_rows_p)]
-L += ['\t],', f'\t"npcs": {json.dumps(npcs)},', '\t"props": [']
+L += ['\t],', f'\t"npcs": {json.dumps(npcs)},', '\t"creatures": [']
+L += [f'\t\t{json.dumps(c)}' + (',' if i < len(creatures)-1 else '') for i, c in enumerate(creatures)]
+L += ['\t],', '\t"props": [']
 L += [f'\t\t{json.dumps(p)}' + (',' if i < len(props)-1 else '') for i, p in enumerate(props)]
 L += ['\t]', '}']
 out.write_text('\n'.join(L) + '\n')

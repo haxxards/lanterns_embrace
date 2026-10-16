@@ -11,7 +11,9 @@
 			"text": "You there! Have you seen a key? Iron, about so long, with my mark on it. I had it at the well this morning and now it's gone. Every penny the village owes the crown is in that strongbox.",
 			"options": [
 				{"text": "We'll keep an eye out for it.", "do": [{"quest": "the_reeves_key", "stage": "started"}], "goto": "thanks"},
-				{"text": "Not our problem.", "end": true}
+				{"text": "Not our problem.", "end": true},
+				{"text": "Is anything else troubling Millbrook?", "if": {"quest": "wolves_of_the_woods", "is": "not_started", "not": {"defeated": "woods_wolves"}}, "goto": "wolves"},
+				{"text": "The wolves in the north-west woods are dead.", "if": {"defeated": "woods_wolves", "quest": "wolves_of_the_woods", "is_not": "done"}, "do": [{"give_gold": 25}, {"quest": "wolves_of_the_woods", "stage": "done"}], "goto": "wolves_done"}
 			]
 		},
 		"thanks": {
@@ -20,7 +22,11 @@
 		},
 		"searching": {
 			"text": "Any sign of my key? I've looked in every bucket in Millbrook.",
-			"options": [{"text": "Not yet.", "end": true}]
+			"options": [
+				{"text": "Is anything else troubling Millbrook?", "if": {"quest": "wolves_of_the_woods", "is": "not_started", "not": {"defeated": "woods_wolves"}}, "goto": "wolves"},
+				{"text": "The wolves in the north-west woods are dead.", "if": {"defeated": "woods_wolves", "quest": "wolves_of_the_woods", "is_not": "done"}, "do": [{"give_gold": 25}, {"quest": "wolves_of_the_woods", "stage": "done"}], "goto": "wolves_done"},
+				{"text": "Not yet.", "end": true}
+			]
 		},
 		"return": {
 			"text": "My key! Where on earth... no, never mind where. Here, for your trouble.",
@@ -30,6 +36,21 @@
 		},
 		"after": {
 			"text": "Millbrook is in your debt. Mind you don't make a habit of finding other people's keys, though.",
+			"options": [
+				{"text": "Is anything else troubling Millbrook?", "if": {"quest": "wolves_of_the_woods", "is": "not_started", "not": {"defeated": "woods_wolves"}}, "goto": "wolves"},
+				{"text": "The wolves in the north-west woods are dead.", "if": {"defeated": "woods_wolves", "quest": "wolves_of_the_woods", "is_not": "done"}, "do": [{"give_gold": 25}, {"quest": "wolves_of_the_woods", "stage": "done"}], "goto": "wolves_done"},
+				{"text": "Farewell, reeve.", "end": true}
+			]
+		},
+		"wolves": {
+			"text": "Wolves. A pack of them in the woods north-west of the river, across the bridge. They've had three of Hob's sheep since the thaw. Millbrook pays twenty-five gold for the lot, and I'll throw in my thanks for free.",
+			"options": [
+				{"text": "We'll hunt them down.", "do": [{"quest": "wolves_of_the_woods", "stage": "started"}], "end": true},
+				{"text": "Maybe later.", "end": true}
+			]
+		},
+		"wolves_done": {
+			"text": "All of them? Hob will sleep easier, and so will his sheep. Twenty-five gold, as promised. Don't spend it all at Tobin's.",
 			"options": [{"text": "Farewell, reeve.", "end": true}]
 		}
 	}

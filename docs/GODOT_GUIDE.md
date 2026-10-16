@@ -180,6 +180,8 @@ terrain, fog of war and the colour grade); see [§5](#5-drawing-the-world).
         │  Props ─ trees, houses, chests, doors    │
         │  PartyController → PartyMembers (Actors) │
         │  Npcs (Actors) ─ townsfolk               │
+        │  Creatures (Actors) ─ foes               │
+        │  CombatManager ─ turn-based fights       │
         │  FogOfWar, Camera                        │
         └───────────────┬──────────────────────────┘
                         │ Events (signals)
@@ -187,7 +189,8 @@ terrain, fog of war and the colour grade); see [§5](#5-drawing-the-world).
         ┌──────────────────────────────────────────┐
         │ HUD: sidebar, portraits, minimap, toasts,│
         │ inventory and shop screen, dialogue      │
-        │ window, journal, menus, save/load        │
+        │ window, journal, combat HUD, menus,      │
+        │ save/load                                │
         └──────────────────────────────────────────┘
 ```
 
@@ -256,6 +259,27 @@ the live copies in `GameState.party` (`Data.new_character()` makes a copy).
    backdrop (interiors) or blended terrain, spawns the townsfolk and then the party at the
    entry, sets up fog, music and ambience, and emits `Events.map_loaded`. The HUD rebuilds
    the portraits and minimap on that signal.
+
+### A fight
+
+1. Every frame while exploring, `World._process` asks `hostiles_noticing()`: is a creature
+   within its `aggro` hexes of a standing party member, with a clear line of sight? If so
+   `start_combat()` collects its encounter group and calls `combat.start(foes)`.
+2. `CombatManager.start` halts the party, rolls initiative for everyone, sorts them, and
+   defers `_run()`, the turn loop.
+3. For a party member's turn, `_run` selects them and `await`s `_player_done`. Meanwhile
+   `World` routes clicks: ground → `player_move(hex)`, which walks a path hex by hex with
+   `move_along()` (checking opportunity attacks as each hex is left), and an enemy →
+   `player_attack(target)`, which may walk next to it first and then calls
+   `attack_with()`.
+4. `attack_with()` works out advantage from the positions, rolls with `CombatRules`, applies
+   damage to the target's sheet, logs a line, plays the lunge and the floating number, and
+   handles someone going down or a creature being slain (loot, XP pool, the group's
+   `defeated` flag).
+5. Space (or the button) emits `_player_done`; `_run` moves on. A creature's turn is
+   `await CombatAI.take_turn(self, c)`, which uses the same `move_along` and `attack_with`.
+6. After each turn `_check_end()` looks for a side with nobody standing: victory shares the
+   XP; defeat leaves the game-over screen to `Events.party_defeated`.
 
 ### Talking to someone
 
@@ -486,7 +510,7 @@ JSON at a new file. [ASSETS.md](ASSETS.md) lists sizes and pivots.
 
 ## 11. A reading order for the code
 
-Roughly 7,200 lines of GDScript (and 2,300 of tests). In this order, each file only depends on ones you have
+Roughly 9,400 lines of GDScript (and 2,500 of tests). In this order, each file only depends on ones you have
 already read:
 
 1. `project.godot`: autoloads and input actions.
@@ -502,12 +526,15 @@ already read:
    orders, interactions. Then `scripts/npc/npc.gd`.
 8. `scripts/dialogue/` (`conditions.gd`, `effects.gd`, `dialogue.gd`, `dialogue_runner.gd`)
    and `scripts/quests/quest_def.gd`, with the quest half of `game_state.gd`.
-9. `terrain_renderer.gd` + `terrain_blend.gdshader`, `fog_of_war.gd` + `.gdshader`.
-10. `scripts/ui/hud.gd`, then `portrait_card.gd`, `minimap.gd`, `inventory_screen.gd`,
-    `item_slot.gd`, `dialogue_window.gd`, `journal_screen.gd`, `game_menu.gd`,
-    `save_load_screen.gd`.
-11. `tests/integration/test_phase2.gd` and `test_phase3.gd`: the whole game driven from
-    code.
+9. `scripts/combat/`: `attack.gd`, `creature_def.gd`, `creature_sheet.gd`,
+   `combat_rules.gd`, `combatant.gd`, then `combat_manager.gd` and `combat_ai.gd`; and
+   `scripts/world/creature.gd`.
+10. `terrain_renderer.gd` + `terrain_blend.gdshader`, `fog_of_war.gd` + `.gdshader`.
+11. `scripts/ui/hud.gd`, then `portrait_card.gd`, `minimap.gd`, `inventory_screen.gd`,
+    `item_slot.gd`, `dialogue_window.gd`, `journal_screen.gd`, `combat_hud.gd`,
+    `game_menu.gd`, `save_load_screen.gd`.
+12. `tests/integration/test_phase2.gd`, `test_phase3.gd` and `test_combat.gd`: the whole
+    game driven from code.
 
 Keep the game running while you read: hover with F3 on to see hex coordinates, and put
 `print()` calls or breakpoints (click left of a line number in the script editor) in the
@@ -562,23 +589,48 @@ data formats.
   `take_gold` and `revive` effects. `GameState` watches every sheet's `changed` signal and
   emits `Events.party_defeated` when nobody is left standing.
 
-**Phase 4: combat**
+**Phase 4, first half (done): how combat was added**
 
-- A `CombatManager` state machine: *exploring → rolling initiative → each turn (move, act)
-  → victory/defeat*. While it runs, the world's click handling routes to it instead of
-  `move_selected_to`.
-- Movement per turn is `CharacterSheet.speed_hexes()`; paths should treat other combatants'
-  hexes as blocked (`HexGrid.set_occupied()`, as NPCs already do) and use
-  `smooth_paths = false`.
-- Attacks use `Rules.weapon_ability`, `attack_summary`'s numbers, `Rules.roll_expr` for
-  damage and `armor_class` for defence. All of these exist already.
-- Spells are data (range, area in hexes, save, damage dice) plus a little code per effect
-  kind. `Hex.spiral`/`Hex.ring`/`Hex.line` give the areas.
-- XP and levelling exist (`GameState.award_xp`, `CharacterSheet.add_xp` with hit points
-  per level). Monsters only need an XP value. Falling at 0 HP, the temple's revival and
-  the game-over screen are in place too: combat only has to call `sheet.damage()`.
-- NPCs that turn hostile can become combatants: an `Npc` is an `Actor`, so it already
-  walks on hexes and blocks them.
+[COMBAT.md](COMBAT.md) has the rules and the data formats. The shape of the code:
+
+- *A monster is a character sheet.* `CreatureSheet extends CharacterSheet`, filled from a
+  stat block (`CreatureDef`). It overrides only what differs (armour class from the stat
+  block, death at 0 HP). Everything that deals with hit points, saves and damage then
+  works on both without `if monster:` branches. This is inheritance used for its proper
+  job: a creature really *is* a sheet with a few rules changed.
+- *Rules without positions.* `CombatRules` is static functions over sheets and numbers
+  (attack rolls, damage dice, hit chances, damage types). The unit tests check it with a
+  seeded `RandomNumberGenerator`, so "a 20 always crits" is a test, not a hope.
+- *A coroutine for the turn loop.* `CombatManager._run()` is a `while` loop that `await`s:
+  the player's End Turn (a signal), a creature's walk (`await actor.arrived`), a pause
+  (`await get_tree().create_timer(...).timeout`). The flow of a round reads top to bottom
+  instead of being spread over callbacks. `abort()` sets `active = false` and emits the
+  awaited signal, so the loop wakes up, sees the flag and returns.
+- *Per-turn state on a small object.* `Combatant` wraps an `Actor` and its sheet with
+  movement left, action/bonus/reaction used, dodging, prone. It resets in
+  `begin_turn()`.
+- *Occupancy and strict steps.* During a fight every actor sets `occupies = true` (its
+  hex is disabled in the A* graph) and `smooth_paths = false` (exact hex steps).
+  `HexGrid.reachable_within()` is a small Dijkstra search that gives the shaded movement
+  area and the cost of each hex.
+- *Input routing.* `World` checks `combat.active` first: clicks become `player_move` or
+  `player_attack`, and Space becomes End Turn. The HUD's `CombatHud` only listens to the
+  manager's signals (`started`, `turn_started`, `state_changed`, `logged`, `hint_changed`).
+- *Tests at speed.* `combat.animate = false` makes moves teleport and pauses vanish, so an
+  integration test can play several rounds in a few frames. A fixed `rng.seed` makes the
+  rounds repeatable.
+
+**Phase 4, second half: where spells plug in**
+
+- Spells are data (range in hexes, area, saving throw, damage or healing dice) in a
+  `spells.json`, plus a little code per effect kind. `Hex.spiral`/`Hex.ring`/`Hex.line`
+  give the areas, and `CombatRules.saving_throw` the saves.
+- Casting is another action in `CombatManager` next to `attack_with`, so it shares
+  advantage, logging, floating text and the death/slain handling. Spell slots go on
+  `CharacterSheet` (the `spells.slots` field already exists) and come back on a rest. Tobin's
+  room becomes a long rest.
+- A spell scroll is an item whose `use` casts its spell (the inventory screen's right-click
+  already calls `InventoryOps.use`).
 
 ### Things to keep doing
 
@@ -619,6 +671,13 @@ data formats.
 - **Disabled A\* points are forgotten on rebuild**: `HexGrid.rebuild_pathfinding()`
   re-creates the points, so it re-applies the occupied hexes afterwards. Any state you
   keep "on top of" an `AStar2D` needs the same care.
+- **Timers ignore the pause by default**: `get_tree().create_timer(t)` keeps counting while
+  the tree is paused (its `process_always` argument defaults to true). The combat's pauses
+  use `create_timer(t, false)`, so opening the menu really stops a creature mid-turn.
+- **Casting a literal to a typed array**: `[step] as Array[Vector2i]` does not make a typed
+  array. Declare it: `var one: Array[Vector2i] = [step]`.
+- **`%` with an Array**: `"seen: %s" % some_array` treats the array as the list of format
+  arguments. Wrap it: `"seen: %s" % [some_array]`.
 - **Fog drawn over tall sprites**: fog is per hex, but a building's roof is drawn over the
   hexes behind it. `FogOfWar` reveals the hexes under a building's picture together with
   the building (`Prop.covered_hexes()` samples the sprite's alpha), so roofs don't vanish

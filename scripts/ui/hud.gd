@@ -13,6 +13,7 @@ Left drag  –  box select        Ctrl+A  –  select all
 1-%d  –  select member        Right click  –  deselect
 Left click a sign / chest / door  –  read / open / go in
 Left click a townsperson  –  talk (1-9 picks an answer)
+In a fight: click ground to move, an enemy to attack  ·  Space  –  end turn
 I  –  inventory        J  –  journal        Esc  –  menu
 F5  –  quicksave        F9  –  quickload
 WASD / arrows / screen edge / middle drag  –  pan
@@ -45,6 +46,7 @@ var _save_load: SaveLoadScreen
 var _dialogue: DialogueWindow
 var _journal: JournalScreen
 var _game_over: PanelContainer
+var _combat_hud: CombatHud
 ## Pause state from before the first modal screen opened (restored on close).
 var _paused_before_modal: Variant = null
 ## Screenshot of the game view taken when the menu opens (save thumbnail).
@@ -76,6 +78,7 @@ func _ready() -> void:
 func bind(w: World) -> void:
 	world = w
 	world.camera.right_ui_width = SIDEBAR_WIDTH
+	_combat_hud.bind(w.combat)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -96,10 +99,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			open_journal()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("debug_knock_out") and GameConfig.debug_keys and world.party.leader():
-		# Testing aid: drop the leader to 0 HP, to try the temple's raise dead.
+		# Testing aid: knock the leader out (Ctrl+K) or kill them (Ctrl+Shift+K),
+		# to try healing and the temple's raise dead.
 		var s := world.party.leader().sheet
-		s.damage(s.hp_current)
-		show_toast("%s has fallen. (debug: Ctrl+K)" % s.display_name)
+		if Input.is_key_pressed(KEY_SHIFT):
+			s.die()
+			show_toast("%s is dead. (debug: Ctrl+Shift+K)" % s.display_name)
+		else:
+			s.damage(s.hp_current)
+			show_toast("%s is knocked out. (debug: Ctrl+K)" % s.display_name)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("quicksave"):
 		quicksave()
@@ -166,7 +174,17 @@ func open_menu() -> void:
 	Audio.play_sfx("ui_open")
 
 
+## Saving waits until a fight is over (the turn order isn't saved).
+func _can_save() -> bool:
+	if GameState.in_combat():
+		show_toast("You can't save during a fight.")
+		return false
+	return true
+
+
 func quicksave() -> void:
+	if not _can_save():
+		return
 	if world == null or world.map == null:
 		return
 	var img := _snapshot if _modal_open() else await _capture_view()
@@ -281,6 +299,8 @@ func _on_menu_resume() -> void:
 
 
 func _on_menu_save() -> void:
+	if not _can_save():
+		return
 	_menu.visible = false
 	var default := "%s, %s" % [world.map.display_name, Time.get_date_string_from_system()]
 	_save_load.open(true, default)
@@ -379,6 +399,7 @@ func _build() -> void:
 	_build_sidebar()
 	_build_left_column()
 	_build_top_banners()
+	_build_combat()
 	_build_message_box()
 	_build_modals()
 
@@ -514,6 +535,17 @@ func _build_top_banners() -> void:
 	_toast.add_child(_toast_label)
 	_toast.visible = false
 	stack.add_child(_toast)
+
+
+## The fight's initiative strip (top), action bar and log (bottom).
+func _build_combat() -> void:
+	_combat_hud = CombatHud.new()
+	_combat_hud.name = "CombatLayer"
+	_root.add_child(_combat_hud)
+	_combat_hud.offset_right = -SIDEBAR_WIDTH
+	var banners := _root.get_node("TopBanners")
+	banners.add_child(_combat_hud.order_panel)
+	banners.move_child(_combat_hud.order_panel, 0)
 
 
 func _build_message_box() -> void:

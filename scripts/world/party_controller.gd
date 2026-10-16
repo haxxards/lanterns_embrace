@@ -120,6 +120,13 @@ func _set_selection(list: Array) -> void:
 
 # --- orders ----------------------------------------------------------------------
 
+## Stops everyone where they are and forgets pending interactions (a fight began).
+func halt() -> void:
+	_waiting_transition = null
+	for m in members:
+		m.pending_interaction = null
+		m.stop()
+
 ## Sends the selection towards `target`. The leader takes the target (or the
 ## nearest free hex); the others take nearby free hexes, keeping roughly their
 ## current left/right arrangement. Returns false if nobody could move.

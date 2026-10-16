@@ -10,7 +10,12 @@ extends Node2D
 ##   left click chest     leader walks over and opens it
 ##   left click door      the party gathers at the door and goes in
 ##   left click someone   leader walks over and talks to them
+##   left click a foe     start a fight
 ##   right click          clear selection
+##
+## During a fight (CombatManager), clicks go to the combatant whose turn it
+## is: ground moves them within their movement, an enemy attacks it, and
+## Space ends the turn.
 
 const DRAG_THRESHOLD := 8.0
 const NO_HEX := Vector2i(-99999, -99999)
@@ -36,11 +41,15 @@ var party: PartyController
 var fog: FogOfWar
 ## Townsfolk on this map.
 var npcs: Array[Npc] = []
+## Hostile creatures on this map (the slain are removed).
+var creatures: Array[Creature] = []
+var combat: CombatManager
 
 var _hover_hex: Vector2i = NO_HEX
 var _hover_prop: Prop = null
 var _hover_member: PartyMember = null
 var _hover_npc: Npc = null
+var _hover_creature: Creature = null
 var _mouse_screen := Vector2(-1.0, -1.0)
 var _press_screen := Vector2.ZERO
 var _press_world := Vector2.ZERO
@@ -94,6 +103,11 @@ func _ready() -> void:
 	party.name = "Party"
 	party.entities = entities
 	add_child(party)
+	combat = CombatManager.new()
+	combat.name = "Combat"
+	add_child(combat)
+	combat.setup(self)
+	combat.state_changed.connect(_on_combat_changed)
 	Events.selection_changed.connect(func(_s: Array) -> void: _refresh_hover(true))
 
 
@@ -136,6 +150,7 @@ func load_map(path: String, entry: String = "") -> bool:
 	RenderingServer.set_default_clear_color(map.background_color)
 
 	_spawn_npcs()
+	_spawn_creatures()
 	var spawn := entry_hex(entry)
 	party.spawn_party(GameState.party, spawn, GameState.pending_positions)
 	GameState.pending_positions.clear()
@@ -185,6 +200,11 @@ func party_positions() -> Dictionary:
 
 
 func _clear() -> void:
+	combat.abort()
+	for cr in creatures:
+		cr.queue_free()
+	creatures.clear()
+	_hover_creature = null
 	for p in props:
 		p.queue_free()
 	props.clear()
@@ -258,6 +278,107 @@ func npc(npc_id: String) -> Npc:
 		if n.def.id == npc_id:
 			return n
 	return null
+
+
+# --- hostile creatures -----------------------------------------------------------------
+
+## Places the map's creatures, except those slain earlier.
+func _spawn_creatures() -> void:
+	for spawn in map.creature_spawns:
+		if GameState.is_defeated(map.id, spawn["id"]):
+			continue
+		var def: CreatureDef = Data.creatures.get(spawn["type"])
+		if def == null:
+			push_warning("Map %s places unknown creature '%s'" % [map.id, spawn["type"]])
+			continue
+		if not grid.is_walkable(spawn["hex"]):
+			push_warning("Creature %s stands on blocked ground at %s" % [spawn["id"], spawn["hex"]])
+			continue
+		var cr := Creature.new()
+		cr.setup(def, grid, spawn, party)
+		entities.add_child(cr)
+		creatures.append(cr)
+
+
+## The visible, living creature under a world position (front-most first).
+func creature_at(world_pos: Vector2) -> Creature:
+	var best: Creature = null
+	for cr in creatures:
+		if cr.visible and cr.is_alive() and cr.pick_rect().has_point(world_pos) \
+				and (best == null or cr.position.y > best.position.y):
+			best = cr
+	return best
+
+
+## Clear if no hex strictly between a and b blocks sight.
+func line_of_sight(a: Vector2i, b: Vector2i) -> bool:
+	var line := Hex.line(a, b)
+	for k in range(1, line.size() - 1):
+		if grid.blocks_sight(line[k]):
+			return false
+	return true
+
+
+## Living creatures not yet fighting that can see a conscious party member
+## within their aggro range.
+func hostiles_noticing(fight: CombatManager = null) -> Array[Creature]:
+	var out: Array[Creature] = []
+	for cr in creatures:
+		if not cr.is_alive() or cr.in_combat or (fight != null and fight.combatant_of(cr) != null):
+			continue
+		for m in party.members:
+			if m.is_alive() and Hex.distance(m.hex, cr.hex) <= cr.def.aggro and line_of_sight(m.hex, cr.hex):
+				out.append(cr)
+				break
+	return out
+
+
+## Starts a fight with `trigger`'s whole encounter group, plus anything else
+## that has noticed the party.
+func start_combat(trigger: Creature) -> void:
+	if combat.active:
+		return
+	var foes: Array = []
+	for cr in creatures:
+		if cr.is_alive() and (cr == trigger or (cr.group == trigger.group and not trigger.group.is_empty())):
+			foes.append(cr)
+	for cr in hostiles_noticing():
+		if not foes.has(cr):
+			foes.append(cr)
+	combat.start(foes)
+
+
+## Called by the fight when a creature dies: loot on the ground, remembered
+## as slain, and its group marked beaten once none of it is left.
+func on_creature_slain(cr: Creature) -> void:
+	creatures.erase(cr)
+	if _hover_creature == cr:
+		_hover_creature = null
+	GameState.mark_defeated(map.id, cr.spawn_id)
+	_drop_loot(cr)
+	var group_left := false
+	for other in creatures:
+		if other.group == cr.group and other.is_alive():
+			group_left = true
+	if not group_left and not cr.group.is_empty():
+		GameState.mark_group_defeated(cr.group)
+	cr.die()
+
+
+func _drop_loot(cr: Creature) -> void:
+	var drops: Array[ItemStack] = []
+	for e in cr.def.loot:
+		if combat.rng.randf() > float(e.get("chance", 1.0)):
+			continue
+		var qty_v: Variant = e.get("qty", 1)
+		var qty := Rules.roll_expr(str(qty_v), combat.rng) if qty_v is String else int(qty_v)
+		if qty > 0 and Data.items.has(str(e["item"])):
+			drops.append(ItemStack.create(str(e["item"]), qty))
+	if drops.is_empty():
+		return
+	var pile := ground_pile(cr.hex, true)
+	for st in drops:
+		pile.inventory.add(st)
 
 
 # --- items on the ground ----------------------------------------------------------
@@ -342,6 +463,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_mouse_button(event as InputEventMouseButton)
 	elif event is InputEventMouseMotion:
 		_on_mouse_motion(event as InputEventMouseMotion)
+	elif combat.active and event.is_action_pressed("toggle_pause"):
+		combat.end_turn()  # Space ends the turn in a fight
+	elif combat.active and (event.is_action_pressed("select_all") or _is_select_key(event)):
+		pass  # the turn order decides who acts
 	elif event.is_action_pressed("toggle_pause"):
 		set_paused(not get_tree().paused)
 	elif event.is_action_pressed("toggle_grid"):
@@ -357,9 +482,20 @@ func _unhandled_input(event: InputEvent) -> void:
 				break
 
 
+func _is_select_key(event: InputEvent) -> bool:
+	for i in 9:
+		if event.is_action_pressed("select_member_%d" % (i + 1)):
+			return true
+	return false
+
+
 func _on_mouse_button(mb: InputEventMouseButton) -> void:
 	_mouse_screen = mb.position
 	var world_pos := screen_to_world(mb.position)
+	if combat.active:
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			_on_combat_click(world_pos)
+		return
 	if mb.button_index == MOUSE_BUTTON_LEFT:
 		if mb.pressed:
 			_left_down = true
@@ -389,6 +525,10 @@ func _on_mouse_motion(mm: InputEventMouseMotion) -> void:
 
 
 func _on_click(world_pos: Vector2, shift: bool) -> void:
+	var foe := creature_at(world_pos)
+	if foe and party.leader():
+		start_combat(foe)
+		return
 	var member := party.member_at(world_pos)
 	if member:
 		if shift:
@@ -407,6 +547,18 @@ func _on_click(world_pos: Vector2, shift: bool) -> void:
 		party.interact_with(prop)
 		return
 	party.move_selected_to(grid.world_to_hex(world_pos))
+	_refresh_hover(true)
+
+
+## A click during a fight: an enemy is attacked, ground is walked to.
+func _on_combat_click(world_pos: Vector2) -> void:
+	if not combat.is_player_turn():
+		return
+	var foe := creature_at(world_pos)
+	if foe:
+		combat.player_attack(combat.combatant_of(foe))
+	elif party.member_at(world_pos) == null:
+		combat.player_move(grid.world_to_hex(world_pos))
 	_refresh_hover(true)
 
 
@@ -453,6 +605,45 @@ func _seen(p: Prop) -> bool:
 
 # --- hover feedback ----------------------------------------------------------------
 
+## Shows where the party member whose turn it is can still walk.
+func _on_combat_changed() -> void:
+	cursor.reachable = combat.reachable_for(combat.current) if combat.is_player_turn() else {}
+	if not combat.active:
+		cursor.preview_path.clear()
+	_refresh_hover(true)
+
+
+## Hover during a fight: the path for the combatant whose turn it is, or what
+## attacking the enemy under the cursor would do.
+func _combat_hover(h: Vector2i, foe: Creature, info: Dictionary) -> void:
+	cursor.preview_path.clear()
+	cursor.hover_hex = null
+	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+	if not combat.is_player_turn():
+		cursor.reachable = {}
+		combat.set_hint("")
+		return
+	var me := combat.current
+	if foe:
+		var text := combat.describe_attack(me, combat.combatant_of(foe))
+		info["action"] = text
+		combat.set_hint(text)
+		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND)
+		return
+	if not grid.in_bounds(h) or h == me.hex():
+		combat.set_hint("")
+		return
+	cursor.hover_hex = h
+	if cursor.reachable.has(h):
+		cursor.hover_color = CursorOverlay.HOVER_OK
+		cursor.preview_path = me.actor.path_to(h)
+		var ft := roundi(float(cursor.reachable[h]) * GameConfig.feet_per_hex)
+		combat.set_hint("Move %d ft  (%d ft left)" % [ft, roundi(me.movement_left)])
+	else:
+		cursor.hover_color = CursorOverlay.HOVER_BLOCKED
+		combat.set_hint("Too far: %d ft of movement left" % roundi(me.movement_left) if grid.is_walkable(h)
+				else "Can't stand there")
+
 func _process(_delta: float) -> void:
 	if grid == null:
 		return
@@ -460,8 +651,14 @@ func _process(_delta: float) -> void:
 	if party.leader() and party.leader().is_moving():
 		_refresh_hover(true)
 	_update_occlusion()
-	for n in npcs:  # townsfolk only show where the party can see
+	for n in npcs:  # townsfolk and creatures only show where the party can see
 		n.visible = fog.is_in_sight(n.hex)
+	for cr in creatures:
+		cr.visible = fog.is_in_sight(cr.hex)
+	if not combat.active and not get_tree().paused:
+		var noticed := hostiles_noticing()
+		if not noticed.is_empty():
+			start_combat(noticed[0])
 
 
 ## Fades tall props (trees, buildings) that hide a party member behind them.
@@ -484,10 +681,17 @@ func _refresh_hover(force: bool = false) -> void:
 	var world_pos := screen_to_world(_mouse_screen)
 	var h := grid.world_to_hex(world_pos)
 	var member := party.member_at(world_pos)
-	var person := npc_at(world_pos) if member == null else null
-	var prop := _interactable_at(world_pos) if person == null else null
-	if not force and h == _hover_hex and member == _hover_member and prop == _hover_prop and person == _hover_npc:
+	var foe := creature_at(world_pos) if member == null else null
+	var person := npc_at(world_pos) if member == null and foe == null else null
+	var prop := _interactable_at(world_pos) if person == null and foe == null and not combat.active else null
+	if not force and h == _hover_hex and member == _hover_member and prop == _hover_prop and person == _hover_npc \
+			and foe == _hover_creature:
 		return
+	if _hover_creature and is_instance_valid(_hover_creature):
+		_hover_creature.hovered = false
+	_hover_creature = foe
+	if foe:
+		foe.hovered = true
 	if _hover_member and is_instance_valid(_hover_member):
 		_hover_member.hovered = false
 	if _hover_npc and is_instance_valid(_hover_npc):
@@ -511,6 +715,8 @@ func _refresh_hover(force: bool = false) -> void:
 		"in_bounds": grid.in_bounds(h),
 	}
 	cursor.preview_path.clear()
+	if not combat.active:
+		cursor.reachable = {}
 	cursor.hover_hex = null
 	if grid.in_bounds(h):
 		cursor.hover_hex = h
@@ -528,12 +734,22 @@ func _refresh_hover(force: bool = false) -> void:
 		info["prop"] = any_prop.display_name()
 	if member:
 		info["member"] = member.sheet.display_name
+	if foe:
+		info["member"] = "%s  (%d/%d HP)" % [foe.def.display_name, foe.sheet.hp_current, foe.sheet.hp_max]
+	if combat.active:
+		_combat_hover(h, foe, info)
+		Events.hover_info_changed.emit(info)
+		return
 	if person:
 		info["member"] = "%s, %s" % [person.def.display_name, person.def.title] if not person.def.title.is_empty() \
 				else person.def.display_name
 
 	var cursor_shape := Input.CURSOR_ARROW
-	if member:
+	if foe:
+		cursor.hover_hex = null
+		cursor_shape = Input.CURSOR_POINTING_HAND
+		info["action"] = "Click to attack"
+	elif member:
 		cursor.hover_hex = null
 	elif person:
 		cursor.hover_hex = null

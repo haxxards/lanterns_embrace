@@ -81,6 +81,10 @@ static func armor_class(sheet: CharacterSheet) -> int:
 		if def.is_shield() and slot == "off_hand":
 			ac += int(def.armor.get("ac_bonus", 2))
 		ac += int(def.bonuses.get("ac", 0))
+	# Fighting Style (Defense): +1 while wearing armour.
+	if armor != null and armor.is_body_armor() \
+			and (sheet.raw.get("features", []) as Array).has("fighting_style_defense"):
+		ac += 1
 	return ac
 
 

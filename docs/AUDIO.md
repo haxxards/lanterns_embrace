@@ -38,5 +38,7 @@ Everything in `assets/audio/` is synthesised by
 rustles and creaks, small metal "clinks" for coins and gear, Karplus-Strong plucked
 strings for the village and hearth music loops, a slow organ pad with a chant line and
 long stone-hall echoes for the temple, and wind, birdsong and fire crackle for the
-ambience loops. `python3 tools/audio/generate_placeholder_audio.py temple` regenerates
-one group (`sfx`, `music`, `temple`, `ambience`) and leaves the others alone. They are there to prove the hooks work; real recordings will sound far better.
+ambience loops. The fight sounds (`hit`, `swing_miss`, `combat_start`: a thump, a whoosh
+and war drums under a low horn) are in their own group. `python3
+tools/audio/generate_placeholder_audio.py temple` regenerates one group (`sfx`, `music`,
+`temple`, `ambience`, `combat`) and leaves the others alone. They are there to prove the hooks work; real recordings will sound far better.

@@ -62,7 +62,10 @@ keys).
 | `alignment` | string | Free text. |
 | `abilities` ● | object | `str dex con int wis cha`, each 1–30. |
 | `hit_points` ● | object | `{ "max": int, "current": int }` |
-| `hit_die` | string | e.g. `"d10"` (used for levelling later). |
+| `hit_die` | string | e.g. `"d10"`: hit points gained per level are half the die + 1 + Con modifier. |
+| `dead` | bool | Killed (three failed death saves, or massive damage): only a temple can raise them. Saved with the game. |
+| `stable` | bool | At 0 HP but no longer making death saves. |
+| `death_saves` | object | `{ "successes": n, "failures": n }` while dying. |
 | `armor_class` | int | Written for reference: the game recomputes AC from equipment (see [ITEMS.md](ITEMS.md)) and keeps this field up to date when saving. |
 | `speed_ft` | int | Walking speed. Combat movement = `speed_ft / feet_per_hex` hexes. |
 | `size` | string | `small` / `medium`. |
@@ -71,7 +74,7 @@ keys).
 | `inventory` | array | Backpack slots in order: `{ "item": id, "qty": n }` or `null` for an empty slot. The backpack has `backpack_slots` slots (16). |
 | `gold` | int | Gold the character brings. It goes into the party's shared purse when they join. |
 | `spells` | object | `ability`, `cantrips`, `known`, `slots` (`{"1": 2}`) (Phase 4). |
-| `features` | array | Class feature ids (Phase 4). |
+| `features` | array | Class feature ids. Used so far: `fighting_style_defense` (+1 AC in armour), `sneak_attack` (rogue: extra d6s once per turn with a finesse or ranged weapon when the attack has advantage or an ally stands next to the target). The rest arrive with Phase 4's second half. |
 | `art.portrait` | string | Portrait image, `res://` or any readable path. |
 | `art.sprite` | string | Map sprite image. |
 | `art.sprite_origin` | [x, y] | Pixel of the sprite that sits on the hex centre (the feet). Default: bottom-centre, 6 px up. |

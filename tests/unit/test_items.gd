@@ -74,7 +74,7 @@ func test_equipment_rules() -> void:
 
 func test_armor_class_follows_equipment() -> void:
 	var g := _sheet("garrick")
-	check_eq(g.armor_class, 18, "chain mail + shield")
+	check_eq(g.armor_class, 19, "chain mail + shield + Defense fighting style")
 	var err := InventoryOps.move(InventoryOps.equip_slot(g, "armor"), InventoryOps.backpack(g, g.inventory.first_free()))
 	check_eq(err, "", "armour taken off")
 	check_eq(g.armor_class, 10 + g.ability_mod("dex") + 2, "unarmoured + shield")

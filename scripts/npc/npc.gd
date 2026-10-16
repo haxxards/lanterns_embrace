@@ -28,7 +28,7 @@ func setup(d: NpcDef, grid: HexGrid, start: Vector2i, party_controller: PartyCon
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	_setup_sprite(d.animation_path, d.sprite_path, null)
 	place_at(start)
-	_grid.set_occupied(start, true)
+	occupies = true
 	_wait = randf_range(2.0, 6.0)
 
 
@@ -55,9 +55,7 @@ func _wander() -> void:
 	if options.is_empty() or _party_near(hex):
 		return
 	var target: Vector2i = options.pick_random()
-	_grid.set_occupied(hex, false)  # our own hex must be enabled to path from it
-	var p := _grid.find_path(hex, target)
-	_grid.set_occupied(hex, true)
+	var p := path_to(target)
 	if not p.is_empty() and p.size() <= def.wander_radius * 2 + 1:
 		follow_path(p)
 
@@ -81,17 +79,6 @@ func hold() -> void:
 func end_talk() -> void:
 	talking = false
 	_wait = randf_range(4.0, 9.0)
-
-
-# --- moving on the grid -----------------------------------------------------------
-
-func _can_stand(h: Vector2i) -> bool:
-	return _grid.is_ground_walkable(h) and (h == hex or not _grid.is_occupied(h))
-
-
-func _on_hex_changed(old: Vector2i, new: Vector2i) -> void:
-	_grid.set_occupied(old, false)
-	_grid.set_occupied(new, true)
 
 
 # --- interaction (the same calls a Prop answers) -----------------------------------

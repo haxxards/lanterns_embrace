@@ -21,6 +21,14 @@ var xp: int = 0
 var abilities: Dictionary = {}
 var hp_max: int = 1
 var hp_current: int = 1
+## At 0 hit points a character is unconscious ("down"). Three failed death
+## saves, or one blow that leaves as much damage again as their maximum,
+## kills them: then only a temple can raise them.
+var dead: bool = false
+## Down but no longer dying (three successful death saves, or the fight ended).
+var stable: bool = false
+var death_successes: int = 0
+var death_failures: int = 0
 ## Derived from equipment (see Rules.armor_class); kept current by recalculate().
 var armor_class: int = 10
 ## Base walking speed from the sheet; see effective_speed_ft() for penalties.
@@ -67,6 +75,11 @@ static func from_dict(d: Dictionary, path: String = "") -> CharacterSheet:
 	var hp: Dictionary = d.get("hit_points", {})
 	s.hp_max = maxi(1, int(hp.get("max", 1)))
 	s.hp_current = clampi(int(hp.get("current", s.hp_max)), 0, s.hp_max)
+	s.dead = bool(d.get("dead", false))
+	s.stable = bool(d.get("stable", s.hp_current == 0))
+	var saves: Dictionary = d.get("death_saves", {})
+	s.death_successes = int(saves.get("successes", 0))
+	s.death_failures = int(saves.get("failures", 0))
 	s.speed_ft = maxi(0, int(d.get("speed_ft", 30)))
 	s.proficiencies = d.get("proficiencies", {})
 	s.gold = maxi(0, int(d.get("gold", 0)))
@@ -113,6 +126,9 @@ func to_dict() -> Dictionary:
 	d["xp"] = xp
 	d["abilities"] = abilities.duplicate()
 	d["hit_points"] = {"max": hp_max, "current": hp_current}
+	d["dead"] = dead
+	d["stable"] = stable
+	d["death_saves"] = {"successes": death_successes, "failures": death_failures}
 	d["armor_class"] = armor_class
 	d["speed_ft"] = speed_ft
 	d["gold"] = gold
@@ -137,8 +153,25 @@ func proficiency_bonus() -> int:
 	return Rules.proficiency_bonus(level)
 
 
+## Conscious: above 0 hit points.
 func is_alive() -> bool:
 	return hp_current > 0
+
+
+func is_dead() -> bool:
+	return dead
+
+
+## Unconscious at 0 hit points, but not dead.
+func is_down() -> bool:
+	return hp_current <= 0 and not dead
+
+
+## Bonus to a saving throw: the ability modifier, plus proficiency for the
+## saves the class is proficient in.
+func saving_throw_bonus(ability: String) -> int:
+	var prof := (proficiencies.get("saving_throws", []) as Array).has(ability)
+	return ability_mod(ability) + (proficiency_bonus() if prof else 0)
 
 
 ## Combat movement per turn, in hexes.
@@ -284,19 +317,91 @@ func add_xp(amount: int) -> int:
 	return gained
 
 
-## Takes damage (never below 0). A character at 0 hit points has fallen.
-func damage(amount: int) -> void:
-	hp_current = clampi(hp_current - amount, 0, hp_max)
+## Takes damage (never below 0). At 0 hit points a character is down. Damage
+## that leaves as much again as the maximum kills outright (5e massive damage),
+## and any hit on someone already down is a failed death save (two for a
+## critical hit).
+func damage(amount: int, critical: bool = false) -> void:
+	if dead or amount <= 0:
+		return
+	if hp_current <= 0:
+		add_death_failures(2 if critical else 1)
+		return
+	var overflow := amount - hp_current
+	hp_current = maxi(0, hp_current - amount)
+	if hp_current == 0:
+		stable = false
+		death_successes = 0
+		death_failures = 0
+		if overflow >= hp_max:
+			dead = true
 	changed.emit()
 
 
-## Restores up to `amount` hit points; returns how many were restored.
+## Restores up to `amount` hit points; returns how many were restored. Wakes
+## someone who is down; does nothing for the dead.
 func heal(amount: int) -> int:
+	if dead or amount <= 0:
+		return 0
 	var before := hp_current
 	hp_current = clampi(hp_current + amount, 0, hp_max)
 	if hp_current != before:
+		if before <= 0:
+			_clear_death_saves()
 		changed.emit()
 	return hp_current - before
+
+
+## Brought back from the dead (a temple's raise dead) with `hp` hit points.
+func revive(hp: int = 1) -> void:
+	dead = false
+	_clear_death_saves()
+	hp_current = clampi(hp, 1, hp_max)
+	changed.emit()
+
+
+func die() -> void:
+	hp_current = 0
+	dead = true
+	changed.emit()
+
+
+func add_death_failures(n: int) -> void:
+	death_failures = mini(3, death_failures + n)
+	stable = false
+	if death_failures >= 3:
+		dead = true
+	changed.emit()
+
+
+## One death saving throw (d20, no modifiers): 10 or more succeeds, a 1 counts
+## as two failures, and a 20 brings the character round with 1 hit point.
+## Three successes and they are stable. Returns what happened.
+func roll_death_save(rng: RandomNumberGenerator = null) -> String:
+	var d := Rules.roll(1, 20, rng)
+	if d == 20:
+		heal(1)
+		return "rallies"
+	if d == 1:
+		add_death_failures(2)
+	elif d < 10:
+		add_death_failures(1)
+	else:
+		death_successes += 1
+		if death_successes >= 3:
+			stable = true
+		changed.emit()
+	if dead:
+		return "dies"
+	if stable:
+		return "stable"
+	return "success" if d >= 10 else "failure"
+
+
+func _clear_death_saves() -> void:
+	stable = false
+	death_successes = 0
+	death_failures = 0
 
 
 ## Weapon attack bonus and damage with the main-hand weapon (or unarmed).

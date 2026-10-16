@@ -9,6 +9,8 @@ The goal of this repository is to be a *core engine*: each system exists in a mi
 data-driven form you can extend, not a finished game.
 
 ![Village overview](docs/images/phase1_overview.jpg)
+![A fight at the bandit camp: initiative along the top, the combat log and action bar below](docs/images/phase4_fight.jpg)
+![Choosing where to move: the shaded hexes are within this turn's movement](docs/images/phase4_move.jpg)
 ![Talking to the innkeeper behind his bar](docs/images/phase3_dialogue.jpg)
 ![The Temple of the Dawn: Father Anselm offers to raise a fallen companion](docs/images/phase3_temple.jpg)
 ![Buying from the innkeeper](docs/images/phase3_shop.jpg)
@@ -18,7 +20,37 @@ data-driven form you can extend, not a finished game.
 New to Godot, or want to know how this is put together before extending it? Start with
 **[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md)**.
 
-## Status: Phase 3, people
+## Status: Phase 4 (first half), combat
+
+### Phase 4, first half: combat
+
+- **Turn-based fights on the hex grid** (5e, simplified). When creatures see the party
+  within their aggro range, everyone rolls initiative and takes turns: movement up to their
+  speed (difficult ground costs double), one action (Attack, Dash, Dodge, Disengage, or a
+  potion), an off-hand attack as a bonus action with two light weapons, and a reaction for
+  opportunity attacks. Click a shaded hex to move, an enemy to attack (stepping up first if
+  needed), Space to end the turn. See [docs/COMBAT.md](docs/COMBAT.md).
+- **The 5e attack rules:** d20 + bonus against AC, natural 1s and 20s, critical hits,
+  advantage and disadvantage (prone, dodging, long range, shooting with an enemy adjacent,
+  Pack Tactics), damage vulnerabilities and immunities, ammunition, versatile weapons,
+  Sneak Attack, and the Defense fighting style. Hovering an enemy shows the attack and its
+  chance to hit.
+- **Down, dying and dead:** at 0 HP a party member falls unconscious and makes death saving
+  throws on their turns. Any healing gets them up; three failures (or massive damage) and
+  only the temple can raise them. The fight is lost only when nobody is left standing.
+- **Enemies:** wolves, bandits, bandit archers, skeletons and skeleton archers, from SRD
+  stat blocks in [`data/creatures/creatures.json`](data/creatures/creatures.json), with
+  rendered, animated sprites. Melee foes close in on the most wounded (wolves hunt as a
+  pack); archers keep their distance and shoot.
+- **Victory** shares the slain creatures' XP, and they drop their loot on the ground. The
+  dead stay dead (in saves too), and beaten groups can complete quests.
+- **The combat interface:** an initiative strip along the top, an action bar with movement
+  and actions left, a combat log, the reachable hexes shaded, floating damage numbers,
+  health bars over enemies, and a few new sounds.
+- **New places and quests:** a wolf pack in the woods north-west of Millbrook (Aldous pays a
+  bounty), and the **Old Temple Road**, a new map reached from the waymarker at the end of
+  the east road, where bandits hold a camp (Bram wants the road open) and skeletons walk
+  in a ruined temple (Father Anselm asks you to give them rest).
 
 ### Phase 3: people
 
@@ -152,6 +184,9 @@ New to Godot, or want to know how this is put together before extending it? Star
 | Left click a chest, drawers, cupboard | Leader walks over and opens it |
 | Left click a building or a way out | The party gathers at the door and goes through |
 | Left click a person | Leader walks over and talks to them |
+| Left click a creature | Start a fight |
+| In a fight: left click ground / an enemy | Move within the shaded area / attack (stepping up first if needed) |
+| In a fight: Space | End the turn |
 | `1`–`9` in a conversation | Pick an answer (or click it) |
 | `I` | Inventory (drag to move or equip, right-click to use) |
 | `J` | Journal: quests and XP |
@@ -165,7 +200,7 @@ New to Godot, or want to know how this is put together before extending it? Star
 | `G` | Toggle the debug hex grid |
 | F3 | Toggle the hover info panel |
 | F1 | Toggle the controls help |
-| Ctrl+K | Debug: knock out the selected leader (with `debug_keys` on) |
+| Ctrl+K / Ctrl+Shift+K | Debug: knock out / kill the selected leader (with `debug_keys` on) |
 
 ## What to try
 
@@ -188,8 +223,13 @@ New to Godot, or want to know how this is put together before extending it? Star
   what the temple needs. **Tobin** at the inn sells the lantern.
 - Party members have their own lines: Anselm and Wenna know Odran, Bram talks shop with
   Garrick, and Pip's song means something to Elowen.
-- Press Ctrl+K to knock someone out, then walk them to the temple and pay to raise them.
-  Knock out everyone to see the game-over screen.
+- Press Ctrl+K to knock someone out and give them a potion, or Ctrl+Shift+K to kill them
+  and pay the temple to raise them. Knock out everyone to see the game-over screen.
+- Cross the bridge and head into the **north-west woods** to meet the wolves. Let Garrick
+  hold the line and Wren flank for Sneak Attack, and watch for wolves knocking people prone.
+- Take the **waymarker at the end of the east road** to the Old Temple Road. Rest at
+  Tobin's first. The bandits' archers keep their distance; the skeletons at the ruin fear
+  Odran's mace (bludgeoning).
 - Press **I**, drag a ring onto a ring slot and watch the AC change, or give someone a
   potion by dropping it on their portrait.
 - Save with Esc → Save game, change things, and load it back.
@@ -222,8 +262,10 @@ data/
   props/           props.json: trees, houses, signs, furniture... (sprite, footprint, flags)
   items/           items.json: every item (docs/ITEMS.md)
   audio/           audio.json: sound names -> files (docs/AUDIO.md)
-  maps/            The village and six interiors (terrain rows + props + townsfolk), see docs/MAPS.md
+  maps/            The village, the Old Temple Road and six interiors (terrain rows, props,
+                   townsfolk, creatures), see docs/MAPS.md
   npcs/            npcs.json: townsfolk, their sprites, dialogue and shops (docs/NPCS_AND_QUESTS.md)
+  creatures/       creatures.json: hostile creatures' stat blocks (docs/COMBAT.md)
   dialogue/        One conversation graph per speaker (docs/DIALOGUE.md)
   quests/          quests.json: quest stages, journal entries and XP
 docs/              GODOT_GUIDE.md, plus format references (characters, maps, items, assets, audio)
@@ -238,10 +280,12 @@ scripts/
   dialogue/        Dialogue, DialogueRunner, Conditions, Effects
   quests/          QuestDef
   npc/             NpcDef, Npc
+  combat/          CombatManager, CombatAI, CombatRules, Combatant, Attack, CreatureDef,
+                   CreatureSheet
   world/           World, TerrainRenderer (+ blend shader), FogOfWar (+ shader), Actor,
-                   PartyMember, PartyController, Prop, camera, overlays
+                   PartyMember, PartyController, Creature, Prop, camera, overlays
   ui/              HUD, portrait cards, minimap, inventory/shop screen, item slots,
-                   dialogue window, journal, menus, theme
+                   dialogue window, journal, combat HUD, menus, theme
 tests/             Headless test runner, unit and integration tests
 tools/             make_character.py, art renderers (tools/art/blender), portrait cropper
                    (tools/art/portraits), map generators (tools/maps), sound synthesiser
@@ -264,6 +308,9 @@ tools/             make_character.py, art renderers (tools/art/blender), portrai
   a save file holds. `SaveManager` writes and reads the slots.
 - People: `Npc` and `PartyMember` share the `Actor` base (sprite, facing, walking). A
   conversation is a `DialogueRunner` (pure logic) shown by the `DialogueWindow`.
+- Fights: `CombatManager` runs the turn loop as a coroutine, `CombatRules` does the dice,
+  and `CombatAI` plays the creatures. A `CreatureSheet` is a `CharacterSheet`, so monsters
+  and the party share hit points, armour class, saves and damage.
 - Items: `ItemDef` is a type from items.json, `ItemStack` a quantity of one, `Inventory` a
   row of slots. `InventoryOps` applies the rules for every move, for the UI and the tests.
 
@@ -299,13 +346,17 @@ effect, whole conversations and quests played through the dialogue runner, XP an
 levelling, buying and selling, the temple's healing and raising, defeat, and checks that
 every dialogue link, item and quest reference is valid. In the running game it checks
 that every NPC can be reached, walking up to the innkeeper and shopping, the key by the
-well, entering the temple, the journal and the game-over screen. Any engine or script
-error raised during a test fails that test.
+well, entering the temple, the journal and the game-over screen. Phase 4 adds the combat
+arithmetic (weapon attacks, hit chances, critical hits, damage types, death saves,
+movement range) and fights on the real map: noticing the party, movement limits,
+attacking, Dash, Dodge and Disengage, opportunity attacks, the wolf and archer AI, victory
+with XP and loot, death saves, potions mid-fight, defeat, and the road to the old temple.
+Any engine or script error raised during a test fails that test.
 
 ## Roadmap
 
 This order follows the plan agreed before Phase 1. See the end of
-[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phase 3 was added and where Phase 4
+[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phases 3 and 4 were added and where the rest of Phase 4
 plugs into the code.
 
 1. ~~**Foundation:** hex grid, pathfinding, party selection and movement, camera, minimap, sample map~~
@@ -317,6 +368,8 @@ plugs into the code.
 4. **Combat:** hostile actions trigger turn-based mode, with initiative, movement and
    actions on hexes. Also weapons and armour, spells and abilities, enemies and AI, death,
    XP and levelling.
+   - ~~First half: turns, movement, attacks, enemies and AI, XP from fights, death saves.~~
+   - Second half: spells and cantrips, spell slots, spell scrolls, resting, class features.
 
 Out of scope for now: character creation and cutscenes.
 

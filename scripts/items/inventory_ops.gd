@@ -240,6 +240,12 @@ static func use(ref: Dictionary, sheet: CharacterSheet) -> String:
 		return ""
 	if not st.def.is_usable():
 		return "%s can't be used like that." % st.def.display_name
+	if sheet.dead:
+		return "%s is beyond a potion's help." % sheet.display_name
+	if GameState.in_combat():
+		var err: String = GameState.combat.item_use_error(sheet)
+		if not err.is_empty():
+			return err
 	var msg := ""
 	if st.def.use.has("heal"):
 		if sheet.hp_current >= sheet.hp_max:
@@ -249,6 +255,8 @@ static func use(ref: Dictionary, sheet: CharacterSheet) -> String:
 		Audio.play_sfx("potion")
 	st.qty -= 1
 	_put(ref, st if st.qty > 0 else null)
+	if GameState.in_combat():
+		GameState.combat.item_used(sheet)  # drinking or giving a potion is an action
 	return msg
 
 

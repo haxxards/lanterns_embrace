@@ -83,7 +83,7 @@ func test_game_state_round_trip() -> void:
 	check_eq(g2.hp_current, 4, "hit points")
 	check_eq(g2.inventory.count("garnet"), 3, "backpack")
 	check_eq(g2.equipped("armor").id, "chain_mail", "equipment")
-	check_eq(g2.armor_class, 18, "AC recomputed")
+	check_eq(g2.armor_class, 19, "AC recomputed (chain mail, shield, Defense style)")
 	var box2 := GameState.get_container("some_map", "box")
 	check(box2 != null and box2.locked and box2.lock_dc == 14, "container lock")
 	check_eq(box2.inventory.count("apple"), 2, "container contents")

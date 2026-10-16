@@ -447,6 +447,225 @@ def villager_man(root):
     sphere("Cap", hc + Vector((0, 0.01 * s, 0.06 * s)), (0.105 * s, 0.112 * s, 0.075 * s), cap, root, 20)
 
 
+# --------------------------------------------------------------------------
+# Foes
+# --------------------------------------------------------------------------
+
+def _hood(root, b, color, mask=None):
+    s, hc = b["s"], b["head"]
+    cloth = mat("Hood" + color, color, rough=0.95, noise_var=0.25, bump=0.3, bump_scale=25)
+    sphere("Hood", hc + Vector((0, 0.03 * s, 0.025 * s)), (0.128 * s, 0.13 * s, 0.14 * s), cloth, root, 20)
+    loft("Mantle", [(1.32 * s, 0.25 * s, 0.17 * s, 0, 0.01 * s), (1.46 * s, 0.2 * s, 0.14 * s, 0, 0.01 * s),
+                    (1.53 * s, 0.11 * s, 0.09 * s, 0, 0.01 * s)], cloth, root)
+    if mask:
+        scarf = mat("Mask" + mask, mask, rough=0.9)
+        sphere("Mask", hc + Vector((0, -0.04 * s, -0.055 * s)), (0.088 * s, 0.08 * s, 0.055 * s), scarf, root, 16)
+
+
+def _jerkin(root, s, color):
+    leather = mat("Jerkin", color, rough=0.6, noise_var=0.25, bump=0.4, bump_scale=60)
+    loft("Jerkin", [(0.78 * s, 0.19 * s, 0.13 * s, 0, 0), (1.0 * s, 0.18 * s, 0.125 * s, 0, 0),
+                    (1.25 * s, 0.205 * s, 0.13 * s, 0, 0), (1.4 * s, 0.215 * s, 0.12 * s, 0, 0)], leather, root)
+    belt = mat("Belt", "#2a1c12", rough=0.6)
+    loft("Belt", [(0.9 * s, 0.2 * s, 0.14 * s, 0, 0), (0.95 * s, 0.2 * s, 0.14 * s, 0, 0)], belt, root)
+
+
+def _bow(root, hand, s, wood_color="#5a3a1e"):
+    """A short bow held upright in `hand`, string towards the body."""
+    wood = mat("Bow", wood_color, rough=0.6, noise_var=0.2)
+    pts, radii = [], []
+    for k in range(9):
+        a = (k / 8.0 - 0.5) * 2.0  # -1 .. 1
+        pts.append(Vector((hand.x, hand.y - 0.06 - 0.12 * (1 - a * a) * s, hand.z + a * 0.55 * s)))
+        radii.append(0.016 if abs(a) < 0.3 else 0.011)
+    limb("Bow", pts, radii, wood, root, sides=8)
+    string = mat("String", "#d8d0b8", rough=0.8)
+    lib.cylinder_between("BowString", pts[0], pts[-1], 0.004, mat=string, parent=root, sides=4)
+
+
+def _quiver(root, s):
+    leather = mat("Quiver", "#4a3020", rough=0.6)
+    q = lib.cylinder_between("Quiver", (0.1 * s, 0.17 * s, 0.95 * s), (-0.05 * s, 0.2 * s, 1.45 * s), 0.055 * s,
+                             mat=leather, parent=root, sides=10)
+    fletch = mat("Fletching", "#c8c0a8", rough=0.9)
+    for k in range(4):
+        x = -0.04 * s + k * 0.02 * s
+        lib.cylinder_between(f"Arrow{k}", (x, 0.2 * s, 1.4 * s), (x - 0.02, 0.21 * s, 1.58 * s), 0.008,
+                             mat=fletch, parent=root, sides=4)
+    _ = q
+
+
+def _blade(root, hand, s, length=0.62, curve=0.0, name="Blade", steel_color="#b8bcc4"):
+    """A sword in the hand, point down and forward; `curve` bends it (a scimitar)."""
+    steel = mat(name + "Steel", steel_color, rough=0.25, metallic=1.0)
+    pts, radii = [], []
+    for k in range(6):
+        f = k / 5.0
+        pts.append(Vector((hand.x + 0.03, hand.y - 0.1 - f * 0.12 - curve * f * f * 0.2,
+                           hand.z - 0.05 - f * length * s)))
+        radii.append(0.022 * (1.0 - 0.6 * f) + 0.004)
+    obj = limb(name, pts, radii, steel, root, sides=6)
+    obj.scale = (1.0, 0.35, 1.0)
+    hilt = mat(name + "Hilt", "#3a2a1a", rough=0.6)
+    lib.box(name + "Guard", (0.14, 0.03, 0.025), (hand.x + 0.03, hand.y - 0.06, hand.z + 0.02), mat=steel, parent=root)
+    lib.cylinder_between(name + "Grip", (hand.x + 0.03, hand.y - 0.05, hand.z + 0.02),
+                         (hand.x + 0.03, hand.y - 0.03, hand.z + 0.13), 0.018, mat=hilt, parent=root, sides=6)
+
+
+def bandit(root):
+    b = body(root, h=1.76, build=1.05, skin="#c08a64", shirt="#5c4e3c", trousers="#3a342a", boots="#2a2018",
+             hair="#2a1a10", hair_style="short", eye="#2a2018")
+    s = b["s"]
+    _jerkin(root, s, "#6a4a2c")
+    _hood(root, b, "#6a2a22", mask="#2a2420")
+    _blade(root, b["hands"][1], s, length=0.6, curve=0.9, name="Scimitar")
+
+
+def bandit_archer(root):
+    b = body(root, h=1.74, build=0.98, skin="#d0a07a", shirt="#4a4a34", trousers="#3a342a", boots="#2a2018",
+             hair="#5a3a1e", hair_style="short", eye="#3a3020")
+    s = b["s"]
+    _jerkin(root, s, "#4a5a34")
+    _hood(root, b, "#3a4a2c", mask="#2a2a22")
+    _quiver(root, s)
+    _bow(root, b["hands"][0], s)
+
+
+def _skeleton_body(root, h=1.74):
+    """A walking skeleton: bones instead of flesh, in the same POSE as body()."""
+    s = h / 1.8
+    bone = mat("Bone", "#d9d0b8", rough=0.65, bump=0.35, bump_scale=90, noise_var=0.12)
+    dark = mat("Socket", "#14100c", rough=1.0)
+    hip_z = 0.92 * s
+    lows = [leg_pose(side, s)[3].z for side in (-1, 1)]
+    POSE["lift"] = -min(lows) - hip_z + 0.07 * s
+    for side in (-1, 1):
+        x = side * 0.09 * s
+        swing, bend, knee, ankle = leg_pose(side, s)
+        hip = Vector((x, 0, hip_z))
+        limb(f"Femur{side}", [hip, hip + knee], [0.028 * s, 0.024 * s], bone, root, sides=8)
+        limb(f"Tibia{side}", [hip + knee, hip + ankle], [0.024 * s, 0.02 * s], bone, root, sides=8)
+        toe = hip + ankle + _down(swing - bend * 0.4 + math.pi / 2) * 0.12 * s
+        limb(f"FootBone{side}", [hip + ankle, toe], [0.022 * s, 0.016 * s], bone, root, sides=6)
+    sphere("Pelvis", (0, 0, hip_z + 0.02 * s), (0.13 * s, 0.07 * s, 0.06 * s), bone, root)
+    tilt = 0.012 * s * POSE["walk"]
+    spine_top = Vector((0, -tilt, hip_z + 0.52 * s))
+    limb("Spine", [Vector((0, 0.02 * s, hip_z)), Vector((0, 0.03 * s, hip_z + 0.25 * s)), spine_top],
+         [0.025 * s, 0.022 * s, 0.022 * s], bone, root, sides=8)
+    for k in range(5):  # ribcage
+        z = hip_z + (0.24 + k * 0.06) * s
+        w = (0.15 - abs(k - 2.4) * 0.012) * s
+        rib = lib.primitive("torus", f"Rib{k}", mat=bone, parent=root, major_radius=1.0, minor_radius=0.012 / w * s,
+                            location=(0, -tilt * 0.6, z))
+        rib.scale = (w, w * 0.72, w)
+    sh_z = hip_z + 0.48 * s
+    lib.cylinder_between("Collar", (-0.2 * s, -tilt, sh_z + 0.02 * s), (0.2 * s, -tilt, sh_z + 0.02 * s), 0.018 * s,
+                         mat=bone, parent=root, sides=6)
+    hands = []
+    for side in (-1, 1):
+        phase = POSE["phase"] + (0.0 if side < 0 else math.pi)
+        swing = -0.38 * math.sin(phase) * POSE["walk"]
+        shoulder = Vector((side * 0.2 * s, -tilt, sh_z))
+        elbow = shoulder + _down(swing) * 0.29 * s + Vector((side * 0.03 * s, 0, 0))
+        hand = elbow + _down(swing + 0.2 + 0.25 * POSE["walk"]) * 0.27 * s
+        limb(f"Humerus{side}", [shoulder, elbow], [0.022 * s, 0.019 * s], bone, root, sides=8)
+        limb(f"Radius{side}", [elbow, hand], [0.019 * s, 0.016 * s], bone, root, sides=8)
+        sphere(f"HandBone{side}", hand, (0.03 * s, 0.025 * s, 0.04 * s), bone, root, 8)
+        hands.append(hand)
+    head_c = spine_top + Vector((0, -0.02 * s, 0.17 * s))
+    limb("Neck", [spine_top, head_c + Vector((0, 0, -0.08 * s))], [0.02 * s, 0.018 * s], bone, root, sides=6)
+    sphere("Skull", head_c, (0.09 * s, 0.1 * s, 0.11 * s), bone, root, 20)
+    sphere("Jaw", head_c + Vector((0, -0.035 * s, -0.075 * s)), (0.06 * s, 0.06 * s, 0.035 * s), bone, root, 12)
+    for side in (-1, 1):
+        sphere(f"EyeSocket{side}", head_c + Vector((side * 0.035 * s, -0.082 * s, 0.01 * s)),
+               (0.024 * s, 0.02 * s, 0.026 * s), dark, root, 10)
+        sphere(f"Glint{side}", head_c + Vector((side * 0.035 * s, -0.095 * s, 0.01 * s)), (0.006 * s,) * 3,
+               mat("Glint", "#ff8a3a", emission="#ff6a1a", strength=8.0), root, 6)
+    sphere("NoseHole", head_c + Vector((0, -0.095 * s, -0.025 * s)), (0.012 * s, 0.01 * s, 0.018 * s), dark, root, 8)
+    return {"s": s, "hands": hands, "head": head_c, "hip_z": hip_z}
+
+
+def skeleton(root):
+    b = _skeleton_body(root)
+    s = b["s"]
+    rust = mat("Rust", "#6a4a32", rough=0.75, metallic=0.5, bump=0.6, bump_scale=200, noise_var=0.3)
+    lib.box("BreastScrap", (0.22 * s, 0.04, 0.2 * s), (0.02 * s, -0.12 * s, 1.27 * s), mat=rust, parent=root,
+            rotation=(0, math.radians(8), 0), bevel=0.01)
+    helm = mat("Helm", "#5a5048", rough=0.5, metallic=0.7, bump=0.5, bump_scale=200)
+    sphere("Helm", b["head"] + Vector((0, 0.01 * s, 0.045 * s)), (0.1 * s, 0.11 * s, 0.085 * s), helm, root, 18)
+    rag = mat("Rag", "#4a3a2a", rough=1.0, noise_var=0.3)
+    loft("Loincloth", [(0.68 * s, 0.13 * s, 0.09 * s, 0, 0), (0.92 * s, 0.14 * s, 0.09 * s, 0, 0)], rag, root, cap=False)
+    _blade(root, b["hands"][1], s, length=0.5, name="Shortsword", steel_color="#8a8a84")
+
+
+def skeleton_archer(root):
+    b = _skeleton_body(root)
+    s = b["s"]
+    rag = mat("Rag", "#3a3428", rough=1.0, noise_var=0.3)
+    loft("Loincloth", [(0.68 * s, 0.13 * s, 0.09 * s, 0, 0), (0.92 * s, 0.14 * s, 0.09 * s, 0, 0)], rag, root, cap=False)
+    sphere("Cowl", b["head"] + Vector((0, 0.03 * s, 0.03 * s)), (0.115 * s, 0.12 * s, 0.12 * s), rag, root, 18)
+    _quiver(root, s)
+    _bow(root, b["hands"][0], s, "#3a2a1a")
+
+
+def wolf(root):
+    """A grey wolf trotting (diagonal legs move together). It faces -y like the
+    other figures; the body is built from overlapping ellipsoids."""
+    s = 0.92
+    fur = mat("Fur", "#6e665a", rough=0.95, noise_var=0.3, bump=0.7, bump_scale=160)
+    pale = mat("FurPale", "#aaa08c", rough=0.95, noise_var=0.25, bump=0.6, bump_scale=160)
+    dark = mat("FurDark", "#3a352e", rough=0.95, bump=0.5, bump_scale=160)
+    nose = mat("Nose", "#141210", rough=0.3)
+    eye = mat("WolfEye", "#d8a83a", rough=0.2, emission="#8a5a10", strength=1.5)
+    walk = POSE["walk"]
+    shoulder_z, hip_z = 0.62 * s, 0.6 * s
+    bob = 0.02 * s * abs(math.sin(POSE["phase"])) * walk
+    legs = []
+    for front, y in ((True, -0.36 * s), (False, 0.38 * s)):
+        for side in (-1, 1):
+            phase = POSE["phase"] + (0.0 if (side < 0) == front else math.pi)
+            swing = 0.45 * math.sin(phase) * walk
+            bend = walk * (0.15 + 0.5 * max(0.0, math.cos(phase)))
+            top = Vector((side * 0.09 * s, y, (shoulder_z if front else hip_z) + bob))
+            upper = 0.28 * s
+            lower = 0.3 * s
+            k_sign = -1.0 if front else 1.0  # elbows bend back, hocks forward
+            knee = top + _down(swing + k_sign * 0.1) * upper
+            paw = knee + _down(swing - k_sign * bend) * lower
+            legs.append(paw.z)
+            limb(f"Upper{front}{side}", [top, knee], [0.06 * s, 0.04 * s], fur, root, sides=10)
+            limb(f"Lower{front}{side}", [knee, paw], [0.035 * s, 0.028 * s], fur if front else dark, root, sides=8)
+            sphere(f"Paw{front}{side}", paw + Vector((0, -0.03 * s, 0.01 * s)), (0.04 * s, 0.055 * s, 0.025 * s),
+                   dark, root, 10)
+    POSE["lift"] = -min(legs) + 0.025 * s
+    # Body: chest, ribs, loins and haunches.
+    sphere("Chest", (0, -0.3 * s, 0.68 * s + bob), (0.15 * s, 0.22 * s, 0.17 * s), fur, root, 20)
+    sphere("Ribs", (0, -0.02 * s, 0.69 * s + bob), (0.145 * s, 0.32 * s, 0.145 * s), fur, root, 20)
+    sphere("Haunch", (0, 0.3 * s, 0.67 * s + bob), (0.135 * s, 0.2 * s, 0.145 * s), fur, root, 18)
+    sphere("Back", (0, 0.05 * s, 0.76 * s + bob), (0.11 * s, 0.42 * s, 0.07 * s), dark, root, 16)
+    sphere("Belly", (0, -0.08 * s, 0.6 * s + bob), (0.1 * s, 0.26 * s, 0.07 * s), pale, root, 16)
+    ruff = mat("FurRuff", "#8a8272", rough=0.95, noise_var=0.3, bump=0.8, bump_scale=160)
+    sphere("Ruff", (0, -0.38 * s, 0.75 * s + bob), (0.15 * s, 0.13 * s, 0.15 * s), ruff, root, 18)
+    # Neck and head, carried low and forward.
+    head = Vector((0, -0.62 * s, 0.82 * s + bob))
+    limb("Neck", [Vector((0, -0.38 * s, 0.78 * s + bob)), head + Vector((0, 0.05 * s, -0.02 * s))],
+         [0.1 * s, 0.075 * s], fur, root, sides=12)
+    sphere("Head", head, (0.085 * s, 0.1 * s, 0.08 * s), fur, root, 18)
+    snout_tip = head + Vector((0, -0.19 * s, -0.035 * s))
+    limb("Snout", [head + Vector((0, -0.06 * s, -0.01 * s)), snout_tip], [0.055 * s, 0.03 * s], pale, root, sides=10)
+    sphere("Nose", snout_tip + Vector((0, -0.01 * s, 0.01 * s)), (0.022 * s, 0.02 * s, 0.018 * s), nose, root, 10)
+    for side in (-1, 1):
+        ear = lib.primitive("cone", f"Ear{side}", mat=dark, parent=root, vertices=8, radius1=0.035 * s, radius2=0.004,
+                            depth=0.09 * s, location=(side * 0.05 * s, head.y + 0.02 * s, head.z + 0.09 * s))
+        ear.rotation_euler = (math.radians(-12), math.radians(side * 14), 0)
+        sphere(f"WolfEye{side}", head + Vector((side * 0.042 * s, -0.07 * s, 0.025 * s)), (0.012 * s,) * 3, eye, root, 8)
+    # Tail, hanging with a little sway.
+    sway = 0.05 * math.sin(POSE["phase"] * 2) * walk
+    base = Vector((0, 0.46 * s, 0.7 * s + bob))
+    limb("Tail", [base, base + Vector((sway, 0.12 * s, -0.12 * s)), base + Vector((sway * 2, 0.18 * s, -0.32 * s))],
+         [0.045 * s, 0.05 * s, 0.025 * s], fur, root, sides=10)
+
+
 CHARACTERS = {
     "fighter": fighter,
     "wizard": wizard,
@@ -458,6 +677,11 @@ CHARACTERS = {
     "noble": noble,
     "villager_woman": villager_woman,
     "villager_man": villager_man,
+    "bandit": bandit,
+    "bandit_archer": bandit_archer,
+    "skeleton": skeleton,
+    "skeleton_archer": skeleton_archer,
+    "wolf": wolf,
 }
 
 

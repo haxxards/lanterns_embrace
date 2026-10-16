@@ -9,12 +9,15 @@ const HOVER_INTERACT := Color(1.0, 0.82, 0.35, 0.95)
 const PATH_COLOR := Color(0.55, 1.0, 0.55, 0.9)
 const PATH_DIFFICULT := Color(1.0, 0.75, 0.3, 0.95)
 const DEST_COLOR := Color(0.35, 0.95, 0.45, 0.7)
+const REACH_FILL := Color(0.45, 0.85, 1.0, 0.13)
 
 var grid: HexGrid
 var party: PartyController
 var hover_hex: Variant = null
 var hover_color := HOVER_OK
 var preview_path: Array[Vector2i] = []
+## In a fight: hexes the active combatant can still reach ({hex: cost}).
+var reachable: Dictionary = {}
 
 
 func _process(_delta: float) -> void:
@@ -25,6 +28,8 @@ func _draw() -> void:
 	if grid == null:
 		return
 	var r := grid.radius
+	for h in reachable:
+		draw_colored_polygon(Hex.corners(grid.hex_to_world(h), r * 0.92), REACH_FILL)
 	if party:
 		for m in party.members:
 			if m.is_moving() and m.destination != m.hex:

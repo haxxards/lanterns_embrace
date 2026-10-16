@@ -66,7 +66,8 @@ along a hex path. On top of that it:
 - A quest is **not started** until something sets a stage, usually a dialogue effect
   `{"quest": "the_reeves_key", "stage": "started"}`.
 - Each stage reached adds its `journal` entry to the journal (J).
-- A stage with `"auto_if"` is reached by itself once its condition holds. The check runs
+- A stage with `"auto_if"` is reached by itself once its condition holds. Fights use
+  `{"defeated": "<group>"}`: true once every creature of that encounter group is dead. The check runs
   whenever a character sheet changes (an item picked up or handed over, hit points), and
   right after a quest moves to a new stage. It only
   applies to quests already under way: finding the key first doesn't start the quest.
@@ -87,7 +88,10 @@ along a hex path. On top of that it:
 | The Reeve's Key | Aldous, by the well | The key lies on the cobbles south-east of the well. Bring it back for 40 gold. Or keep it: it opens his strongbox. |
 | A Draught for the Miller's Wife | Wenna, the herbalist | Take her fever draught to Hob at the mill for 20 gold. |
 | Light for the Dawn | Father Anselm, the temple | Buy a lantern from Tobin and bring it to the altar for a potion of greater healing. |
-| The Lantern That Never Goes Out | Pip, the bard | A rumour only, the hook for later. |
+| Wolves in the Woods | Aldous | Kill the wolf pack in the north-west woods (across the bridge), then tell him: 25 gold. |
+| The Old Temple Road | Bram, the smith | Clear the bandits camped on the road east of Millbrook (the waymarker at the end of the east road): 50 gold. |
+| Rest for the Restless Dead | Father Anselm | Destroy the skeletons at the ruined temple at the end of that road: a potion of greater healing. |
+| The Lantern That Never Goes Out | Pip, the bard | A rumour only, the hook for later. (A carved stone at the ruin adds a clue.) |
 
 ## Vendors
 
@@ -105,13 +109,19 @@ the shelf and is saved.
 
 ## The temple, falling and game over
 
-- A party member at 0 hit points has **fallen**: drawn greyed out where they lie, can't be
-  selected or given orders, and the party doesn't wait for them at a door (they are carried
-  along to the next map). Their portrait says "Fallen".
-- **Father Anselm** at the Temple of the Dawn heals the living for 10 gold and raises the
-  fallen for 100 gold (with 1 hit point). **Tobin** rents a room that heals everyone for 5.
-  Both are ordinary dialogue options.
-- When **everyone** has fallen, `Events.party_defeated` fires and the HUD shows the
+- A party member at 0 hit points is **down** (unconscious): they lie on the ground, greyed,
+  can't be selected or given orders, and the party doesn't wait for them at a door (they
+  are carried along to the next map). In a fight they make death saving throws (see
+  [COMBAT.md](COMBAT.md)); their portrait says "Dying" with the saves so far, or
+  "Unconscious" once stable. **Any healing wakes them**: a potion (from someone next to
+  them, in a fight), Tobin's room, or the temple.
+- Three failed death saves, or one blow that leaves as much damage again as their
+  maximum, and they are **dead** (darker, portrait "Dead"). Healing does nothing for the
+  dead.
+- **Father Anselm** at the Temple of the Dawn heals everyone who isn't dead for 10 gold,
+  and raises the dead for 100 gold (with 1 hit point). **Tobin** rents a room that heals
+  everyone who isn't dead for 5. These are ordinary dialogue options.
+- When **nobody** is left standing, `Events.party_defeated` fires and the HUD shows the
   game-over screen (load a save, or quit).
 - With `debug_keys` on in `data/config/game_config.json`, **Ctrl+K** knocks out the
-  first selected member, so you can try all this before combat exists (Phase 4).
+  first selected member and **Ctrl+Shift+K** kills them, to try healing and raising.

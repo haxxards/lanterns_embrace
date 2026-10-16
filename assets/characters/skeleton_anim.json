@@ -1,0 +1,31 @@
+{
+	"texture": "res://assets/characters/skeleton_sheet.png",
+	"cell": [
+		58,
+		73
+	],
+	"origin": [
+		29,
+		60
+	],
+	"directions": [
+		"s",
+		"se",
+		"e",
+		"ne",
+		"n"
+	],
+	"columns": 9,
+	"idle_column": 0,
+	"walk_columns": [
+		1,
+		2,
+		3,
+		4,
+		5,
+		6,
+		7,
+		8
+	],
+	"cycle_px": 110
+}

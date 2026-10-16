@@ -20,7 +20,7 @@
 		"current": 12
 	},
 	"hit_die": "d10",
-	"armor_class": 18,
+	"armor_class": 19,
 	"speed_ft": 30,
 	"size": "medium",
 	"proficiencies": {

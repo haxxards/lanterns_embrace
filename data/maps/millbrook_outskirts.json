@@ -6,6 +6,7 @@
 	"music": "village",
 	"ambience": "outdoors",
 	"spawns": {"party": [4, 30]},
+	"entries": {"east_road": [80, 30]},
 	"terrain": [
 		"fffffffffffffffffffffffffffffff..~~~................................................",
 		"fffffffffffffffffffffffffffffff..~~~................................................",
@@ -94,7 +95,7 @@
 		"          w                r              w                             B           ",
 		"  B             w          r   r     B                                   T          ",
 		"                   w          r    b   T                 o                          ",
-		"                                           w                                       P",
+		"                                           w                                        ",
 		"           b          b                                                             ",
 		"            T                                                                       ",
 		"                                                                                    ",
@@ -124,6 +125,11 @@
 		"                      o     r                            w                     P    "
 	],
 	"npcs": [{"id": "aldous", "at": [62, 29]}],
+	"creatures": [
+		{"id": "wolf_1", "type": "wolf", "at": [13, 8], "group": "woods_wolves", "wander": 2},
+		{"id": "wolf_2", "type": "wolf", "at": [15, 10], "group": "woods_wolves", "wander": 2},
+		{"id": "wolf_3", "type": "wolf", "at": [14, 11], "group": "woods_wolves", "wander": 2}
+	],
 	"props": [
 		{"type": "house_large", "at": [59, 15], "name": "The Lantern & Thistle", "variant": 0, "id": "millbrook_inn", "interior": "res://data/maps/millbrook_inn.json", "entry": "door", "addons": ["bar", "tables:4"]},
 		{"type": "house_small", "at": [47, 21], "name": "Miller's Cottage", "variant": 0, "id": "millbrook_miller", "interior": "res://data/maps/millbrook_miller.json", "entry": "door"},
@@ -155,6 +161,7 @@
 		{"type": "market_stall", "at": [66, 25], "variant": 0},
 		{"type": "market_stall", "at": [67, 33], "variant": 1},
 		{"type": "cart", "at": [73, 22]},
-		{"type": "item_pile", "at": [66, 31], "id": "reeve_key_pile", "items": [{"item": "reeve_key", "qty": 1}]}
+		{"type": "item_pile", "at": [66, 31], "id": "reeve_key_pile", "items": [{"item": "reeve_key", "qty": 1}]},
+		{"type": "waymarker", "at": [82, 29], "name": "Road to the Hills", "map": "res://data/maps/old_temple_road.json", "entry": "west"}
 	]
 }

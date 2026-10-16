@@ -9,8 +9,8 @@ extends RefCounted
 ##   {"give_gold": 20}  {"take_gold": 10}
 ##   {"quest": "id", "stage": "started"}  advance a quest (see GameState.set_quest_stage)
 ##   {"xp": 50}                           every living member gains it
-##   {"heal_party": true}                 the living are healed to full
-##   {"revive": true}                     the fallen rise with 1 hit point
+##   {"heal_party": true}                 everyone not dead is healed to full (the unconscious wake)
+##   {"revive": true}                     the dead (and the unconscious) rise with 1 hit point
 ##   {"toast": "text"}
 ##
 ## Returns a list of short messages describing what happened (for toasts).
@@ -63,14 +63,17 @@ static func _apply_one(e: Dictionary, speaker: CharacterSheet) -> String:
 		GameState.award_xp(int(e["xp"]))
 	if e.has("heal_party"):
 		for s in GameState.party:
-			if s.is_alive():
+			if not s.dead:
 				s.heal(s.hp_max)
 		Audio.play_sfx("potion")
 		return "The party is healed."
 	if e.has("revive"):
 		var raised := PackedStringArray()
 		for s in GameState.party:
-			if not s.is_alive():
+			if s.dead:
+				s.revive(1)
+				raised.append(s.display_name)
+			elif not s.is_alive():
 				s.heal(1)
 				raised.append(s.display_name)
 		if not raised.is_empty():

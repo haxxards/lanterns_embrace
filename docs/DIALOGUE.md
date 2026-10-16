@@ -108,8 +108,10 @@ of them.
 | `{"gold": 10}` | The purse holds at least this much |
 | `{"member": "odran"}` | That character is in the party and standing |
 | `{"speaker": "wren"}` | That character is the one doing the talking |
-| `{"hurt": true}` | A living member is below full hit points |
-| `{"fallen": true}` | A member is down at 0 hit points |
+| `{"hurt": true}` | Someone who isn't dead is below full hit points (the unconscious count) |
+| `{"fallen": true}` | Someone is at 0 hit points (down or dead) |
+| `{"dead": true}` | Someone is dead |
+| `{"defeated": "group"}` | Every creature of that encounter group has been killed (see [COMBAT.md](COMBAT.md)) |
 | `{"visited": "node"}` | That node of this dialogue was shown before |
 | `{"all": [...]}`, `{"any": [...]}`, `{"not": {...}}` | Combinations |
 
@@ -129,17 +131,17 @@ the HUD shows as a toast ("Received 20 gold.").
 | `{"give_gold": 20}` / `{"take_gold": 10}` | The shared purse |
 | `{"quest": "id", "stage": "started"}` | Moves a quest on (logs the journal entry, awards XP on a done stage) |
 | `{"xp": 50}` | Every living member gains it |
-| `{"heal_party": true}` | The living are healed to full |
-| `{"revive": true}` | The fallen get up with 1 hit point |
+| `{"heal_party": true}` | Everyone who isn't dead is healed to full (the unconscious wake) |
+| `{"revive": true}` | The dead (and the unconscious) get up with 1 hit point |
 | `{"toast": "text"}` | Just a message |
 
 Paid services are an option gated on gold, with a `take_gold` effect. The temple does it
 this way:
 
 ```json
-{"text": "Raise our fallen. (100 gold)", "if": {"fallen": true, "gold": 100},
+{"text": "Raise our dead. (100 gold)", "if": {"dead": true, "gold": 100},
  "do": [{"take_gold": 100}, {"revive": true}], "goto": "raised"},
-{"text": "Raise our fallen.", "if": {"fallen": true, "not": {"gold": 100}}, "goto": "poor"}
+{"text": "Raise our dead.", "if": {"dead": true, "not": {"gold": 100}}, "goto": "poor"}
 ```
 
 ## Adding a conversation

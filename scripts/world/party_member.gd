@@ -36,9 +36,18 @@ func is_alive() -> bool:
 	return sheet.is_alive()
 
 
-## The fallen lie grey and still until raised at a temple.
+## The unconscious lie on the ground, greyed; the dead darker still, until
+## raised at a temple.
 func _refresh_alive() -> void:
-	modulate = Color(1, 1, 1) if is_alive() else Color(0.45, 0.42, 0.42, 0.75)
+	if is_alive():
+		modulate = Color(1, 1, 1)
+	elif sheet.dead:
+		modulate = Color(0.4, 0.36, 0.36, 0.8)
+	else:
+		modulate = Color(0.7, 0.66, 0.66, 0.9)
+	_sprite.rotation = 0.0 if is_alive() else -PI / 2.0
+	_sprite_rest = Vector2.ZERO if is_alive() else Vector2(_sprite.get_rect().size.y * 0.42, -6.0)
+	_sprite.position = _sprite_rest
 	if not is_alive():
 		stop()
 		pending_interaction = null

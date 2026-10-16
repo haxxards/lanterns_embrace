@@ -1,6 +1,6 @@
 extends Node
 ## Loads and indexes static game data: terrain, props, items, character
-## sheets, townsfolk (NPCs), quests and dialogues.
+## sheets, townsfolk (NPCs), quests, dialogues and hostile creatures.
 ##
 ## Content is plain JSON under res://data so it can be authored outside Godot.
 ## Textures referenced by data are loaded through load_texture(), which also
@@ -11,6 +11,7 @@ const PROPS_PATH := "res://data/props/props.json"
 const ITEMS_PATH := "res://data/items/items.json"
 const NPCS_PATH := "res://data/npcs/npcs.json"
 const QUESTS_PATH := "res://data/quests/quests.json"
+const CREATURES_PATH := "res://data/creatures/creatures.json"
 
 var terrain: Dictionary = {}            # id -> TerrainDef
 var terrain_by_symbol: Dictionary = {}  # symbol -> TerrainDef
@@ -18,6 +19,7 @@ var props: Dictionary = {}              # id -> PropDef
 var items: Dictionary = {}              # id -> ItemDef
 var npcs: Dictionary = {}               # id -> NpcDef
 var quests: Dictionary = {}             # id -> QuestDef
+var creatures: Dictionary = {}          # id -> CreatureDef
 var _dialogues: Dictionary = {}         # path -> Dialogue (loaded on first use)
 var characters: Dictionary = {}         # id -> CharacterSheet (template, never mutated)
 
@@ -37,6 +39,7 @@ func reload() -> void:
 	_load_characters()
 	_load_npcs()
 	_load_quests()
+	_load_creatures()
 	_dialogues.clear()
 
 
@@ -97,6 +100,14 @@ func _load_quests() -> void:
 	if d is Dictionary:
 		for quest_id in d.get("quests", {}):
 			quests[quest_id] = QuestDef.from_dict(quest_id, d["quests"][quest_id])
+
+
+func _load_creatures() -> void:
+	creatures.clear()
+	var d: Variant = JsonUtil.load_json(CREATURES_PATH)
+	if d is Dictionary:
+		for creature_id in d.get("creatures", {}):
+			creatures[creature_id] = CreatureDef.from_dict(creature_id, d["creatures"][creature_id])
 
 
 ## A dialogue file, parsed once and cached.

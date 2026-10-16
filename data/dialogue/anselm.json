@@ -15,12 +15,25 @@
 			"options": [
 				{"text": "Heal our wounds. (10 gold)", "if": {"hurt": true, "gold": 10}, "do": [{"take_gold": 10}, {"heal_party": true}], "goto": "healed"},
 				{"text": "Heal our wounds.", "if": {"hurt": true, "not": {"gold": 10}}, "goto": "poor"},
-				{"text": "Raise our fallen. (100 gold)", "if": {"fallen": true, "gold": 100}, "do": [{"take_gold": 100}, {"revive": true}], "goto": "raised"},
-				{"text": "Raise our fallen.", "if": {"fallen": true, "not": {"gold": 100}}, "goto": "poor"},
+				{"text": "Raise our dead. (100 gold)", "if": {"dead": true, "gold": 100}, "do": [{"take_gold": 100}, {"revive": true}], "goto": "raised"},
+				{"text": "Raise our dead.", "if": {"dead": true, "not": {"gold": 100}}, "goto": "poor"},
 				{"text": "Is there anything the temple needs?", "if": {"quest": "light_for_the_dawn", "is": "not_started"}, "goto": "quest"},
 				{"text": "We've brought a lantern for the altar.", "if": {"quest": "light_for_the_dawn", "is": "started", "item": "lantern"}, "do": [{"take_item": "lantern"}, {"give_item": "potion_of_greater_healing"}, {"quest": "light_for_the_dawn", "stage": "done"}], "goto": "blessed"},
+				{"text": "Tell us about the old temple in the hills.", "if": {"quest": "rest_for_the_dead", "is": "not_started", "not": {"defeated": "temple_dead"}}, "goto": "old_temple"},
+				{"text": "The dead at the old temple are at rest.", "if": {"defeated": "temple_dead", "quest": "rest_for_the_dead", "is_not": "done"}, "do": [{"give_item": "potion_of_greater_healing"}, {"quest": "rest_for_the_dead", "stage": "done"}], "goto": "dead_rested"},
 				{"text": "Farewell.", "end": true}
 			]
+		},
+		"old_temple": {
+			"text": "Before this little house there was a greater one, on the hill at the end of the old temple road. Brother Odran's order kept it, until the fever came. We buried the brothers in its yard. Now travellers say the dead walk among its stones. If you go there, give them rest. Please.",
+			"options": [
+				{"text": "We'll lay them to rest.", "do": [{"quest": "rest_for_the_dead", "stage": "started"}], "goto": "greet"},
+				{"text": "We'll think on it.", "goto": "greet"}
+			]
+		},
+		"dead_rested": {
+			"text": "Then the brothers sleep again. Thank you. Take this, and the dawn's blessing with it.",
+			"next": "greet"
 		},
 		"quest": {
 			"text": "Our altar lamp cracked in the frost, and a temple of the dawn without a light is a poor joke. If you could find a hooded lantern, Tobin at the inn sells them, I would be grateful, and so would the dawn.",

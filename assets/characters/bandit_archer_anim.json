@@ -1,0 +1,31 @@
+{
+	"texture": "res://assets/characters/bandit_archer_sheet.png",
+	"cell": [
+		56,
+		78
+	],
+	"origin": [
+		28,
+		62
+	],
+	"directions": [
+		"s",
+		"se",
+		"e",
+		"ne",
+		"n"
+	],
+	"columns": 9,
+	"idle_column": 0,
+	"walk_columns": [
+		1,
+		2,
+		3,
+		4,
+		5,
+		6,
+		7,
+		8
+	],
+	"cycle_px": 110
+}

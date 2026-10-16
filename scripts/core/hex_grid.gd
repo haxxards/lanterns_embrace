@@ -191,6 +191,34 @@ func path_cost(path: Array[Vector2i]) -> float:
 	return total
 
 
+## Every hex reachable from `from` for at most `budget` movement (in hexes;
+## difficult terrain counts double), avoiding occupied hexes: {hex: cost}.
+## `from` itself is included at cost 0 even if something occupies it.
+func reachable_within(from: Vector2i, budget: float) -> Dictionary:
+	var best := {from: 0.0}
+	var frontier: Array = [[0.0, from]]
+	while not frontier.is_empty():
+		# Pop the cheapest entry (the frontier stays small for a turn's move).
+		var k := 0
+		for i in range(1, frontier.size()):
+			if frontier[i][0] < frontier[k][0]:
+				k = i
+		var cur: Array = frontier[k]
+		frontier.remove_at(k)
+		var cost: float = cur[0]
+		var h: Vector2i = cur[1]
+		if cost > best.get(h, INF):
+			continue
+		for n in Hex.neighbors(h):
+			if not is_walkable(n):
+				continue
+			var c := cost + move_cost(n)
+			if c <= budget + 0.001 and c < best.get(n, INF):
+				best[n] = c
+				frontier.append([c, n])
+	return best
+
+
 ## Walkable hexes within `max_radius` of `target`, nearest first.
 func walkable_near(target: Vector2i, max_radius: int) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []

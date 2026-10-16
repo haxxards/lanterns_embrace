@@ -24,6 +24,30 @@
 				{"id": "done", "done": true, "journal": "We gave the temple a lantern. Father Anselm blessed us with a potion of greater healing."}
 			]
 		},
+		"wolves_of_the_woods": {
+			"name": "Wolves in the Woods", "xp": 100,
+			"stages": [
+				{"id": "started", "journal": "Aldous Grey, the reeve, will pay 25 gold for the wolf pack that hunts the woods north-west of Millbrook, across the river."},
+				{"id": "slain", "auto_if": {"defeated": "woods_wolves"}, "journal": "We killed the wolves in the north-west woods. The reeve will want to hear of it."},
+				{"id": "done", "done": true, "journal": "Aldous paid the bounty on the wolves: 25 gold."}
+			]
+		},
+		"the_old_temple_road": {
+			"name": "The Old Temple Road", "xp": 150,
+			"stages": [
+				{"id": "started", "journal": "Bram the smith says bandits have camped on the old temple road, which leaves Millbrook to the east. He'll pay 50 gold to see the road open again."},
+				{"id": "cleared", "auto_if": {"defeated": "road_bandits"}, "journal": "The bandits' camp on the old temple road is no more. Bram will be glad to hear it."},
+				{"id": "done", "done": true, "journal": "Bram paid us 50 gold for clearing the road."}
+			]
+		},
+		"rest_for_the_dead": {
+			"name": "Rest for the Restless Dead", "xp": 150,
+			"stages": [
+				{"id": "started", "journal": "Father Anselm asked us to give rest to the dead that walk at the ruined temple in the hills, at the end of the old temple road."},
+				{"id": "laid_to_rest", "auto_if": {"defeated": "temple_dead"}, "journal": "The skeletons among the old temple's stones are still at last. Father Anselm should know."},
+				{"id": "done", "done": true, "journal": "Father Anselm blessed us with a potion of greater healing for laying the dead to rest."}
+			]
+		},
 		"the_undying_lantern": {
 			"name": "The Lantern That Never Goes Out", "xp": 0,
 			"stages": [

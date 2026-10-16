@@ -89,7 +89,7 @@ func refresh() -> void:
 	var s := member.sheet
 	_hp_bar.max_value = s.hp_max
 	_hp_bar.value = s.hp_current
-	_hp_label.text = "HP %d / %d" % [s.hp_current, s.hp_max] if s.is_alive() else "Fallen"
+	_hp_label.text = "HP %d / %d" % [s.hp_current, s.hp_max] if s.is_alive() else _down_text(s)
 	modulate = Color.WHITE if s.is_alive() else Color(0.6, 0.55, 0.55)
 	_stats_label.text = "AC %d   Speed %d ft" % [s.armor_class, s.effective_speed_ft()]
 
@@ -141,3 +141,12 @@ func _label(text: String, size: int, color: Color) -> Label:
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	l.clip_text = true
 	return l
+
+
+## "Dead", "Unconscious (stable)" or "Dying" with the death saves so far.
+func _down_text(s: CharacterSheet) -> String:
+	if s.dead:
+		return "Dead"
+	if s.stable:
+		return "Unconscious"
+	return "Dying  %d✓ %d✗" % [s.death_successes, s.death_failures]

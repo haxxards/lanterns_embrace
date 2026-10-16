@@ -1297,6 +1297,168 @@ def cart():
 
 
 
+# --------------------------------------------------------------------------
+# The wilds: a bandit camp and the ruined temple (Phase 4)
+# --------------------------------------------------------------------------
+
+def campfire():
+    root = setup()
+    stone = stone_material("FireStone", "#7d776c", scale=6.0)
+    r = np.random.default_rng(61)
+    for k in range(9):
+        a = k * 2 * math.pi / 9
+        s = lib.primitive("ico_sphere", f"RingStone{k}", mat=stone, parent=root, subdivisions=2,
+                          radius=0.13 + r.uniform(-0.02, 0.03), location=(math.cos(a) * 0.5, math.sin(a) * 0.5, 0.06))
+        s.scale = (1.2, 1.0, 0.7)
+    ash = lib.material("Ash", lib.lin("#2a2420"), rough=1.0)
+    lib.primitive("cylinder", "Ash", mat=ash, parent=root, vertices=20, radius=0.42, depth=0.03, location=(0, 0, 0.015))
+    logs = bark_material("FireLogs", "#4a3626")
+    for k in range(4):
+        a = k * math.pi / 4 + 0.3
+        lib.cylinder_between(f"Log{k}", (math.cos(a) * 0.42, math.sin(a) * 0.42, 0.05),
+                             (-math.cos(a) * 0.1, -math.sin(a) * 0.1, 0.32), 0.055, mat=logs, parent=root, sides=8)
+    ember = lib.material("Embers", lib.lin("#ff5a1a"), emission=lib.lin("#ff4a10"), emission_strength=8.0)
+    lib.primitive("ico_sphere", "Embers", mat=ember, parent=root, subdivisions=2, radius=0.2, location=(0, 0, 0.06)).scale = (1.4, 1.4, 0.4)
+    flame = lib.material("CampFlame", lib.lin("#ffc860"), emission=lib.lin("#ffa030"), emission_strength=14.0)
+    for k, (dx, dy, h) in enumerate(((0, 0, 0.55), (0.1, 0.06, 0.4), (-0.09, 0.04, 0.38), (0.02, -0.08, 0.32))):
+        lib.primitive("cone", f"Flame{k}", mat=flame, parent=root, vertices=10, radius1=0.12, radius2=0.0, depth=h,
+                      location=(dx, dy, 0.1 + h / 2))
+    finish("campfire", root)
+
+
+def tent():
+    root = setup()
+    canvas = lib.material("Canvas", lib.lin("#a8987a"), rough=0.95, noise_var=0.2, bump=0.3, bump_scale=40)
+    dark = lib.material("TentDark", lib.lin("#1a1612"), rough=1.0)
+    pole = wood_material("TentPole", "#5a4128")
+    width = 2 * lib.HEX_M - 0.4
+    depth = footprint_depth(2) - 0.2
+    h = 1.6
+    yc = depth / 2 + 0.1
+    half = width / 2
+    slope = math.atan2(h, half)
+    side_len = math.hypot(h, half)
+    for s in (-1, 1):
+        lib.box(f"Side{s}", (side_len, depth, 0.03), (s * half / 2, yc, h / 2), mat=canvas, parent=root,
+                rotation=(0, s * slope, 0))
+    # Front gable with an open flap, and the back gable.
+    for y, name in ((yc - depth / 2, "Front"), (yc + depth / 2, "Back")):
+        v = [(-half, y, 0), (half, y, 0), (0, y, h)]
+        lib.mesh_object(name, v, [(0, 1, 2)], mat=canvas, parent=root)
+    lib.mesh_object("Opening", [(-0.35, yc - depth / 2 - 0.01, 0), (0.35, yc - depth / 2 - 0.01, 0),
+                                (0, yc - depth / 2 - 0.01, 1.1)], [(0, 1, 2)], mat=dark, parent=root)
+    lib.mesh_object("Flap", [(0.0, yc - depth / 2 - 0.02, 1.15), (0.55, yc - depth / 2 - 0.25, 0.05),
+                             (0.05, yc - depth / 2 - 0.05, 0.05)], [(0, 1, 2)], mat=canvas, parent=root)
+    lib.cylinder_between("Ridge", (0, yc - depth / 2 - 0.15, h + 0.03), (0, yc + depth / 2 + 0.15, h + 0.03), 0.04,
+                         mat=pole, parent=root, sides=8)
+    rope = lib.material("Rope", lib.lin("#c8b890"), rough=0.9)
+    for y in (yc - depth / 2 - 0.15, yc + depth / 2 + 0.15):
+        for s in (-1, 1):
+            lib.cylinder_between(f"Guy{y}{s}", (0, y, h), (s * (half + 0.4), y, 0.02), 0.01, mat=rope, parent=root, sides=4)
+    finish("tent", root)
+
+
+def waymarker():
+    root = setup()
+    post = wood_material("WayPost", "#5a4128")
+    board = wood_material("WayBoard", "#8a6a40")
+    lib.box("Post", (0.14, 0.14, 1.8), (0, 0, 0.88), mat=post, parent=root, bevel=0.02)
+    # An arrow-shaped board pointing along the road.
+    v = [(-0.55, 0, -0.14), (0.35, 0, -0.14), (0.6, 0, 0), (0.35, 0, 0.14), (-0.55, 0, 0.14)]
+    pts = [(x, -0.09 + dy, 1.5 + z) for (x, _, z) in v for dy in (0.0,)]
+    obj = lib.mesh_object("Arrow", pts, [(0, 1, 2, 3, 4)], mat=board, parent=root)
+    sol = obj.modifiers.new("Thick", 'SOLIDIFY')
+    sol.thickness = 0.06
+    paint = lib.material("WayPaint", lib.lin("#e6d6a0"), rough=0.8)
+    lib.box("Stripe", (0.6, 0.01, 0.05), (-0.05, -0.13, 1.5), mat=paint, parent=root)
+    stone = stone_material("Cairn", "#8a8478", scale=5.0)
+    for k, (x, y, rad) in enumerate(((0.2, 0.15, 0.16), (-0.2, 0.1, 0.13), (0.05, -0.18, 0.12), (0.0, 0.05, 0.1))):
+        lib.primitive("ico_sphere", f"Cairn{k}", mat=stone, parent=root, subdivisions=2, radius=rad,
+                      location=(x, y, rad * 0.6))
+    finish("waymarker", root)
+
+
+def ruin_stone():
+    return stone_material("RuinStone", "#9a948a", scale=2.2, mortar="#5a564e")
+
+
+def ruined_wall(variant=0):
+    root = setup()
+    stone = ruin_stone()
+    moss = lib.material("Moss", lib.lin("#3c4e26"), rough=0.95, noise_var=0.35)
+    width = 3 * lib.HEX_M - 0.25
+    y = 0.45
+    r = np.random.default_rng(71 + variant)
+    n = 9
+    for k in range(n):
+        x0 = -width / 2 + k * width / n
+        # A jagged, crumbling top: tall in the middle (variant 0) or with a gap (variant 1).
+        f = k / (n - 1)
+        top = 2.4 - 1.6 * abs(f - 0.5) * 2 + r.uniform(-0.35, 0.25)
+        if variant == 1:
+            top = (2.6 if k in (0, 1, n - 2, n - 1) else 0.6 + r.uniform(0, 0.4)) + r.uniform(-0.3, 0.2)
+        top = max(0.35, top)
+        lib.box(f"Course{k}", (width / n + 0.02, 0.55, top), (x0 + width / n / 2, y, top / 2), mat=stone, parent=root,
+                bevel=0.03)
+        if r.random() < 0.35:
+            lib.box(f"Moss{k}", (width / n * 0.6, 0.4, 0.03), (x0 + width / n / 2, y, top + 0.01), mat=moss, parent=root)
+    if variant == 0:  # a broken window arch
+        dark = lib.material("RuinShadow", lib.lin("#2a2622"), rough=1.0)
+        lib.box("Window", (0.5, 0.58, 0.8), (0.0, y, 1.35), mat=dark, parent=root)
+    for k in range(5):  # fallen blocks at its foot
+        b = lib.box(f"Fallen{k}", (0.35, 0.3, 0.25), (r.uniform(-width / 2, width / 2), y - 0.45 + r.uniform(-0.1, 0.1), 0.12),
+                    mat=stone, parent=root, rotation=(0, 0, r.uniform(0, 3)), bevel=0.03)
+        _ = b
+    finish("ruined_wall", root, variant=variant)
+
+
+def broken_column(variant=0):
+    root = setup()
+    stone = ruin_stone()
+    h = 2.6 if variant == 0 else 0.9
+    lib.box("Plinth", (0.8, 0.8, 0.25), (0, 0, 0.125), mat=stone, parent=root, bevel=0.03)
+    col = lib.primitive("cylinder", "Shaft", mat=stone, parent=root, vertices=16, radius=0.28, depth=h,
+                        location=(0, 0, 0.25 + h / 2))
+    for k in range(8):  # fluting
+        a = k * math.pi / 4
+        lib.box(f"Flute{k}", (0.04, 0.04, h), (math.cos(a) * 0.28, math.sin(a) * 0.28, 0.25 + h / 2), mat=stone,
+                parent=root, rotation=(0, 0, a))
+    # A broken, slanted top.
+    lib.box("Break", (0.62, 0.62, 0.2), (0, 0, 0.25 + h), mat=stone, parent=root, rotation=(math.radians(14), math.radians(-9), 0))
+    if variant == 1:  # the fallen drums beside it
+        for k, (x, y) in enumerate(((0.75, -0.25), (0.95, 0.35))):
+            d = lib.primitive("cylinder", f"Drum{k}", mat=stone, parent=root, vertices=16, radius=0.27, depth=0.5,
+                              location=(x, y, 0.27))
+            d.rotation_euler = (math.radians(90), 0, math.radians(30 + k * 40))
+    _ = col
+    finish("broken_column", root, variant=variant)
+
+
+def rubble():
+    root = setup()
+    stone = ruin_stone()
+    r = np.random.default_rng(83)
+    for k in range(9):
+        lib.box(f"Block{k}", (r.uniform(0.18, 0.4), r.uniform(0.15, 0.3), r.uniform(0.1, 0.22)),
+                (r.uniform(-0.55, 0.55), r.uniform(-0.45, 0.45), 0.08), mat=stone, parent=root,
+                rotation=(r.uniform(-0.3, 0.3), r.uniform(-0.3, 0.3), r.uniform(0, 3)), bevel=0.02)
+    finish("rubble", root)
+
+
+def standing_stone():
+    root = setup()
+    stone = stone_material("Menhir", "#8e8a80", scale=1.6, mortar="#6a665e")
+    s = lib.box("Menhir", (0.6, 0.35, 2.0), (0, 0, 1.0), mat=stone, parent=root, bevel=0.12, segments=3)
+    s.rotation_euler = (0, math.radians(3), 0)
+    rune = lib.material("Runes", lib.lin("#9ad8ff"), emission=lib.lin("#7ac8ff"), emission_strength=3.0)
+    for k, (x, z, w, hgt) in enumerate(((-0.1, 1.55, 0.05, 0.25), (0.08, 1.5, 0.18, 0.04), (0.0, 1.2, 0.04, 0.3),
+                                         (-0.12, 1.0, 0.16, 0.04), (0.1, 0.85, 0.04, 0.22))):
+        lib.box(f"Rune{k}", (w, 0.02, hgt), (x, -0.185, z), mat=rune, parent=root)
+    moss = lib.material("StoneMoss", lib.lin("#56703a"), rough=0.95)
+    lib.box("Moss", (0.62, 0.37, 0.12), (0, 0, 0.06), mat=moss, parent=root)
+    finish("standing_stone", root)
+
+
 def variants(fn, n):
     return [lambda i=i: fn(i) for i in range(n)]
 
@@ -1324,6 +1486,13 @@ ALL = {
     "market_stall": variants(market_stall, 2),
     "cart": [cart],
     "temple": [temple],
+    "campfire": [campfire],
+    "tent": [tent],
+    "waymarker": [waymarker],
+    "ruined_wall": variants(ruined_wall, 2),
+    "broken_column": variants(broken_column, 2),
+    "rubble": [rubble],
+    "standing_stone": [standing_stone],
 }
 
 

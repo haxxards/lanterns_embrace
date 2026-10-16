@@ -79,7 +79,7 @@ func test_starting_party_respects_max_size() -> void:
 
 func test_every_map_is_sound() -> void:
 	var paths := JsonUtil.list_json_files("res://data/maps")
-	check(paths.size() >= 6, "outdoor map plus five interiors")
+	check(paths.size() >= 8, "two outdoor maps plus six interiors")
 	for path in paths:
 		_check_map(path)
 
@@ -118,6 +118,28 @@ func _check_map(path: String) -> void:
 			check(Data.items.has(str(it.get("item"))), "%s: %s holds unknown item %s" % [m.id, pl.def.id, it])
 		if kind == "container" and pl.extra.has("key"):
 			check(Data.items.has(str(pl.extra["key"])), "%s: key item %s exists" % [m.id, pl.extra["key"]])
+		if kind == "exit":
+			_check_exit(m, pl)
+	for s in m.creature_spawns:
+		check(Data.creatures.has(s["type"]), "%s: creature type %s exists" % [m.id, s["type"]])
+		check(g.is_walkable(s["hex"]) and g.is_reachable(m.party_spawn, s["hex"]),
+				"%s: %s stands on reachable ground" % [m.id, s["id"]])
+
+
+## An exit leads to a real map, arriving at one of its entries (or in front of
+## one of its buildings).
+func _check_exit(m: MapData, pl: MapData.Placement) -> void:
+	var path := str(pl.extra.get("map", ""))
+	check(FileAccess.file_exists(path), "%s: exit leads to %s, which exists" % [m.id, path])
+	if not FileAccess.file_exists(path):
+		return
+	var target := Data.load_map(path)
+	var entry := str(pl.extra.get("entry", ""))
+	var known := entry.is_empty() or target.entries.has(entry)
+	for tp in target.placements:
+		if str(tp.extra.get("id", "")) == entry:
+			known = true
+	check(known, "%s: exit entry '%s' exists on %s" % [m.id, entry, target.id])
 
 
 func _map_grid(m: MapData) -> HexGrid:

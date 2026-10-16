@@ -5,7 +5,7 @@ real recording of the same name, or point data/audio/audio.json elsewhere.
 
     pip install numpy scipy soundfile
     python3 tools/audio/generate_placeholder_audio.py            # everything
-    python3 tools/audio/generate_placeholder_audio.py temple     # just one group
+    python3 tools/audio/generate_placeholder_audio.py temple     # just one group (sfx, music, temple, ambience, combat)
 
 Sound effects are short one-shots; music and ambience are seamless loops
 (the tail of each loop is folded back onto its start).
@@ -225,6 +225,38 @@ def sfx():
     save("sfx/error.ogg", fade(x), 0.4)
 
 
+def combat_sfx():
+    """Fight sounds (own random generator, so the other groups stay as they are)."""
+    r = np.random.default_rng(11)
+    # A blow landing: a dull thump with a short, gritty crunch.
+    x = np.zeros(int(0.35 * SR))
+    place(x, knock(85, 0.3, 0.06), 0.0)
+    crunch = band(noise(0.08), 300, 2400) * env(int(0.08 * SR), 0.001, 0.025)
+    place(x, crunch, 0.0, 0.7)
+    save("sfx/hit.ogg", fade(x), 0.6)
+    # A swing that misses: a whoosh rising through the air.
+    d = 0.3
+    w = noise(d, "pink")
+    sweep = np.zeros_like(w)
+    n = len(w)
+    for k in range(6):  # band sweep in slices
+        a, b = k * n // 6, (k + 1) * n // 6
+        sweep[a:b] = band(w, 500 + k * 350, 1500 + k * 500)[a:b]
+    x = sweep * np.sin(np.pi * np.clip(t(d) / d, 0, 1)) ** 2
+    save("sfx/swing_miss.ogg", fade(x), 0.45)
+    # A fight begins: two war-drum beats under a low horn.
+    x = np.zeros(int(1.4 * SR))
+    for k, at in enumerate((0.0, 0.32)):
+        place(x, knock(58, 0.6, 0.12), at, 1.0 - 0.2 * k)
+    dh = 1.0
+    tt = t(dh)
+    horn = sum(np.sin(2 * np.pi * f * tt + 0.3 * np.sin(2 * np.pi * 5 * tt)) * a
+               for f, a in ((110, 1.0), (220, 0.5), (330, 0.3), (165, 0.4)))
+    horn = lowpass(horn, 1400) * np.minimum(1, tt / 0.15) * np.minimum(1, (dh - tt) / 0.4)
+    place(x, horn, 0.3, 0.35 + 0.0 * r.random())
+    save("sfx/combat_start.ogg", fade(x), 0.6)
+
+
 # --------------------------------------------------------------------------
 # Music: plucked-string loops
 # --------------------------------------------------------------------------
@@ -338,6 +370,6 @@ def ambience():
 
 if __name__ == "__main__":
     import sys
-    groups = {"sfx": sfx, "music": music, "temple": temple, "ambience": ambience}
-    for name in sys.argv[1:] or ["sfx", "music", "temple", "ambience"]:
+    groups = {"sfx": sfx, "music": music, "temple": temple, "ambience": ambience, "combat": combat_sfx}
+    for name in sys.argv[1:] or ["sfx", "music", "temple", "ambience", "combat"]:
         groups[name]()

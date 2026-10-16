@@ -7,12 +7,27 @@
 			"options": [
 				{"text": "Let's see your wares.", "shop": true},
 				{"text": "How's business?", "goto": "business"},
+				{"text": "The bandits on the old temple road are dealt with.", "if": {"defeated": "road_bandits", "quest": "the_old_temple_road", "is_not": "done"}, "do": [{"give_gold": 50}, {"quest": "the_old_temple_road", "stage": "done"}], "goto": "road_done"},
 				{"text": "Garrick: \"Good balance on that hammer.\"", "if": {"member": "garrick"}, "goto": "garrick"},
 				{"text": "Farewell.", "end": true}
 			]
 		},
 		"business": {
 			"text": "Quiet. Horseshoes and hinges, mostly. The old temple road's gone wild, so nobody comes down from the hills to trade any more. If you're the sort that goes up there, you'll want something sharper than a hinge.",
+			"options": [
+				{"text": "Gone wild how?", "if": {"quest": "the_old_temple_road", "is": "not_started", "not": {"defeated": "road_bandits"}}, "goto": "road"},
+				{"text": "Back to business.", "goto": "greet"}
+			]
+		},
+		"road": {
+			"text": "Bandits. Four of them, maybe more, camped where the road crosses the clearing past the east waymarker. They take a toll from anyone fool enough to pass, and the toll is usually everything. Clear them out and there's fifty gold in it. And past their camp, the old temple on the hill, where folk say the dead don't stay down.",
+			"options": [
+				{"text": "Consider it done.", "do": [{"quest": "the_old_temple_road", "stage": "started"}], "goto": "greet"},
+				{"text": "Not today.", "goto": "greet"}
+			]
+		},
+		"road_done": {
+			"text": "Ha! I'll believe it when I see a cart come down that road. No, I believe you. Fifty gold, and you'll get a fair price at this forge as long as I'm at it.",
 			"next": "greet"
 		},
 		"garrick": {

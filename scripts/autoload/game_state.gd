@@ -30,8 +30,14 @@ var quests: Dictionary = {}
 ## Quest id -> stage ids reached so far, in order (the journal).
 var quest_log: Dictionary = {}
 
+## The fight in progress (a CombatManager), or null. Not saved: the game
+## can't be saved mid-fight.
+var combat: Node = null
+
 ## map id -> {container id -> ContainerState}
 var _containers: Dictionary = {}
+## map id -> {creature spawn id -> true}: creatures slain there (they stay dead).
+var _defeated: Dictionary = {}
 ## map id -> PackedByteArray, one byte per hex: 1 = explored.
 var _explored: Dictionary = {}
 
@@ -51,6 +57,8 @@ func start_new_game() -> void:
 	playtime = 0.0
 	_containers.clear()
 	_explored.clear()
+	_defeated.clear()
+	combat = null
 	pending_positions.clear()
 	pending_camera = null
 	var d: Variant = JsonUtil.load_json(GameConfig.starting_party_path)
@@ -134,11 +142,23 @@ func anyone_fallen() -> bool:
 	return false
 
 
+## Someone not dead is below full hit points (the unconscious count).
 func anyone_hurt() -> bool:
 	for s in party:
-		if s.is_alive() and s.hp_current < s.hp_max:
+		if not s.dead and s.hp_current < s.hp_max:
 			return true
 	return false
+
+
+func anyone_dead() -> bool:
+	for s in party:
+		if s.dead:
+			return true
+	return false
+
+
+func in_combat() -> bool:
+	return combat != null and is_instance_valid(combat) and combat.active
 
 
 ## How many of an item the whole party carries (backpacks and equipment).
@@ -183,10 +203,10 @@ func take_party_item(item_id: String, qty: int) -> int:
 	return taken
 
 
-## Every living member gains `amount` XP (quest rewards are not split).
+## Every member who isn't dead gains `amount` XP (quest rewards are not split).
 func award_xp(amount: int) -> void:
 	for s in party:
-		if s.is_alive():
+		if not s.dead:
 			var levels := s.add_xp(amount)
 			if levels > 0:
 				Events.toast_requested.emit("%s reaches level %d!" % [s.display_name, s.level])
@@ -291,6 +311,23 @@ func set_explored(map_id: String, mask: PackedByteArray) -> void:
 	_explored[map_id] = mask
 
 
+func is_defeated(map_id: String, spawn_id: String) -> bool:
+	return (_defeated.get(map_id, {}) as Dictionary).has(spawn_id)
+
+
+func mark_defeated(map_id: String, spawn_id: String) -> void:
+	if not _defeated.has(map_id):
+		_defeated[map_id] = {}
+	_defeated[map_id][spawn_id] = true
+
+
+## Records that a whole encounter group has been beaten (the "defeated"
+## condition reads it) and lets quests notice.
+func mark_group_defeated(group: String) -> void:
+	flags["defeated:%s" % group] = true
+	check_quests()
+
+
 # --- save data -----------------------------------------------------------------
 
 ## Everything needed to restore the game. `positions` ({id: Vector2i}) and
@@ -316,6 +353,10 @@ func to_dict(positions: Dictionary = {}, camera: Variant = null) -> Dictionary:
 		if not maps.has(map_id):
 			maps[map_id] = {}
 		maps[map_id]["explored"] = Marshalls.raw_to_base64(_explored[map_id])
+	for map_id in _defeated:
+		if not maps.has(map_id):
+			maps[map_id] = {}
+		maps[map_id]["defeated"] = (_defeated[map_id] as Dictionary).keys()
 	var d := {
 		"version": SAVE_VERSION,
 		"party": members,
@@ -365,6 +406,7 @@ func load_dict(d: Dictionary) -> bool:
 	pending_camera = JsonUtil.to_vec2(d["camera"]) if d.has("camera") else null
 	_containers.clear()
 	_explored.clear()
+	_defeated.clear()
 	var maps: Dictionary = d.get("maps", {})
 	for map_id in maps:
 		var m: Dictionary = maps[map_id]
@@ -372,6 +414,8 @@ func load_dict(d: Dictionary) -> bool:
 			set_container(map_id, cid, ContainerState.from_dict(m["containers"][cid]))
 		if m.has("explored"):
 			_explored[map_id] = Marshalls.base64_to_raw(str(m["explored"]))
+		for spawn_id in m.get("defeated", []):
+			mark_defeated(map_id, str(spawn_id))
 	party_changed.emit()
 	gold_changed.emit(gold)
 	return true

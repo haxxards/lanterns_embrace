@@ -26,6 +26,15 @@ var destination: Vector2i
 var path: Array[Vector2i] = []
 ## Straight-line smoothing; turn off for strict hex-by-hex steps (combat).
 var smooth_paths: bool = true
+## Marks the hex it stands on as taken in the grid, so others path around it
+## (townsfolk and creatures always; party members during a fight).
+var occupies: bool = false:
+	set(value):
+		if value == occupies:
+			return
+		occupies = value
+		if _grid != null:
+			_grid.set_occupied(hex, value)
 var hovered: bool = false:
 	set(value):
 		hovered = value
@@ -41,6 +50,9 @@ var _moving: bool = false
 var _walk_time: float = 0.0
 ## Path hex currently walked towards in a straight line (null = pick one).
 var _aim: Variant = null
+## Where the sprite sits relative to the feet when standing still (moved for
+## someone lying on the ground).
+var _sprite_rest := Vector2.ZERO
 
 
 ## Creates the sprite: an animation sheet if `animation_path` loads, else a
@@ -98,13 +110,16 @@ func _update_frame() -> void:
 
 ## Teleports to `h`, cancelling any movement.
 func place_at(h: Vector2i) -> void:
+	if occupies and _grid != null:
+		_grid.set_occupied(hex, false)
+		_grid.set_occupied(h, true)
 	hex = h
 	destination = h
 	path.clear()
 	_aim = null
 	_moving = false
 	position = _grid.hex_to_world(h)
-	_sprite.position = Vector2.ZERO
+	_sprite.position = _sprite_rest
 	_update_frame()
 
 
@@ -202,14 +217,29 @@ func _update_hex() -> void:
 		path = path.slice(i + 1)
 
 
-## Whether this actor may count `h` as its hex (walkable ground).
+## Whether this actor may count `h` as its hex (walkable ground, and not
+## taken by someone else).
 func _can_stand(h: Vector2i) -> bool:
+	if occupies:
+		return _grid.is_ground_walkable(h) and (h == hex or not _grid.is_occupied(h))
 	return _grid.is_walkable(h)
 
 
-## Hook for subclasses (NPCs move their grid blocker).
-func _on_hex_changed(_old: Vector2i, _new: Vector2i) -> void:
-	pass
+## Called when the feet cross into a new hex; moves the grid blocker along.
+func _on_hex_changed(old: Vector2i, new: Vector2i) -> void:
+	if occupies:
+		_grid.set_occupied(old, false)
+		_grid.set_occupied(new, true)
+
+
+## Path to `to` from where it stands (its own hex counts as free).
+func path_to(to: Vector2i) -> Array[Vector2i]:
+	if occupies:
+		_grid.set_occupied(hex, false)
+	var p := _grid.find_path(hex, to)
+	if occupies:
+		_grid.set_occupied(hex, true)
+	return p
 
 
 ## Index of the farthest upcoming path hex reachable in a straight, clear line.
@@ -249,7 +279,7 @@ func _segment_clear(a: Vector2, b: Vector2, max_cost: float) -> bool:
 
 func _finish_walk() -> void:
 	_moving = false
-	_sprite.position = Vector2.ZERO
+	_sprite.position = _sprite_rest
 	destination = hex
 	_update_frame()
 	arrived.emit(self)

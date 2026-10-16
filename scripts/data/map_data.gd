@@ -30,6 +30,9 @@ var party_spawn: Vector2i = Vector2i.ZERO  # axial
 var entries: Dictionary = {}
 ## Townsfolk to place: [{"id": npc id, "hex": axial Vector2i}].
 var npc_spawns: Array[Dictionary] = []
+## Hostile creatures: [{"id": spawn id, "type": creature id, "hex": axial,
+## "group": encounter group, "wander": hexes}].
+var creature_spawns: Array[Dictionary] = []
 ## Names from data/audio/audio.json ("" = silence).
 var music: String = ""
 var ambience: String = ""
@@ -98,6 +101,14 @@ static func load_file(path: String, terrain_by_symbol: Dictionary, props: Dictio
 			m.errors.append("npc entry without an id: %s" % str(entry))
 			continue
 		m.npc_spawns.append({"id": str(entry["id"]), "hex": Hex.offset_to_axial(JsonUtil.to_vec2i(entry.get("at")))})
+	for entry in d.get("creatures", []):
+		if not entry is Dictionary or not entry.has("type"):
+			m.errors.append("creature entry without a type: %s" % str(entry))
+			continue
+		var spawn_id := str(entry.get("id", "%s_%d" % [entry["type"], m.creature_spawns.size()]))
+		m.creature_spawns.append({"id": spawn_id, "type": str(entry["type"]),
+				"hex": Hex.offset_to_axial(JsonUtil.to_vec2i(entry.get("at"))),
+				"group": str(entry.get("group", spawn_id)), "wander": int(entry.get("wander", 1))})
 	m.music = str(d.get("music", ""))
 	m.ambience = str(d.get("ambience", ""))
 	m.fog = bool(d.get("fog", true))
