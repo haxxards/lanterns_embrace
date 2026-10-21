@@ -379,6 +379,6 @@ failure, then remove it.
 | [NPCS_AND_QUESTS.md](NPCS_AND_QUESTS.md) | Townsfolk, quests, shops, the temple |
 | [COMBAT.md](COMBAT.md) | Fights, creatures, the AI |
 | [ASSETS.md](ASSETS.md) | Where the art comes from and how to replace or re-render it |
-| [ROADMAP.md](ROADMAP.md) | The original four-phase plan: what's done, what isn't, what was added |
+| [TODO.md](TODO.md) | Every planned and requested item, flagged COMPLETE, PENDING or NOT STARTED |
 | [PAINTED_STYLE.md](PAINTED_STYLE.md) | The painted item icons: switching styles, and how the look is made, with the maths |
 | [AUDIO.md](AUDIO.md) | Sounds, music and ambience |

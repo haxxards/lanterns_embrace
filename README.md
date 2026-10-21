@@ -379,9 +379,9 @@ Any engine or script error raised during a test fails that test.
 
 ## Roadmap
 
-This order follows the plan agreed before Phase 1. **[docs/ROADMAP.md](docs/ROADMAP.md)**
-checks every item of that plan: what's done, what isn't, and what was added that the plan
-didn't include. See the end of [docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phases 3
+This order follows the plan agreed before Phase 1. **[docs/TODO.md](docs/TODO.md)** lists
+every item of that plan and every request since, each flagged **COMPLETE**, **PENDING** or
+**NOT STARTED**. See the end of [docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phases 3
 and 4 were added and where the rest of Phase 4 plugs into the code.
 
 1. ~~**Foundation:** hex grid, pathfinding, party selection and movement, camera, minimap, sample map~~
