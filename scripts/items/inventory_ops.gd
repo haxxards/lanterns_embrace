@@ -242,6 +242,8 @@ static func use(ref: Dictionary, sheet: CharacterSheet) -> String:
 		return "%s can't be used like that." % st.def.display_name
 	if sheet.dead:
 		return "%s is beyond a potion's help." % sheet.display_name
+	if st.def.use.has("cast"):
+		return _read_scroll(ref, st, sheet)
 	if GameState.in_combat():
 		var err: String = GameState.combat.item_use_error(sheet)
 		if not err.is_empty():
@@ -258,6 +260,22 @@ static func use(ref: Dictionary, sheet: CharacterSheet) -> String:
 	if GameState.in_combat():
 		GameState.combat.item_used(sheet)  # drinking or giving a potion is an action
 	return msg
+
+
+## Reading a spell scroll from the inventory, outside a fight: spells that
+## help (Cure Wounds) take effect on the reader (Abilities has the rules);
+## others wait for a fight, where scrolls are read from the combat bar.
+static func _read_scroll(ref: Dictionary, st: ItemStack, sheet: CharacterSheet) -> String:
+	var spell: SpellDef = Data.spells.get(str(st.def.use["cast"]))
+	if spell == null:
+		return "The writing on the %s means nothing to anyone." % st.def.display_name
+	var result := Abilities.cast(sheet, spell, sheet, GameState.party, 0, true)
+	if not result["ok"]:
+		return str(result["text"])
+	st.qty -= 1
+	_put(ref, st if st.qty > 0 else null)
+	return str(result["text"]).replace(" casts %s from a scroll" % spell.display_name,
+			" reads a scroll of %s" % spell.display_name)
 
 
 static func _free_backpack_slot(sheet: CharacterSheet) -> Dictionary:

@@ -639,17 +639,39 @@ data formats.
   integration test can play several rounds in a few frames. A fixed `rng.seed` makes the
   rounds repeatable.
 
-**Phase 4, second half: where spells plug in**
+**Phase 4, second half (done): how spells and abilities were added**
 
-- Spells are data (range in hexes, area, saving throw, damage or healing dice) in a
-  `spells.json`, plus a little code per effect kind. `Hex.spiral`/`Hex.ring`/`Hex.line`
-  give the areas, and `CombatRules.saving_throw` the saves.
-- Casting is another action in `CombatManager` next to `attack_with`, so it shares
-  advantage, logging, floating text and the death/slain handling. Spell slots go on
-  `CharacterSheet` (the `spells.slots` field already exists) and come back on a rest. Tobin's
-  room becomes a long rest.
-- A spell scroll is an item whose `use` casts its spell (the inventory screen's right-click
-  already calls `InventoryOps.use`).
+[SPELLS.md](SPELLS.md) has the rules and the data formats. The shape of the code:
+
+- *Spells are data, effects are named.* `data/spells/spells.json` holds range, area,
+  attack or save, damage or healing dice, and what higher slots add. `SpellDef` turns feet
+  into hexes on loading. Only the handful of special effects (`sleep`, `bless`, `shield`,
+  `teleport`...) need code, each a `match` branch; a new damage or healing spell is just
+  a new entry.
+- *Three layers, by what they need.* `Spellcasting` works on sheets alone (slots, DC,
+  dice, healing, buffs), so the spells screen and the fight share it. `CombatSpells` adds
+  positions (ranges, lines of sight, areas from `Hex.spiral` and a cone of dot products,
+  the cursor preview). `CombatManager` keeps the turn: `use_ability()` either casts at
+  once or enters *targeting*, and `World` sends the next click to `confirm_target()`.
+  Spell attacks go through the same `attack_with` as swords, so advantage, critical hits,
+  logging and the slain are handled once.
+- *A class table, not class code.* `data/classes/classes.json` lists what each level
+  grants; `Classes.grant(sheet)` adds what's missing, on loading and on levelling up.
+  `Features` counts uses by "pool", so Turn Undead and Preserve Life both spend Channel
+  Divinity without knowing about each other.
+- *Conditions live on `Combatant`*, the per-fight object (asleep, turned, blessed, marked,
+  Shield, concentration). Those that last beyond a fight (Mage Armor, Aid, Guidance) live
+  on the sheet's `effects` and end on a long rest.
+- *Saving a coroutine's state.* A turn loop that `await`s can't be saved as such, so
+  `CombatManager.to_dict()` saves the *data* it works on (order, whose turn, each
+  combatant's state, creature hit points and hexes) and `restore()` rebuilds it and
+  starts the loop with `_run(true)`, which resumes the saved turn instead of starting a
+  round. A generation counter, bumped on every start, restore and abort, plus
+  `in_fight(c)` checks after each `await`, stop a turn left over from before a load from
+  acting in the new fight.
+- *Out of combat is its own small class.* `Abilities` casts from the spells screen and
+  the inventory with no positions or action economy, using the same `Spellcasting`
+  arithmetic.
 
 ### Things to keep doing
 
@@ -670,6 +692,10 @@ data formats.
   because `[x]` is an untyped `Array`. Build the typed array first and `append`.
 - **Multi-line lambdas inside a call's parentheses** are easy to get wrong; prefer a named
   method and `connect(_on_thing.bind(arg))`.
+- **Nodes made but never added to the tree leak.** A `Label` built in `_ready()` "for
+  later" and only added on demand is never freed if it is never added: the headless test
+  run reports it as leaked `CanvasItem`s at exit. Add it straight away (hidden if need
+  be).
 - **Freeing nodes from inside their own signals** crashes or misbehaves. Use
   `call_deferred` (see `Main._on_map_change_requested`).
 - **Mouse positions**: an event's `position` is in viewport (screen) space. Convert with

@@ -682,6 +682,46 @@ def gold():
     finish("gold", elevation=45)
 
 
+def scroll(name, ribbon_color, seal_color, rune_color):
+    """A rolled parchment with a tongue unrolled toward the viewer, tied with a
+    ribbon and sealed with wax; ribbon, seal and the glowing rune on the sheet
+    are in the spell's colours, so each scroll reads differently."""
+    root = setup()
+    paper = cloth("Parchment", "#e4d4a6", bump=0.12)
+    grip("Roll", -0.21, 0.21, 0.045, paper, root)
+    edge = cloth("RollEnd", "#b89a64", bump=0.12)
+    for x in (-0.212, 0.212):
+        cyl(f"End{x}", (x, 0, 0), 0.044, 0.004, edge, root, rot=(0, math.radians(90), 0), verts=24)
+        cyl(f"Hole{x}", (x, 0, 0), 0.012, 0.006, cloth("Hole", "#5a4428"), root, rot=(0, math.radians(90), 0))
+    lib.box("Sheet", (0.36, 0.17, 0.004), (0, -0.1, -0.043), mat=paper, parent=root)
+    ink = cloth("Ink", "#3a2a1e", bump=0.0)
+    for i, w in enumerate((0.16, 0.13, 0.15, 0.09)):
+        lib.box(f"Line{i}", (w, 0.009, 0.002), (-0.16 + w / 2, -0.06 - i * 0.03, -0.0405), mat=ink, parent=root)
+    torus("Rune", (0.1, -0.11, -0.04), 0.032, 0.008, liquid("Rune", rune_color, glow=5.0), root)
+    rib = cloth("Ribbon", ribbon_color, bump=0.1)
+    torus("Band", (0.03, 0, 0), 0.048, 0.008, rib, root, rot=(0, math.radians(90), 0))
+    for k, dx in enumerate((-0.012, 0.016)):
+        tail = lib.box(f"Tail{k}", (0.016, 0.1, 0.003), (0.03 + dx, -0.07, -0.04), mat=rib, parent=root)
+        tail.rotation_euler = (0, 0, math.radians(14 if dx > 0 else -12))
+    wax = lib.material("Wax", lib.lin(seal_color), rough=0.35, noise_var=0.2, noise_scale=10, spec=0.5)
+    cyl("Seal", (0.03, -0.05, -0.034), 0.028, 0.012, wax, root, verts=20)
+    torus("SealRim", (0.03, -0.05, -0.028), 0.018, 0.003, wax, root)
+    diagonal(root, 25)
+    finish(name, elevation=55)
+
+
+def scroll_of_cure_wounds():
+    scroll("scroll_of_cure_wounds", "#3a8a48", "#b8242a", "#60e080")
+
+
+def scroll_of_magic_missile():
+    scroll("scroll_of_magic_missile", "#5a3aa0", "#2a4ab0", "#a080ff")
+
+
+def scroll_of_burning_hands():
+    scroll("scroll_of_burning_hands", "#c0501a", "#7a1410", "#ff8a2a")
+
+
 ALL = {
     "longsword": longsword, "shortsword": shortsword, "dagger": dagger, "rapier": rapier, "greataxe": greataxe,
     "mace": mace,
@@ -694,6 +734,8 @@ ALL = {
     "remedy": remedy,
     "rations": rations, "apple": apple, "torch": torch, "lantern": lantern, "holy_symbol": holy_symbol,
     "thieves_tools": thieves_tools, "spellbook": spellbook, "garnet": garnet, "key": key, "gold": gold,
+    "scroll_of_cure_wounds": scroll_of_cure_wounds, "scroll_of_magic_missile": scroll_of_magic_missile,
+    "scroll_of_burning_hands": scroll_of_burning_hands,
 }
 
 

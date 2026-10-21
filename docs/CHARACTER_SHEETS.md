@@ -73,8 +73,17 @@ keys).
 | `equipment` | object | Slot → item id (or `{ "item", "qty" }`), `null` when empty. Slots: `helmet`, `amulet`, `armor`, `cloak`, `gloves`, `main_hand`, `off_hand`, `ring_1`, `ring_2`, `boots`. |
 | `inventory` | array | Backpack slots in order: `{ "item": id, "qty": n }` or `null` for an empty slot. The backpack has `backpack_slots` slots (16). |
 | `gold` | int | Gold the character brings. It goes into the party's shared purse when they join. |
-| `spells` | object | `ability`, `cantrips`, `known`, `slots` (`{"1": 2}`) (Phase 4). |
-| `features` | array | Class feature ids. Used so far: `fighting_style_defense` (+1 AC in armour), `sneak_attack` (rogue: extra d6s once per turn with a finesse or ranged weapon when the attack has advantage or an ally stands next to the target). The rest arrive with Phase 4's second half. |
+| `spells` | object | `ability` (`int`, `wis`...; `null` for non-casters), `cantrips` and `known` (spell ids from `data/spells/spells.json`). `slots` (`{"1": 2}`) is only read for classes without a slot table; wizards and clerics use the SRD full-caster table. See [SPELLS.md](SPELLS.md). |
+| `features` | array | Class feature ids (defined in `data/classes/classes.json`): `fighting_style_defense`, `second_wind`, `action_surge`, `expertise`, `sneak_attack`, `cunning_action`, `arcane_recovery`, `divine_domain`, `disciple_of_life`, `channel_divinity`, `turn_undead`, `preserve_life`... |
+| `slots_used` | object | Spell slots spent since the last long rest, by level: `{"1": 1}`. Written by the game. |
+| `feature_uses` | object | Uses spent of limited features, by feature: `{"second_wind": 1}`. Written by the game. |
+| `hit_dice_used` | int | Hit dice spent on short rests (half come back on a long rest). Written by the game. |
+| `effects` | object | Effects lasting until a long rest: `{"mage_armor": true, "aid": 5, "guidance": true}`. Written by the game. |
+
+**The class table fills in the rest.** On loading, `Classes.grant` adds every feature
+and spell the character's class gives by their level (from `data/classes/classes.json`),
+so a sheet only needs what it wants beyond that, and an old sheet catches up. Levelling up
+grants the next level's features and spells the same way.
 | `art.portrait` | string | Portrait image, `res://` or any readable path. |
 | `art.sprite` | string | Map sprite image. |
 | `art.sprite_origin` | [x, y] | Pixel of the sprite that sits on the hex centre (the feet). Default: bottom-centre, 6 px up. |

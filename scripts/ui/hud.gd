@@ -15,7 +15,9 @@ Left click a sign / chest  –  read / open
 Left click the hexes in front of a door  –  go in (point at a building to see them)
 Left click a townsperson  –  talk (1-9 picks an answer)
 In a fight: click ground to move, an enemy to attack  ·  Space  –  end turn
-I  –  inventory        J  –  journal        Esc  –  menu
+In a fight: spell and ability buttons in the combat bar, then click a target
+I  –  inventory     J  –  journal     B  –  spells     R  –  rest
+Esc  –  menu (or cancel a spell's targeting)
 F5  –  quicksave        F9  –  quickload
 WASD / arrows / screen edge / middle drag  –  pan
 Mouse wheel, + / -  –  zoom        C  –  centre on selection
@@ -46,6 +48,8 @@ var _menu: GameMenu
 var _save_load: SaveLoadScreen
 var _dialogue: DialogueWindow
 var _journal: JournalScreen
+var _spells: SpellsScreen
+var _rest: RestDialog
 var _game_over: PanelContainer
 var _combat_hud: CombatHud
 ## Pause state from before the first modal screen opened (restored on close).
@@ -99,6 +103,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif not _modal_open():
 			open_journal()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("toggle_spells"):
+		if _spells.visible:
+			_spells.close()
+		elif not _modal_open():
+			open_spells()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("rest"):
+		if _rest.visible:
+			_rest.close()
+		elif not _modal_open():
+			open_rest()
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("debug_knock_out") and GameConfig.debug_keys and world.party.leader():
 		# Testing aid: knock the leader out (Ctrl+K) or kill them (Ctrl+Shift+K),
 		# to try healing and the temple's raise dead.
@@ -118,7 +134,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_cancel"):
 		# Esc closes the top-most thing, or opens the menu.
-		if _message_panel.visible:
+		if world != null and world.combat.active and not world.combat.targeting.is_empty() and not _modal_open():
+			world.combat.cancel_targeting()  # stop choosing a target for a spell
+		elif _message_panel.visible:
 			_message_panel.visible = false
 		elif _game_over.visible:
 			pass
@@ -126,6 +144,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_dialogue.close()
 		elif _journal.visible:
 			_journal.close()
+		elif _spells.visible:
+			_spells.close()
+		elif _rest.visible:
+			_rest.close()
 		elif _save_load.visible:
 			_save_load.close()
 		elif _inventory.visible:
@@ -175,11 +197,13 @@ func open_menu() -> void:
 	Audio.play_sfx("ui_open")
 
 
-## Saving waits until a fight is over (the turn order isn't saved).
+## In a fight, saving waits for one of the party's turns, between moves
+## (loading carries on that turn from there).
 func _can_save() -> bool:
-	if GameState.in_combat():
-		show_toast("You can't save during a fight.")
-		return false
+	if GameState.in_combat() and world != null:
+		if not world.combat.is_player_turn() or not world.combat.targeting.is_empty():
+			show_toast("In a fight, save on one of your turns, between moves.")
+			return false
 	return true
 
 
@@ -216,7 +240,7 @@ func _capture_view() -> Image:
 
 func _modal_open() -> bool:
 	return _inventory.visible or _menu.visible or _save_load.visible or _dialogue.visible \
-			or _journal.visible or _game_over.visible
+			or _journal.visible or _spells.visible or _rest.visible or _game_over.visible
 
 
 ## The "PAUSED" banner is only for the player's own pause, not for menus.
@@ -245,6 +269,8 @@ func _close_all_modals() -> void:
 	_save_load.close()
 	_dialogue.visible = false
 	_journal.visible = false
+	_spells.visible = false
+	_rest.visible = false
 	_game_over.visible = false
 	_menu.visible = false
 	_on_modal_closed()
@@ -253,6 +279,22 @@ func _close_all_modals() -> void:
 func open_journal() -> void:
 	_enter_modal()
 	_journal.open()
+
+
+## Spells and abilities of the selection's leader (or the first member).
+func open_spells() -> void:
+	if world == null or world.party.members.is_empty():
+		return
+	var m: PartyMember = world.party.leader() if world.party.leader() else world.party.members[0]
+	_enter_modal()
+	_spells.open(GameState.party, m.sheet)
+
+
+func open_rest() -> void:
+	if world == null:
+		return
+	_enter_modal()
+	_rest.open(world)
 
 
 func _on_dialogue_requested(npc: Npc, speaker: PartyMember) -> void:
@@ -352,6 +394,8 @@ func _on_selection_changed(selected: Array) -> void:
 	# Clicking portraits while the inventory is open switches whose it shows.
 	if _inventory.visible and not selected.is_empty():
 		_inventory.show_sheet((selected[0] as PartyMember).sheet)
+	if _spells.visible and not selected.is_empty():
+		_spells.show_sheet((selected[0] as PartyMember).sheet)
 
 
 func _on_card_pressed(card: PortraitCard, shift: bool) -> void:
@@ -462,6 +506,8 @@ func _build_sidebar() -> void:
 	vbox.add_child(buttons)
 	_add_button(buttons, "Inventory", open_inventory)
 	_add_button(buttons, "Journal", open_journal)
+	_add_button(buttons, "Spells", open_spells)
+	_add_button(buttons, "Rest", open_rest)
 	_add_button(buttons, "Menu", open_menu)
 	_add_button(buttons, "Select all", func() -> void: world.party.select_all())
 	_add_button(buttons, "Pause", func() -> void: world.set_paused(not get_tree().paused))
@@ -613,6 +659,14 @@ func _build_modals() -> void:
 	_journal.name = "Journal"
 	_journal.closed.connect(_on_modal_closed)
 	center.add_child(_journal)
+	_spells = SpellsScreen.new()
+	_spells.name = "Spells"
+	_spells.closed.connect(_on_modal_closed)
+	center.add_child(_spells)
+	_rest = RestDialog.new()
+	_rest.name = "Rest"
+	_rest.closed.connect(_on_modal_closed)
+	center.add_child(_rest)
 	_game_over = _build_game_over()
 	center.add_child(_game_over)
 	# The conversation panel sits along the bottom of the map area.

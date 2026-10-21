@@ -1,6 +1,7 @@
 extends Node
-## Loads and indexes static game data: terrain, props, items, character
-## sheets, townsfolk (NPCs), quests, dialogues and hostile creatures.
+## Loads and indexes static game data: terrain, props, items, spells, classes
+## and their features, character sheets, townsfolk (NPCs), quests, dialogues
+## and hostile creatures.
 ##
 ## Content is plain JSON under res://data so it can be authored outside Godot.
 ## Textures referenced by data are loaded through load_texture(), which also
@@ -12,6 +13,8 @@ const ITEMS_PATH := "res://data/items/items.json"
 const NPCS_PATH := "res://data/npcs/npcs.json"
 const QUESTS_PATH := "res://data/quests/quests.json"
 const CREATURES_PATH := "res://data/creatures/creatures.json"
+const SPELLS_PATH := "res://data/spells/spells.json"
+const CLASSES_PATH := "res://data/classes/classes.json"
 
 var terrain: Dictionary = {}            # id -> TerrainDef
 var terrain_by_symbol: Dictionary = {}  # symbol -> TerrainDef
@@ -20,6 +23,9 @@ var items: Dictionary = {}              # id -> ItemDef
 var npcs: Dictionary = {}               # id -> NpcDef
 var quests: Dictionary = {}             # id -> QuestDef
 var creatures: Dictionary = {}          # id -> CreatureDef
+var spells: Dictionary = {}             # id -> SpellDef
+var classes: Dictionary = {}            # id -> class entry from classes.json (Dictionary)
+var features: Dictionary = {}           # id -> feature entry from classes.json (Dictionary)
 var _dialogues: Dictionary = {}         # path -> Dialogue (loaded on first use)
 var characters: Dictionary = {}         # id -> CharacterSheet (template, never mutated)
 
@@ -36,6 +42,7 @@ func reload() -> void:
 	_load_terrain()
 	_load_props()
 	_load_items()
+	_load_spells_and_classes()  # before the characters: sheets gain their class features
 	_load_characters()
 	_load_npcs()
 	_load_quests()
@@ -99,6 +106,17 @@ func set_art_style(kind: String, style: String) -> bool:
 			it.icon = load_texture(GameConfig.styled_path(it.icon_path))
 	Events.art_style_changed.emit(kind, style)
 	return true
+
+
+func _load_spells_and_classes() -> void:
+	spells.clear()
+	var d: Variant = JsonUtil.load_json(SPELLS_PATH)
+	if d is Dictionary:
+		for spell_id in d.get("spells", {}):
+			spells[spell_id] = SpellDef.from_dict(spell_id, d["spells"][spell_id])
+	var c: Variant = JsonUtil.load_json(CLASSES_PATH)
+	classes = (c.get("classes", {}) as Dictionary).duplicate(true) if c is Dictionary else {}
+	features = (c.get("features", {}) as Dictionary).duplicate(true) if c is Dictionary else {}
 
 
 func _load_npcs() -> void:

@@ -23,7 +23,12 @@ func test_party_weapon_attacks() -> void:
 	check_eq(g[0].damage, "1d8+3", "one-handed longsword")
 	check(not g[0].is_ranged() and g[0].reach == 1, "melee, reach 1 hex")
 	var wren := CombatRules.weapon_attacks(GameState.member("wren"))
-	check_eq(wren.size(), 2, "Wren: shortsword and an off-hand dagger")
+	check_eq(wren.size(), 3, "Wren: shortsword, an off-hand dagger, and throwing the dagger")
+	var thrown := _attack_named(wren, "thrown")
+	check(thrown != null and thrown.is_ranged() and thrown.thrown_from == "off_hand", "the dagger can be thrown")
+	check(thrown != null and thrown.range_normal == 4 and thrown.range_long == 12 and thrown.damage == "1d4+3"
+			and not thrown.off_hand, "thrown dagger: 20/60 ft = 4/12 hexes, Dex +3, as the Attack action: %s"
+			% [thrown.describe() if thrown else "none"])
 	var sword := _attack_named(wren, "Shortsword")
 	check(sword != null and sword.to_hit == 5 and sword.damage == "1d6+3", "finesse uses Dex +3: %s" % [sword.describe() if sword else "none"])
 	var off := _attack_named(wren, "off hand")

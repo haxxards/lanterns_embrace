@@ -5,6 +5,8 @@ extends RefCounted
 
 var id: String = ""
 var display_name: String = ""
+## SRD creature type: "beast", "humanoid", "undead"... (Sleep and Turn Undead check it).
+var creature_type: String = ""
 var armor_class: int = 10
 var hp: int = 1
 var speed_ft: int = 30
@@ -33,6 +35,7 @@ static func from_dict(creature_id: String, d: Dictionary) -> CreatureDef:
 	c.raw = d
 	c.id = creature_id
 	c.display_name = str(d.get("name", creature_id.capitalize()))
+	c.creature_type = str(d.get("type", ""))
 	c.armor_class = int(d.get("ac", 10))
 	c.hp = maxi(1, int(d.get("hp", 1)))
 	c.speed_ft = int(d.get("speed_ft", 30))

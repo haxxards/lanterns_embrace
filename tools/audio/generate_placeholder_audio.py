@@ -5,7 +5,7 @@ real recording of the same name, or point data/audio/audio.json elsewhere.
 
     pip install numpy scipy soundfile
     python3 tools/audio/generate_placeholder_audio.py            # everything
-    python3 tools/audio/generate_placeholder_audio.py temple     # just one group (sfx, music, temple, ambience, combat)
+    python3 tools/audio/generate_placeholder_audio.py temple     # just one group (sfx, music, temple, ambience, combat, magic)
 
 Sound effects are short one-shots; music and ambience are seamless loops
 (the tail of each loop is folded back onto its start).
@@ -257,6 +257,22 @@ def combat_sfx():
     save("sfx/combat_start.ogg", fade(x), 0.6)
 
 
+def magic_sfx():
+    """Spell sounds (own random generator, so the other groups stay as they are)."""
+    r = np.random.default_rng(23)
+    # A spell is cast: an airy swell under a shimmer of rising bell partials.
+    d = 1.1
+    x = np.zeros(int(d * SR))
+    air = band(noise(0.9, "pink"), 900, 5000) * np.sin(np.pi * np.clip(t(0.9) / 0.9, 0, 1)) ** 2
+    place(x, air, 0.0, 0.35)
+    for k, f in enumerate((660, 880, 1100, 1320, 1760)):
+        tt = t(0.8)
+        glide = f * (1 + 0.06 * tt)  # each partial drifts up a little
+        tone = np.sin(2 * np.pi * np.cumsum(glide) / SR) * env(len(tt), 0.01, 0.25)
+        place(x, tone, 0.06 * k + r.uniform(0, 0.02), 0.5 - 0.06 * k)
+    save("sfx/spell_cast.ogg", fade(x), 0.55)
+
+
 # --------------------------------------------------------------------------
 # Music: plucked-string loops
 # --------------------------------------------------------------------------
@@ -370,6 +386,7 @@ def ambience():
 
 if __name__ == "__main__":
     import sys
-    groups = {"sfx": sfx, "music": music, "temple": temple, "ambience": ambience, "combat": combat_sfx}
-    for name in sys.argv[1:] or ["sfx", "music", "temple", "ambience", "combat"]:
+    groups = {"sfx": sfx, "music": music, "temple": temple, "ambience": ambience, "combat": combat_sfx,
+              "magic": magic_sfx}
+    for name in sys.argv[1:] or list(groups):
         groups[name]()

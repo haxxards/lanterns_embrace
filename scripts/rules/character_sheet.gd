@@ -3,9 +3,10 @@ extends RefCounted
 ## A party member's character sheet, loaded from JSON (see docs/CHARACTER_SHEETS.md).
 ##
 ## The raw dictionary is kept so fields this version of the game does not use
-## yet (spells, features...) survive a load/save round trip. Equipment and the
-## backpack are live objects (ItemStack / Inventory); armour class and speed
-## are derived from them by recalculate().
+## yet survive a load/save round trip; spells and features are read from it
+## (raw["spells"], raw["features"]; see Spellcasting, Features, Classes).
+## Equipment and the backpack are live objects (ItemStack / Inventory); armour
+## class and speed are derived from them by recalculate().
 
 ## Emitted when equipment, backpack contents or hit points change.
 signal changed
@@ -45,6 +46,17 @@ var sprite_path: String = ""
 var animation_path: String = ""
 ## Pixel in the sprite that sits on the hex centre (the character's feet).
 var sprite_origin: Variant = null
+## Spell slots spent since the last long rest: {spell level: count}.
+var slots_used: Dictionary = {}
+## Uses of limited features spent since they last recharged: {feature id: count}.
+var feature_uses: Dictionary = {}
+## Hit dice spent on short rests (a character has one per level).
+var hit_dice_used: int = 0
+## Magic that lasts until a long rest or until used: {"mage_armor": true,
+## "aid": 5, "guidance": true}.
+var effects: Dictionary = {}
+## What the last level-up brought (feature and spell names), for messages.
+var level_up_gains: PackedStringArray = PackedStringArray()
 var errors: PackedStringArray = PackedStringArray()
 var source_path: String = ""
 var raw: Dictionary = {}
@@ -94,6 +106,13 @@ static func from_dict(d: Dictionary, path: String = "") -> CharacterSheet:
 	for stack in s.all_items():
 		if not stack.is_valid():
 			s.errors.append("unknown item '%s'" % stack.id)
+	var used: Dictionary = d.get("slots_used", {}) if d.get("slots_used") is Dictionary else {}
+	for k in used:
+		s.slots_used[int(k)] = int(used[k])
+	s.feature_uses = (d.get("feature_uses", {}) as Dictionary).duplicate() if d.get("feature_uses") is Dictionary else {}
+	s.hit_dice_used = clampi(int(d.get("hit_dice_used", 0)), 0, s.level)
+	s.effects = (d.get("effects", {}) as Dictionary).duplicate() if d.get("effects") is Dictionary else {}
+	Classes.grant(s)  # catch up with the class table (features and spells by level)
 	s.recalculate()
 	var art: Dictionary = d.get("art", {})
 	s.portrait_path = str(art.get("portrait", ""))
@@ -138,6 +157,14 @@ func to_dict() -> Dictionary:
 		eq[slot] = (st.id if st.qty == 1 else st.to_variant()) if st != null else null
 	d["equipment"] = eq
 	d["inventory"] = inventory.to_array()
+	var used := {}
+	for k in slots_used:
+		if int(slots_used[k]) > 0:
+			used[str(k)] = int(slots_used[k])
+	d["slots_used"] = used
+	d["feature_uses"] = feature_uses.duplicate()
+	d["hit_dice_used"] = hit_dice_used
+	d["effects"] = effects.duplicate()
 	return d
 
 
@@ -151,6 +178,15 @@ func ability_mod(ability: String) -> int:
 
 func proficiency_bonus() -> int:
 	return Rules.proficiency_bonus(level)
+
+
+func has_feature(feature_id: String) -> bool:
+	return (raw.get("features", []) as Array).has(feature_id)
+
+
+## Hit dice not yet spent (one per level; a long rest returns half).
+func hit_dice_left() -> int:
+	return maxi(0, level - hit_dice_used)
 
 
 ## Conscious: above 0 hit points.
@@ -298,23 +334,38 @@ func effective_speed_ft() -> int:
 	return maxi(0, speed)
 
 
-## Adds experience; levels up (more hit points) when a threshold is crossed.
-## Returns how many levels were gained.
+## Adds experience; levels up when a threshold is crossed: more hit points, a
+## hit die, and whatever the class table grants at the new level (features,
+## spells, spell slots; see Classes). Returns how many levels were gained;
+## level_up_gains names what came with them.
 @warning_ignore("integer_division")
 func add_xp(amount: int) -> int:
 	xp = maxi(0, xp + amount)
 	var gained := 0
+	level_up_gains = PackedStringArray()
 	while level < Rules.MAX_LEVEL and xp >= Rules.XP_THRESHOLDS[level]:
 		level += 1
 		gained += 1
 		# 5e fixed hit points per level: half the hit die + 1, plus Con.
-		var die := int(str(raw.get("hit_die", "d8")).trim_prefix("d"))
-		var hp := maxi(1, die / 2 + 1 + ability_mod("con"))
+		var hp := maxi(1, Classes.hit_die(self) / 2 + 1 + ability_mod("con"))
 		hp_max += hp
 		if is_alive():
 			hp_current += hp
+		level_up_gains.append_array(Classes.grant(self))
+		var slots := Spellcasting.slots_text(self)
+		if not slots.is_empty() and Spellcasting.is_caster(self):
+			level_up_gains.append("spell slots %s" % slots)
+	recalculate()
 	changed.emit()
 	return gained
+
+
+## "Elowen reaches level 2! New: Mage Armor, spell slots 1st 3/3."
+func level_up_message() -> String:
+	var msg := "%s reaches level %d!" % [display_name, level]
+	if not level_up_gains.is_empty():
+		msg += " New: %s." % ", ".join(level_up_gains)
+	return msg
 
 
 ## Takes damage (never below 0). At 0 hit points a character is down. Damage

@@ -61,6 +61,8 @@ const UNARMORED_DEFENSE := {"barbarian": "con", "monk": "wis"}
 static func armor_class(sheet: CharacterSheet) -> int:
 	var dex := sheet.ability_mod("dex")
 	var ac := 10 + dex
+	if sheet.effects.has("mage_armor"):
+		ac = 13 + dex  # replaced below if armour is worn
 	if (sheet.raw.get("features", []) as Array).has("unarmored_defense") \
 			and UNARMORED_DEFENSE.has(sheet.character_class):
 		ac += sheet.ability_mod(UNARMORED_DEFENSE[sheet.character_class])
@@ -122,12 +124,17 @@ static func roll_expr(expr: String, rng: RandomNumberGenerator = null) -> int:
 	return roll(d["count"], d["sides"], rng) + int(d["bonus"])
 
 
-## d20 + ability modifier (+ proficiency bonus if proficient): a 5e ability check.
+## d20 + ability modifier (+ proficiency bonus if proficient, twice with
+## Expertise): a 5e ability check. A Guidance spell on the character adds 1d4
+## and is used up.
 static func ability_check(sheet: CharacterSheet, ability: String, proficient: bool,
-		rng: RandomNumberGenerator = null) -> int:
+		rng: RandomNumberGenerator = null, expertise: bool = false) -> int:
 	var total := roll(1, 20, rng) + sheet.ability_mod(ability)
 	if proficient:
-		total += sheet.proficiency_bonus()
+		total += sheet.proficiency_bonus() * (2 if expertise else 1)
+	if sheet.effects.has("guidance"):
+		total += roll(1, 4, rng)
+		sheet.effects.erase("guidance")
 	return total
 
 

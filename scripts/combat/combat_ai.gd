@@ -13,16 +13,38 @@ extends RefCounted
 ##   - someone in normal range and in sight: shoot the most wounded;
 ##   - otherwise move to a hex in range and in sight (not next to the party),
 ##     then shoot; failing that, close in.
+## turned (Turn Undead)
+##   - Dash as far from the cleric as it can, and don't attack.
+## (Asleep creatures don't get here: their turns pass.)
 
 
 static func take_turn(m: CombatManager, c: Combatant) -> void:
-	if m.conscious_enemies_of(c).is_empty() or not c.is_conscious():
+	if m.conscious_enemies_of(c).is_empty() or not c.can_act():
+		return
+	if c.turned_by != null:
+		await _flee(m, c, c.turned_by)
 		return
 	var def := (c.sheet as CreatureSheet).def if c.sheet is CreatureSheet else null
 	if def != null and def.ai == "ranged" and c.ranged_attack() != null:
 		await _ranged_turn(m, c)
 	else:
 		await _melee_turn(m, c)
+
+
+## Dash to the reachable hex furthest from `from` (the cheapest of those).
+static func _flee(m: CombatManager, c: Combatant, from: Combatant) -> void:
+	m.ai_dash(c)
+	var reach := m.reachable_for(c)
+	var best: Variant = null
+	var best_key := Vector2(-INF, -INF)
+	for h in reach:
+		var key := Vector2(Hex.distance(h, from.hex()), -float(reach[h]))
+		if key > best_key:
+			best_key = key
+			best = h
+	if best != null and best != c.hex():
+		m.log_line("%s flees from %s." % [c.display_name(), from.display_name()])
+		await m.move_along(c, c.actor.path_to(best))
 
 
 static func _melee_turn(m: CombatManager, c: Combatant) -> void:
@@ -37,7 +59,7 @@ static func _melee_turn(m: CombatManager, c: Combatant) -> void:
 			await _close_in(m, c, targets, true)
 			return
 		await m.move_along(c, c.actor.path_to(plan["hex"]))
-		if not m.active or not c.is_conscious():
+		if not m.in_fight(c) or not c.is_conscious():
 			return
 		adjacent = _within(c.hex(), m.conscious_enemies_of(c), melee.reach)
 	if adjacent.is_empty() or c.action_used:
@@ -60,7 +82,7 @@ static func _ranged_turn(m: CombatManager, c: Combatant) -> void:
 			await _close_in(m, c, targets, false)
 			return
 		await m.move_along(c, c.actor.path_to(spot))
-		if not m.active or not c.is_conscious():
+		if not m.in_fight(c) or not c.is_conscious():
 			return
 		shootable = _shootable(m, c.hex(), m.conscious_enemies_of(c), bow.range_normal)
 		if shootable.is_empty():

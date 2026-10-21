@@ -20,7 +20,7 @@ containers and saves only ever store **stacks**: an item id and a quantity,
 | `weapon` | object | `category` (`simple`/`martial`), `damage` (dice, e.g. `"1d8"`), `damage_type`, optional `versatile` dice, `properties` (`finesse`, `light`, `thrown`, `two_handed`, `ammunition`), `range` `[normal, long]` in feet, `ammo` item id. |
 | `armor` | object | Body armour: `type` (`light`/`medium`/`heavy`), `base_ac`, `dex_cap` (medium), `strength` (heavy: below it, speed −10 ft), `stealth_disadvantage`. Shields: `type: "shield"`, `ac_bonus`. |
 | `bonuses` | object | Passive bonuses while worn. `{"ac": 1}` is implemented. |
-| `use` | object | What using it does. `{"heal": "2d4+2"}` is implemented (potions, food). |
+| `use` | object | What using it does: `{"heal": "2d4+2"}` (potions, food), or `{"cast": "<spell id>"}` for a spell scroll (kind `scroll`): read by anyone whose class has the spell, cast at the spell's level with no slot, used up. See [SPELLS.md](SPELLS.md#spell-scrolls). |
 | `tool` | string | `lockpick` lets the holder try locks. |
 
 The special item `gold` (kind `currency`) represents coins in containers. Picking it up

@@ -148,6 +148,11 @@ func describe() -> String:
 		lines.append("+%d AC while worn" % int(bonuses["ac"]))
 	if use.has("heal"):
 		lines.append("Use: heals %s" % use["heal"])
+	if use.has("cast"):
+		var spell: SpellDef = Data.spells.get(str(use["cast"]))
+		if spell != null:
+			lines.append("Use: casts %s (%s spell; %s)" % [spell.display_name, " or ".join(spell.classes),
+					spell.level_text().to_lower()])
 	if not description.is_empty():
 		lines.append(description)
 	lines.append("Weight %s   Value %s" % [format_weight(weight), format_value(value)])

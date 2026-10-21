@@ -1,8 +1,9 @@
 extends TestCase
 ## Phase 4 (first half) on the real main scene: creatures noticing the party,
 ## initiative and turns, moving and attacking, opportunity attacks, the enemy
-## AI, death saves, victory (XP, loot, the slain stay slain), defeat, potions
-## in a fight, and no saving mid-fight. Moves resolve instantly
+## AI, death saves, victory (XP, loot, the slain stay slain), defeat and
+## potions in a fight (spells, features and saving mid-fight are in
+## test_spells.gd). Moves resolve instantly
 ## (combat.animate = false) so the tests are quick and repeatable.
 
 var main: Node
@@ -92,8 +93,6 @@ func test_a_creature_in_sight_starts_a_fight() -> void:
 	check(wolf.in_combat, "the wolf is fighting")
 	check(hud._combat_hud.order_panel.visible, "initiative strip shown")
 	check(await _until_player_turn(), "a party member gets a turn")
-	await hud.quicksave()
-	check(hud._toast_label.text == "You can't save during a fight.", "no saving mid-fight")
 	for m in world.party.members:
 		check(world.grid.is_occupied(m.hex), "%s blocks their hex in a fight" % m.sheet.display_name)
 

@@ -44,6 +44,8 @@ func save_game(slot: String, label: String, world: World, thumbnail: Image = nul
 	for m in world.party.members:
 		positions[m.sheet.id] = m.hex
 	var data := GameState.to_dict(positions, world.camera.position)
+	if world.combat.active:
+		data["combat"] = world.combat.to_dict()
 	var names: Array = []
 	for s in GameState.party:
 		names.append("%s (%d)" % [s.display_name, s.level])

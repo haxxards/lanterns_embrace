@@ -7,8 +7,9 @@ extends RefCounted
 
 
 ## The attacks a party member can make with what they hold: the main-hand
-## weapon (or an unarmed strike), and the off-hand weapon when both are light
-## (two-weapon fighting, a bonus action).
+## weapon (or an unarmed strike), the off-hand weapon when both are light
+## (two-weapon fighting, a bonus action), and throwing a weapon with the
+## "thrown" property (a dagger) from either hand, as the Attack action.
 static func weapon_attacks(sheet: CharacterSheet) -> Array[Attack]:
 	var out: Array[Attack] = []
 	var main := sheet.equipped_def("main_hand")
@@ -24,7 +25,26 @@ static func weapon_attacks(sheet: CharacterSheet) -> Array[Attack]:
 		out.append(_weapon_attack(sheet, main, false, off == null))
 	if main != null and off != null and main.has_property("light") and off.is_weapon() and off.has_property("light"):
 		out.append(_weapon_attack(sheet, off, true, false))
+	for slot in ["main_hand", "off_hand"]:
+		var w := sheet.equipped_def(slot)
+		if w != null and w.is_weapon() and w.has_property("thrown") and w.weapon.has("range"):
+			out.append(_thrown_attack(sheet, w, slot))
 	return out
+
+
+## Throwing `w` from `slot`: a ranged attack with the weapon's own numbers.
+@warning_ignore("integer_division")
+static func _thrown_attack(sheet: CharacterSheet, w: ItemDef, slot: String) -> Attack:
+	var a := _weapon_attack(sheet, w, false, false)
+	var feet := maxi(1, GameConfig.feet_per_hex)
+	var r: Array = w.weapon["range"]
+	a.name = "%s (thrown)" % w.display_name
+	a.range_normal = maxi(1, int(r[0]) / feet)
+	a.range_long = maxi(a.range_normal, int(r[1]) / feet)
+	a.reach = 0
+	a.light = false  # a throw doesn't set up an off-hand attack
+	a.thrown_from = slot
+	return a
 
 
 @warning_ignore("integer_division")
@@ -113,12 +133,20 @@ static func has_feature(sheet: CharacterSheet, feature: String) -> bool:
 	return (sheet.raw.get("features", []) as Array).has(feature)
 
 
-## d20 + save bonus against `dc`: {roll, total, success}.
+## d20 + save bonus (+ `extra`, e.g. Bless's 1d4) against `dc`: {roll, total, success}.
 static func saving_throw(sheet: CharacterSheet, ability: String, dc: int,
-		rng: RandomNumberGenerator = null) -> Dictionary:
+		rng: RandomNumberGenerator = null, extra: int = 0) -> Dictionary:
 	var r := Rules.roll(1, 20, rng)
-	var total := r + sheet.saving_throw_bonus(ability)
+	var total := r + sheet.saving_throw_bonus(ability) + extra
 	return {"roll": r, "total": total, "success": total >= dc}
+
+
+## Chance (0-1) to hit with a Bless die (1d4) added to the roll.
+static func hit_chance_blessed(to_hit: int, ac: int, adv: int) -> float:
+	var p := 0.0
+	for k in range(1, 5):
+		p += hit_chance(to_hit + k, ac, adv)
+	return p / 4.0
 
 
 ## d20 + Dexterity modifier.

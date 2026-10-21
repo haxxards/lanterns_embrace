@@ -179,6 +179,10 @@ func load_map(path: String, entry: String = "") -> bool:
 	Audio.play_music(map.music)
 	Audio.play_ambience(map.ambience)
 	Events.map_loaded.emit(map.id)
+	if not GameState.pending_combat.is_empty():
+		var fight := GameState.pending_combat
+		GameState.pending_combat = {}
+		combat.restore(fight)  # a game saved mid-fight: the fight goes on
 	return true
 
 
@@ -528,6 +532,8 @@ func _on_mouse_button(mb: InputEventMouseButton) -> void:
 	if combat.active:
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 			_on_combat_click(world_pos)
+		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			combat.cancel_targeting()
 		return
 	if mb.button_index == MOUSE_BUTTON_LEFT:
 		if mb.pressed:
@@ -587,9 +593,14 @@ func _on_click(world_pos: Vector2, shift: bool) -> void:
 	_refresh_hover(true)
 
 
-## A click during a fight: an enemy is attacked, ground is walked to.
+## A click during a fight: an enemy is attacked, ground is walked to. While a
+## spell waits for a target, the click chooses it instead.
 func _on_combat_click(world_pos: Vector2) -> void:
 	if not combat.is_player_turn():
+		return
+	if not combat.targeting.is_empty():
+		combat.confirm_target(grid.world_to_hex(world_pos), _combatant_at(world_pos))
+		_refresh_hover(true)
 		return
 	var foe := creature_at(world_pos)
 	if foe:
@@ -597,6 +608,17 @@ func _on_combat_click(world_pos: Vector2) -> void:
 	elif party.member_at(world_pos) == null:
 		combat.player_move(grid.world_to_hex(world_pos))
 	_refresh_hover(true)
+
+
+## The fighter (creature or party member) under the cursor, or null.
+func _combatant_at(world_pos: Vector2) -> Combatant:
+	var foe := creature_at(world_pos)
+	if foe:
+		return combat.combatant_of(foe)
+	var member := party.member_at(world_pos)
+	if member:
+		return combat.combatant_of(member)
+	return combat.combatant_at_hex(grid.world_to_hex(world_pos))
 
 
 ## Viewport (screen) position -> world position, through the camera.
@@ -671,12 +693,22 @@ func _on_combat_changed() -> void:
 func _combat_hover(h: Vector2i, foe: Creature, info: Dictionary) -> void:
 	cursor.preview_path.clear()
 	cursor.hover_hex = null
+	cursor.area = []
 	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 	if not combat.is_player_turn():
 		cursor.reachable = {}
 		combat.set_hint("")
 		return
 	var me := combat.current
+	if not combat.targeting.is_empty():
+		# Choosing a spell's target: show what it would cover and do.
+		var p := combat.preview_target(h, _combatant_at(screen_to_world(_mouse_screen)))
+		cursor.area = p["hexes"]
+		cursor.area_ok = p["ok"]
+		info["action"] = str(p["text"])
+		combat.set_hint("%s   (right-click or Esc: cancel)" % p["text"])
+		Input.set_default_cursor_shape(Input.CURSOR_CROSS if p["ok"] else Input.CURSOR_FORBIDDEN)
+		return
 	if foe:
 		var text := combat.describe_attack(me, combat.combatant_of(foe))
 		info["action"] = text

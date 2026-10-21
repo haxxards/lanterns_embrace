@@ -1,6 +1,6 @@
 """Inventory icons in the "painted" style.
 
-The same 34 items as render_items.py, re-modelled with more detail (fullered
+The same 37 items as render_items.py, re-modelled with more detail (fullered
 blades, wrapped grips, riveted rims, mail rings, buckles...) and rendered with
 the painted materials, lighting and finishing pass from painted.py. Which set
 the game shows is chosen by "art_style" in data/config/game_config.json.
@@ -1129,6 +1129,76 @@ def gold(root):
                  (r.uniform(-0.25, 0.25), r.uniform(-0.25, 0.25), r.uniform(0, math.tau)))
     for h in range(5):  # a little stack beside the pile
         coin((0.12, -0.05, 0.004 + h * 0.0075), (0, 0, r.uniform(0, math.tau)))
+
+
+def spiral_roll(name, x0, x1, r_out, turns, thick, mat, parent):
+    """Parchment rolled up along X: an Archimedean spiral (radius growing
+    steadily with angle) swept from x0 to x1, so the ends show the turns of
+    the sheet. The outer edge finishes at the bottom, heading towards -Y,
+    where the unrolled tongue carries on."""
+    n = int(turns * 32)
+    pts = []
+    for k in range(n + 1):
+        t = k / n
+        a = 1.5 * math.pi - (1 - t) * turns * 2 * math.pi  # ends at 3/2 pi: straight down
+        r = r_out * (0.2 + 0.8 * t)
+        pts.append((-r * math.cos(a), r * math.sin(a)))  # mirrored in Y so it unrolls towards -Y
+    verts = [(x0, y, z) for y, z in pts] + [(x1, y, z) for y, z in pts]
+    faces = [(k, k + 1, n + 2 + k, n + 1 + k) for k in range(n)]
+    obj = lib.mesh_object(name, verts, faces, mat=mat, parent=parent, smooth=True)
+    sol = obj.modifiers.new("Thick", 'SOLIDIFY')
+    sol.thickness = thick
+    return obj
+
+
+def scroll(root, ribbon_color, seal_color, rune_color):
+    """A spell scroll: a parchment roll with a tongue unrolled towards the
+    viewer, inked lines and a glowing rune on it, tied with a ribbon and
+    sealed with wax. Ribbon, seal and rune are in the spell's colours."""
+    parchment = painted.leather("Parchment", "#ead8a8")
+    r = 0.045
+    spiral_roll("Roll", -0.2, 0.2, r, 3.75, 0.004, parchment, root)
+    plate("Sheet", [(-0.2, 0.0), (0.2, 0.0), (0.2, -0.17), (0.07, -0.18), (-0.06, -0.165), (-0.2, -0.175)], 0.004,
+          parchment, root, bevel_w=0.0).location.z = -r
+    ink = painted.leather("Ink", "#2e2014")
+    for i, w in enumerate((0.15, 0.12, 0.14, 0.08)):
+        x = -0.17
+        plate(f"Line{i}", [(x, 0), (x + w, 0), (x + w, -0.008), (x, -0.008)], 0.001, ink, root,
+              bevel_w=0.0).location = (0, -0.05 - i * 0.03, -r + 0.0025)
+    rune = painted.glow("Rune", rune_color, 4.0, "#fff6e0", gloss=False)
+    ri.torus("Rune", (0.1, -0.1, -r + 0.003), 0.032, 0.006, rune, root).scale = (1, 1, 0.4)
+    for k in range(3):
+        a = math.tau * k / 3 + 0.5
+        tube(f"RuneStroke{k}", [(0.1 + math.cos(a) * 0.026, -0.1 + math.sin(a) * 0.026, -r + 0.003),
+                                (0.1 - math.cos(a) * 0.01, -0.1 - math.sin(a) * 0.01, -r + 0.003)],
+             0.0045, rune, root, sides=6)
+    ribbon = painted.cloth("Ribbon", ribbon_color, weave=300.0)
+    ring_x("Band", 0.03, r + 0.003, 0.006, ribbon, root).scale = (1.0, 1.0, 1.6)
+    for k, (dx, ang) in enumerate(((-0.014, -0.25), (0.016, 0.3))):
+        tail = plate(f"Tail{k}", [(-0.008, 0), (0.008, 0), (0.01, -0.1), (0.0, -0.088), (-0.01, -0.1)], 0.003,
+                     ribbon, root, bevel_w=0.0)
+        tail.location = (0.03 + dx, -0.02, -r + 0.004)
+        tail.rotation_euler = (0, 0, ang)
+    wax = painted.leather("Wax", seal_color)
+    ball("Seal", (0.03, -0.05, -r + 0.01), 0.03, wax, root, scale=(1, 1, 0.35))
+    ri.torus("SealRim", (0.03, -0.05, -r + 0.019), 0.017, 0.003, wax, root)
+    ball("SealBoss", (0.03, -0.05, -r + 0.019), 0.008, wax, root, scale=(1, 1, 0.5))
+    root.rotation_euler = (0, 0, math.radians(25))
+
+
+@item("scroll_of_cure_wounds", 55)
+def scroll_of_cure_wounds(root):
+    scroll(root, "#3a8a48", "#b8242a", "#60e080")
+
+
+@item("scroll_of_magic_missile", 55)
+def scroll_of_magic_missile(root):
+    scroll(root, "#5a3aa0", "#2a4ab0", "#a080ff")
+
+
+@item("scroll_of_burning_hands", 55)
+def scroll_of_burning_hands(root):
+    scroll(root, "#c0501a", "#7a1410", "#ff8a2a")
 
 
 # --------------------------------------------------------------------------

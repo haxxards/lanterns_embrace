@@ -12,6 +12,8 @@ const PATH_DIFFICULT := Color(1.0, 0.75, 0.3, 0.95)
 const DEST_COLOR := Color(0.35, 0.95, 0.45, 0.7)
 const REACH_FILL := Color(0.45, 0.85, 1.0, 0.13)
 const DOOR_FILL := Color(1.0, 0.82, 0.35, 0.22)
+const AREA_OK := Color(1.0, 0.62, 0.2, 0.3)
+const AREA_BAD := Color(0.95, 0.3, 0.25, 0.25)
 
 var grid: HexGrid
 var party: PartyController
@@ -24,6 +26,9 @@ var reachable: Dictionary = {}
 ## or on the zone itself (hot: a click goes in).
 var door_zone: Array[Vector2i] = []
 var door_zone_hot: bool = false
+## A spell's target or area while choosing it (red if it can't be cast there).
+var area: Array[Vector2i] = []
+var area_ok: bool = true
 
 
 func _process(_delta: float) -> void:
@@ -36,6 +41,10 @@ func _draw() -> void:
 	var r := grid.radius
 	for h in reachable:
 		draw_colored_polygon(Hex.corners(grid.hex_to_world(h), r * 0.92), REACH_FILL)
+	for h in area:
+		var fill := AREA_OK if area_ok else AREA_BAD
+		draw_colored_polygon(Hex.corners(grid.hex_to_world(h), r * 0.92), fill)
+		_hex_outline(h, r * 0.92, Color(fill, 0.9), 1.5)
 	var strength := 1.0 if door_zone_hot else 0.55
 	for h in door_zone:
 		draw_colored_polygon(Hex.corners(grid.hex_to_world(h), r * 0.92), Color(DOOR_FILL, DOOR_FILL.a * strength))

@@ -708,8 +708,8 @@ style switch is ready for that: their files would go in `assets/characters/paint
 |---|---|
 | `tools/art/blender/painted.py` | The painted materials, the light rig and the `PREVIEW` switch |
 | `tools/art/blender/paint_filter.py` | The finishing pass: Kuwahara brushwork, colour, outline (numpy and Pillow only) |
-| `tools/art/blender/render_items_painted.py` | The 34 painted models and `render_icon()` |
-| `tools/art/blender/render_items.py` | The classic icons (unchanged) |
+| `tools/art/blender/render_items_painted.py` | The painted models (the 34 original items, plus the spell scrolls added in Phase 4) and `render_icon()` |
+| `tools/art/blender/render_items.py` | The classic icons (unchanged, plus the spell scrolls) |
 | `tools/art/blender/render_all.py` | Renders everything; `--style` picks a style |
 | `tools/art/blender/painted_breakdown.py` | The step-by-step shield pictures, the brush close-ups and the AgX strip in this document |
 | `tools/art/blender/style_test.py` | The Garrick experiment from section 10 |

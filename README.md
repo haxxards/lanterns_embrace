@@ -11,6 +11,8 @@ data-driven form you can extend, not a finished game.
 ![Village overview](docs/images/phase1_overview.jpg)
 ![A fight at the bandit camp: initiative along the top, the combat log and action bar below](docs/images/phase4_fight.jpg)
 ![Choosing where to move: the shaded hexes are within this turn's movement](docs/images/phase4_move.jpg)
+![Aiming Burning Hands: the cone catches two bandits, with spell buttons in the combat bar](docs/images/phase4_burning_hands.jpg)
+![The spells and abilities screen: Odran choosing whom to heal with Cure Wounds](docs/images/phase4_spells_screen.jpg)
 ![Talking to the innkeeper behind his bar](docs/images/phase3_dialogue.jpg)
 ![The Temple of the Dawn: Father Anselm offers to raise a fallen companion](docs/images/phase3_temple.jpg)
 ![Buying from the innkeeper](docs/images/phase3_shop.jpg)
@@ -23,7 +25,41 @@ the code and data in order and has a "where do I find..." table. It leans on
 **[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md)**, which explains how everything works, with
 Godot explained along the way.
 
-## Status: Phase 4 (first half), combat
+## Status: Phase 4 complete (combat, spells and abilities)
+
+### Phase 4, second half: spells and abilities
+
+- **Spellcasting** (5e SRD): Elowen the wizard and Odran the cleric cast 16 spells, from
+  data in [`data/spells/spells.json`](data/spells/spells.json): Fire Bolt, Sacred Flame,
+  Guidance, Spare the Dying, Magic Missile, Burning Hands, Sleep, Shield, Mage Armor, Bless,
+  Cure Wounds, Healing Word, Guiding Bolt, and from level 3 Scorching Ray, Misty Step and
+  Aid. Spell attack bonus and save DC from the casting ability, cantrips that grow at
+  levels 5, 11 and 17, and casting with a higher slot for more dice, darts or targets.
+  See [docs/SPELLS.md](docs/SPELLS.md).
+- **Spell slots** from the SRD full-caster table, shown as pips on the portraits, the
+  spells screen and the combat bar; they come back on a long rest.
+- **Casting in a fight:** spell, feature and scroll buttons in the combat bar (greyed out
+  with the reason when they can't be used). Targeted spells preview on the map: areas (a
+  circle for Sleep, a 60° cone for Burning Hands) light up amber, or red when the cast won't work, with who would be
+  caught and the chance to hit. Conditions (asleep, turned, blessed, marked by Guiding
+  Bolt), concentration with Constitution saves, the bonus-action spell rule, and Shield
+  cast for the wizard as a reaction when it would turn a hit into a miss.
+- **Class features from a class table** ([`data/classes/classes.json`](data/classes/classes.json)),
+  gained on level-up with the new spells and slots: Second Wind and Action Surge (fighter),
+  Expertise and Cunning Action (rogue), Arcane Recovery (wizard), Disciple of Life and
+  Channel Divinity: Turn Undead and Preserve Life (Life cleric).
+- **Spells and abilities screen** (B, or the sidebar's Spells button): each member's casting
+  numbers, slots, hit dice, spells, features and scrolls, with healing and lasting spells
+  (and Second Wind, Preserve Life) usable outside a fight.
+- **Resting** (R, or the sidebar's Rest button): a short rest spends hit dice and brings
+  back short-rest features; a long rest restores everything but needs a roof (indoors, or
+  a room at Tobin's inn). Not with enemies about.
+- **Spell scrolls** (Cure Wounds, Magic Missile, Burning Hands), with icons in both art
+  styles: read by anyone with the spell on their class list, no slot needed. Wenna sells
+  them and two chests on the Old Temple Road hold them.
+- **The rest of combat:** thrown weapons (Wren throws her dagger when she can't reach; it
+  lands at the target's feet), **getting away** from a fight by breaking line of sight or
+  distance, and **saving mid-fight** on a party member's turn (the fight resumes on load).
 
 ### Painted item icons
 
@@ -100,7 +136,7 @@ Godot explained along the way.
 
 ### Phase 2: items and places
 
-- **Items:** 33 item types with 5e SRD numbers (weapons, armour, shields, rings, cloaks,
+- **Items:** 34 item types with 5e SRD numbers (weapons, armour, shields, rings, cloaks,
   potions, food, tools, gems, keys), each with a pre-rendered icon. Defined in
   [`data/items/items.json`](data/items/items.json), see [docs/ITEMS.md](docs/ITEMS.md).
 - **Inventory and paper doll** (I): ten equipment slots around a large portrait, a 16-slot
@@ -202,9 +238,12 @@ Godot explained along the way.
 | Left click a creature | Start a fight |
 | In a fight: left click ground / an enemy | Move within the shaded area / attack (stepping up first if needed) |
 | In a fight: Space | End the turn |
+| In a fight: a spell or ability button, then a target | Cast or use it (right click or Esc cancels the targeting) |
 | `1`–`9` in a conversation | Pick an answer (or click it) |
 | `I` | Inventory (drag to move or equip, right-click to use) |
 | `J` | Journal: quests and XP |
+| `B` | Spells and abilities: slots, spells, features, scrolls; cast healing outside a fight |
+| `R` | Rest: short or long |
 | Esc | Menu: save, load, quicksave, quickload, item icon style, quit (also closes windows) |
 | F5 / F9 | Quicksave / quickload |
 | Double-click a portrait | Centre the camera on that member |
@@ -252,6 +291,12 @@ Godot explained along the way.
   hexes in front of its door (point at the inn to see them).
 - Press Esc and click **Item icons** to flip between the classic and painted icons, then
   open the inventory (I).
+- In a fight, put the wolves to sleep with Elowen's **Sleep** (watch the circle: allies in
+  it fall asleep too), or line up a **Burning Hands** cone. Bless the front line with
+  Odran, then patch them up with **Healing Word** as a bonus action.
+- After a fight, press **R** for a short rest, or **B** to cast Cure Wounds. Take a room at
+  Tobin's for a long rest to get the spell slots back.
+- Save in the middle of a fight on one of your turns, and load it back.
 
 All the feel-related numbers are in [`data/config/game_config.json`](data/config/game_config.json):
 
@@ -375,14 +420,16 @@ arithmetic (weapon attacks, hit chances, critical hits, damage types, death save
 movement range) and fights on the real map: noticing the party, movement limits,
 attacking, Dash, Dodge and Disengage, opportunity attacks, the wolf and archer AI, victory
 with XP and loot, death saves, potions mid-fight, defeat, and the road to the old temple.
-Any engine or script error raised during a test fails that test.
+Its second half adds the spell rules (slots, dice, healing, level-up grants, features,
+rests) and spells, features, scrolls, thrown weapons, getting away and saving mid-fight on
+the real map. Any engine or script error raised during a test fails that test.
 
 ## Roadmap
 
 This order follows the plan agreed before Phase 1. **[docs/TODO.md](docs/TODO.md)** lists
 every item of that plan and every request since, each flagged **COMPLETE**, **PENDING** or
 **NOT STARTED**. See the end of [docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phases 3
-and 4 were added and where the rest of Phase 4 plugs into the code.
+and 4 were added.
 
 1. ~~**Foundation:** hex grid, pathfinding, party selection and movement, camera, minimap, sample map~~
 2. ~~**Items and places:** item and equipment data, inventory and paper doll, chests and
@@ -390,11 +437,11 @@ and 4 were added and where the rest of Phase 4 plugs into the code.
    save/load with a basic slot menu, and minimal drop-in audio hooks.~~
 3. ~~**People:** NPCs, a branching dialogue system (in-house, no addons), quests, vendors
    (buy and sell), temple revival (paid service, game over only when the whole party is down).~~
-4. **Combat:** hostile actions trigger turn-based mode, with initiative, movement and
+4. ~~**Combat:** hostile actions trigger turn-based mode, with initiative, movement and
    actions on hexes. Also weapons and armour, spells and abilities, enemies and AI, death,
-   XP and levelling.
+   XP and levelling.~~
    - ~~First half: turns, movement, attacks, enemies and AI, XP from fights, death saves.~~
-   - Second half: spells and cantrips, spell slots, spell scrolls, resting, class features.
+   - ~~Second half: spells and cantrips, spell slots, spell scrolls, resting, class features.~~
 
 Out of scope for now: character creation and cutscenes.
 

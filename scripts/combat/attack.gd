@@ -24,6 +24,10 @@ var off_hand: bool = false
 var on_hit: Dictionary = {}
 ## The weapon used, if any.
 var weapon: ItemDef = null
+## A spell attack (Fire Bolt...): no Sneak Attack, no ammunition.
+var spell: bool = false
+## A thrown weapon: the equipment slot it leaves ("main_hand"/"off_hand"), else "".
+var thrown_from: String = ""
 
 
 func is_ranged() -> bool:

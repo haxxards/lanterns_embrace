@@ -5,10 +5,12 @@ code lives in `scripts/combat/`:
 
 | File | Class | What it does |
 |---|---|---|
-| `combat_manager.gd` | **CombatManager** | The fight: initiative, the turn loop, movement, attacks, opportunity attacks, death saves, victory and defeat. A node under `World`. |
+| `combat_manager.gd` | **CombatManager** | The fight: initiative, the turn loop, movement, attacks, opportunity attacks, death saves, spells and features (targeting, conditions, concentration), victory, defeat and getting away, and saving and restoring a fight. A node under `World`. |
+| `combat_spells.gd` | **CombatSpells** | Casting in a fight: what can be cast now, areas on the grid, the cursor preview, the effects (see [SPELLS.md](SPELLS.md)). |
+| `combat_features.gd` | **CombatFeatures** | Second Wind, Action Surge, Cunning Action, Turn Undead, Preserve Life in a fight. |
 | `combat_ai.gd` | **CombatAI** | How creatures take their turns. |
 | `combat_rules.gd` | **CombatRules** | The arithmetic, with no positions or nodes: weapon attacks from a sheet, hit chances, attack and damage rolls, damage types, sneak attack, saves, initiative. |
-| `combatant.gd` | **Combatant** | One participant's per-turn bookkeeping: movement left, action, bonus action, reaction, dodging, prone... |
+| `combatant.gd` | **Combatant** | One participant's per-turn bookkeeping: movement left, action, bonus action, reaction, dodging, prone, and conditions from spells (asleep, turned, blessed, marked, Shield, concentration). |
 | `attack.gd` | **Attack** | One way to attack: to-hit, damage dice, reach or range, ammunition. |
 | `creature_def.gd`, `creature_sheet.gd` | **CreatureDef**, **CreatureSheet** | A stat block from `data/creatures/creatures.json`, and a live creature. A `CreatureSheet` *is* a `CharacterSheet`, so combat treats monsters and the party alike. |
 
@@ -24,16 +26,18 @@ the party members and townsfolk.
 - Everyone stops where they are, rolls **initiative** (d20 + Dex modifier) and acts in that
   order. Creatures that notice the fight later join at the start of the next round.
 
-The game can't be saved during a fight (quickload works).
+A fight can be saved on a party member's turn, between moves; loading carries on that turn
+(see [SPELLS.md](SPELLS.md#saving-in-the-middle-of-a-fight)).
 
 ## A turn
 
 | | |
 |---|---|
 | **Movement** | Up to your speed (30 ft = 6 hexes; difficult ground costs double). Click a hex in the shaded area; the path and cost are previewed. You can split movement around your action. |
-| **Action** | **Attack** (click an enemy: if it is out of melee reach but you can walk next to it, you walk and then strike), **Dash** (double movement), **Dodge** (attacks against you have disadvantage until your next turn), **Disengage** (your movement provokes no opportunity attacks), or **drink or give a potion** (to yourself or someone next to you, from the inventory screen). |
-| **Bonus action** | An **off-hand attack** after attacking with a light melee weapon, if a light weapon is in the other hand (two-weapon fighting: no ability modifier on its damage). Click the enemy again. |
-| **Reaction** | An **opportunity attack**, made automatically when an enemy leaves your melee reach without disengaging. |
+| **Action** | **Attack** (click an enemy: if it is out of melee reach but you can walk next to it, you walk and then strike; a thrown weapon is thrown when you can't), **Dash** (double movement), **Dodge** (attacks against you have disadvantage until your next turn), **Disengage** (your movement provokes no opportunity attacks), **cast a spell** or **read a scroll** (the spell buttons in the combat bar), **Turn Undead** or **Preserve Life**, or **drink or give a potion** (to yourself or someone next to you, from the inventory screen). |
+| **Bonus action** | An **off-hand attack** after attacking with a light melee weapon, if a light weapon is in the other hand (two-weapon fighting: no ability modifier on its damage). Click the enemy again. Or a bonus-action spell (Healing Word, Misty Step), **Second Wind**, or the rogue's **Cunning Action** (Dash or Disengage). |
+| **Reaction** | An **opportunity attack**, made automatically when an enemy leaves your melee reach without disengaging. For a wizard, **Shield**, cast automatically when it would turn a hit into a miss. |
+| **Free** | The fighter's **Action Surge**: one more action this turn. |
 | **End turn** | Space, or the button. |
 
 During a fight every combatant blocks the hex it stands on. Party members walk exactly hex
@@ -47,12 +51,16 @@ by hex, not with the free-walking smoothing used when exploring.
   weapons; the better of the two for finesse weapons) plus proficiency if trained.
   Versatile weapons use the larger die when the other hand is empty. Bows use up arrows.
 - **Advantage** (roll two d20s, keep the higher) for attacking someone **prone** from next
-  to them or someone **unconscious**, and for a wolf's **Pack Tactics** (an ally next to
-  the target). **Disadvantage** (keep the lower) against someone **dodging**, against a
+  to them, someone **unconscious** or **asleep**, someone marked by **Guiding Bolt**, and
+  for a wolf's **Pack Tactics** (an ally next to the target). **Bless** adds 1d4 to the
+  roll. **Disadvantage** (keep the lower) against someone **dodging**, against a
   prone target from range, at **long range**, and for a ranged attack with an enemy next
   to you. Both at once cancel out.
 - **Damage types:** creatures can be vulnerable (double), resistant (half) or immune.
   Skeletons are vulnerable to bludgeoning (Odran's mace) and immune to poison.
+- **Thrown weapons** (Wren's dagger: 20/60 ft): when the target can't be reached on foot
+  this turn, the dagger is thrown instead. It leaves the hand and lands on the target's
+  hex, to be picked up from the ground afterwards.
 - **Sneak Attack** (Wren): once per turn, extra d6s (1d6 at levels 1–2) with a finesse or
   ranged weapon, when the attack has advantage or an ally is next to the target.
 - **On-hit effects:** a wolf's bite knocks the target **prone** unless it makes a DC 11
@@ -82,7 +90,10 @@ by hex, not with the free-walking smoothing used when exploring.
   dead: the map remembers them, in saves too. When a whole encounter group is dead,
   the condition `{"defeated": "<group>"}` becomes true, which quests use.
 - **Defeat** when no party member is left standing: the game-over screen.
-- There is no fleeing yet: a fight lasts until one side is down.
+- **Getting away**: from the second round on, if no conscious enemy is within its aggro
+  range + 2 hexes of a conscious party member, in sight, the party has escaped. The fight
+  ends and the XP of anything slain so far is shared. Walk away (Disengage first, or
+  accept the opportunity attacks); creatures that can't see you don't follow.
 
 ## Enemy AI
 
@@ -95,6 +106,8 @@ by hex, not with the free-walking smoothing used when exploring.
 - **Ranged** creatures use their melee weapon on anyone next to them; otherwise they shoot
   the most wounded target in range and in sight, moving first to a spot in range and in
   sight (and not next to the party) if they need to.
+- **Turned** undead Dash as far from the cleric as they can and don't attack. **Asleep**
+  creatures' turns pass.
 
 ## Creatures: `data/creatures/creatures.json`
 
@@ -151,9 +164,9 @@ critical hits, damage types, death saves, creature sheets, movement range).
 `tests/integration/test_combat.gd` fights on the real map with `combat.animate = false`, so
 moves resolve at once: noticing, movement limits, attacking, Dash/Dodge/Disengage,
 opportunity attacks, the AI, victory with XP and loot, death saves, potions, defeat, and the
-road to the old temple.
+road to the old temple. `tests/integration/test_spells.gd` covers spells, features,
+scrolls, thrown weapons, getting away and saving mid-fight (see [SPELLS.md](SPELLS.md)).
 
-## Not yet (Phase 4, second half)
+## Spells and features
 
-Spells and cantrips, spell slots, spell scrolls, resting (short and long), Second Wind and
-other class features, thrown weapons, fleeing a fight, and saving mid-fight.
+Spells, spell slots, scrolls, class features and resting are in [SPELLS.md](SPELLS.md).

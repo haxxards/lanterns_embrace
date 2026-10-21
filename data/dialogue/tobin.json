@@ -28,7 +28,7 @@
 		"room": {
 			"text": "Five gold for a bed, a hot bath and Marta's stew in the morning. You'll wake up a new person. Probably the same person, but rested.",
 			"options": [
-				{"text": "Here's five gold.", "if": {"gold": 5}, "do": [{"take_gold": 5}, {"heal_party": true}], "goto": "rested"},
+				{"text": "Here's five gold.", "if": {"gold": 5}, "do": [{"take_gold": 5}, {"long_rest": true}], "goto": "rested"},
 				{"text": "We can't afford it.", "if": {"not": {"gold": 5}}, "goto": "greet"},
 				{"text": "Maybe later.", "goto": "greet"}
 			]

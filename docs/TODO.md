@@ -4,8 +4,7 @@ Every item we have discussed for this project, from the four-phase plan agreed b
 Phase 1 to the requests made along the way, with a flag:
 
 - **COMPLETE**: works end to end and is covered by tests.
-- **PENDING**: being worked on now (Phase 4, part 2), or partly done. The note says what's
-  left.
+- **PENDING**: being worked on now, or partly done. The note says what's left.
 - **NOT STARTED**: not begun. The note says why (out of scope, deferred, or a known gap).
 
 This file is updated as each item is finished, so it always shows where the project is.
@@ -26,7 +25,10 @@ This file is updated as each item is finished, so it always shows where the proj
 - Phase 2, Items and places - **COMPLETE** (spell scrolls moved to Phase 4, part 2)
 - Phase 3, People - **COMPLETE**
 - Phase 4, part 1, Combat - **COMPLETE**
-- Phase 4, part 2, Spells, rests, class features and the rest of combat - **PENDING** (in progress)
+- Phase 4, part 2, Spells, rests, class features and the rest of combat - **COMPLETE**
+
+Nothing is **PENDING** at the moment: every planned item is either complete or listed
+under [Not started](#not-started-ideas-and-gaps).
 
 ---
 
@@ -48,9 +50,10 @@ This file is updated as each item is finished, so it always shows where the proj
 - Dialogue with no addons - **COMPLETE** (the project has no addons at all)
 - Drop-in replaceable placeholders - **COMPLETE**
 - XP - **COMPLETE** (from quests and fights)
-- Levelling - **PENDING**: a level-up adds hit points, and the proficiency bonus and Sneak
-  Attack dice grow. New class features, spell slots and spells per level are part of
-  Phase 4, part 2.
+- Levelling - **COMPLETE**: a level-up adds hit points and a hit die, the proficiency bonus
+  and Sneak Attack dice grow, and the class table grants new features, spells and spell
+  slots ([SPELLS.md](SPELLS.md)). Choosing spells yourself at a level-up is
+  [not started](#not-started-ideas-and-gaps).
 - Fog of war - **COMPLETE**
 - Minimal audio - **COMPLETE**
 - Character creation - **NOT STARTED** (out of scope, as agreed)
@@ -71,7 +74,7 @@ This file is updated as each item is finished, so it always shows where the proj
 
 ## Phase 2: Items and places
 
-- Item and equipment data (34 items with SRD numbers) - **COMPLETE**
+- Item and equipment data (34 items with SRD numbers; 37 with Phase 4's scrolls) - **COMPLETE**
 - Inventory and equipment screen (paper doll, backpack, drag and drop) - **COMPLETE**
 - Chests and drawers (plus cupboards and a crate) - **COMPLETE**
 - Gold, as a shared party purse - **COMPLETE**
@@ -81,7 +84,7 @@ This file is updated as each item is finished, so it always shows where the proj
 - Audio hooks (from your answers) - **COMPLETE**
 - Bar and table add-ons for a house (your request) - **COMPLETE**
 - Dropping and picking up items (your request) - **COMPLETE**
-- Spell scrolls - moved to Phase 4, part 2 (your request); see there
+- Spell scrolls - moved to Phase 4, part 2 (your request) - **COMPLETE** there
 - "The rest of Phase 2", to revisit later - **NOT STARTED**: you didn't name items. The
   item system's known gaps are listed under [Not started](#not-started-ideas-and-gaps).
 
@@ -111,52 +114,54 @@ This file is updated as each item is finished, so it always shows where the proj
 ## Phase 4, part 2: Spells, rests, class features
 
 ### Spells and cantrips
-- Spell data in `data/spells/spells.json` - **PENDING**
-- Spell attack bonus and saving-throw DC from the casting ability - **PENDING**
-- Cantrips Fire Bolt, Sacred Flame, Spare the Dying and Guidance - **PENDING**
-- Cantrip damage growing at levels 5, 11 and 17 - **PENDING**
+- Spell data in `data/spells/spells.json` ([SPELLS.md](SPELLS.md)) - **COMPLETE**
+- Spell attack bonus and saving-throw DC from the casting ability - **COMPLETE**
+- Cantrips Fire Bolt, Sacred Flame, Spare the Dying and Guidance - **COMPLETE**
+- Cantrip damage growing at levels 5, 11 and 17 - **COMPLETE**
 - Level 1 spells: Magic Missile, Burning Hands, Sleep, Shield, Mage Armor, Bless, Cure
-  Wounds, Healing Word, Guiding Bolt - **PENDING**
-- Level 2 spells for casters who reach level 3: Scorching Ray, Misty Step, Aid - **PENDING**
-- Casting with a higher-level slot (upcasting) - **PENDING**
-- Concentration (Bless) - **PENDING**
-- Conditions from spells and features: asleep, turned - **PENDING**
-- Spell areas on the hex grid (circle, cone), previewed before casting - **PENDING**
-- Casting in a fight: spell buttons and targeting - **PENDING**
-- Casting outside a fight (healing, buffs) - **PENDING**
-- Shield cast automatically as a reaction when it would turn a hit into a miss - **PENDING**
+  Wounds, Healing Word, Guiding Bolt - **COMPLETE**
+- Level 2 spells for casters who reach level 3: Scorching Ray, Misty Step, Aid - **COMPLETE**
+- Casting with a higher-level slot (upcasting) - **COMPLETE**
+- Concentration (Bless) - **COMPLETE**
+- Conditions from spells and features: asleep, turned (also blessed, and Guiding Bolt's
+  mark) - **COMPLETE**
+- Spell areas on the hex grid (circle, cone), previewed before casting - **COMPLETE**
+- Casting in a fight: spell buttons and targeting - **COMPLETE**
+- Casting outside a fight (healing, buffs), from the spells screen - **COMPLETE**
+- Shield cast automatically as a reaction when it would turn a hit into a miss - **COMPLETE**
 
 ### Spell slots
-- Slots by class and level (the SRD full-caster table) - **PENDING**
-- Slots shown on the portraits and the spell screen - **PENDING**
+- Slots by class and level (the SRD full-caster table) - **COMPLETE**
+- Slots shown on the portraits and the spell screen - **COMPLETE**
 
 ### Spell scrolls
-- Scroll items, with icons in both art styles - **PENDING**
-- Reading a scroll: a caster with the spell on their class list, no slot used - **PENDING**
-- Scrolls for sale and in loot - **PENDING**
+- Scroll items, with icons in both art styles - **COMPLETE**
+- Reading a scroll: a caster with the spell on their class list, no slot used - **COMPLETE**
+- Scrolls for sale and in loot (Wenna sells Cure Wounds; the bandits' strongbox and the
+  ruin's chest hold one each) - **COMPLETE**
 
-### Resting
-- Short rest: spend hit dice, recover short-rest features - **PENDING**
-- Long rest: hit points, slots and features back; indoors only - **PENDING**
-- A room at Tobin's inn is a long rest - **PENDING**
+### Resting (R, or the sidebar's Rest button)
+- Short rest: spend hit dice, recover short-rest features - **COMPLETE**
+- Long rest: hit points, slots and features back; indoors only - **COMPLETE**
+- A room at Tobin's inn is a long rest - **COMPLETE**
 
 ### Class features
-- Fighter: Second Wind (level 1), Action Surge (level 2) - **PENDING**
+- Fighter: Second Wind (level 1), Action Surge (level 2) - **COMPLETE**
 - Rogue: Expertise with thieves' tools (level 1), Cunning Action Dash and Disengage
-  (level 2) - **PENDING**
-- Wizard: Arcane Recovery (level 1) - **PENDING**
+  (level 2) - **COMPLETE**
+- Wizard: Arcane Recovery (level 1) - **COMPLETE**
 - Cleric, Life domain: Disciple of Life (level 1); Channel Divinity Turn Undead and
-  Preserve Life (level 2) - **PENDING**
-- Features, slots and spells gained on level-up, from a class table - **PENDING**
+  Preserve Life (level 2) - **COMPLETE**
+- Features, slots and spells gained on level-up, from a class table - **COMPLETE**
 
 ### Spell and ability bar (from your first message: "interact with their inventory or spells or abilities")
-- A spells and abilities screen, opened from the sidebar - **PENDING**
-- Ability buttons in the combat bar - **PENDING**
+- A spells and abilities screen, opened from the sidebar (or B) - **COMPLETE**
+- Ability buttons in the combat bar - **COMPLETE**
 
 ### The rest of combat
-- Thrown weapons (daggers) - **PENDING**
-- Fleeing a fight - **PENDING**
-- Saving and loading in the middle of a fight - **PENDING**
+- Thrown weapons (daggers) - **COMPLETE**
+- Fleeing a fight (getting out of the enemies' sight or reach ends it) - **COMPLETE**
+- Saving and loading in the middle of a fight (on a party member's turn) - **COMPLETE**
 
 ---
 
@@ -172,7 +177,7 @@ This file is updated as each item is finished, so it always shows where the proj
 - One commit per phase - **COMPLETE**
 - A guide to how the game is built ([GODOT_GUIDE.md](GODOT_GUIDE.md)) - **COMPLETE**
 - A study checklist ([START_HERE.md](START_HERE.md)) - **COMPLETE**
-- A painted art style for the item icons, rolled out to all 34 - **COMPLETE**
+- A painted art style for the item icons, rolled out to all 34 (and the 3 scrolls since) - **COMPLETE**
 - A config switch between the classic and painted styles, plus an in-game button - **COMPLETE**
 - Documentation of how the painted style was made ([PAINTED_STYLE.md](PAINTED_STYLE.md)) - **COMPLETE**
 - The reference art in the repository - **COMPLETE**
@@ -202,7 +207,11 @@ incomplete without them:
 - Python map generators - **COMPLETE**
 - A headless test suite that fails on any engine error; screenshot scripts - **COMPLETE**
 - A document for each system (MAPS, ITEMS, CHARACTER_SHEETS, DIALOGUE, NPCS_AND_QUESTS,
-  COMBAT, ASSETS, AUDIO) - **COMPLETE**
+  COMBAT, SPELLS, ASSETS, AUDIO) - **COMPLETE**
+- Phase 4, part 2 extras: a rest dialog (R) showing everyone's hit points, hit dice and
+  slots; hit dice per character; Second Wind and Preserve Life usable outside a fight;
+  scrolls readable from the inventory as well as the combat bar; a spell-casting sound;
+  every class feature described on the spells screen - **COMPLETE**
 
 ## Changed from the original proposal
 
@@ -228,7 +237,12 @@ None of these were promised; they are the known limits, listed so nothing is for
 - Enemy spellcasters - **NOT STARTED**
 - Hiding and stealth (Cunning Action's Hide) - **NOT STARTED**
 - A game clock (resting doesn't move time on) - **NOT STARTED**
-- Items whose use does more than heal (only healing and lock-picking today) - **NOT STARTED**
+- Choosing Bless's and Aid's targets by hand (they take the nearest allies) - **NOT STARTED**
+- Concentration spells other than Bless, and more spells beyond 2nd level - **NOT STARTED**
+- Other classes' features and spell lists (only fighter, rogue, wizard and Life cleric
+  have class tables) - **NOT STARTED**
+- Items whose use does more than heal or cast a scroll's spell (healing, scrolls and
+  lock-picking today) - **NOT STARTED**
 - Passive bonuses on worn items other than armour class - **NOT STARTED**
 - Splitting a stack by a chosen amount - **NOT STARTED**
 - Unidentified magic items; trapped containers - **NOT STARTED**

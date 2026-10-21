@@ -215,7 +215,7 @@ func _open_container(opener: CharacterSheet) -> void:
 			Events.toast_requested.emit("Unlocked with the %s." % (key_def.display_name if key_def else "key"))
 		elif container.lock_dc > 0 and opener.inventory.has_tool("lockpick"):
 			var trained := (opener.proficiencies.get("tools", []) as Array).has("thieves_tools")
-			var roll := Rules.ability_check(opener, "dex", trained)
+			var roll := Rules.ability_check(opener, "dex", trained, null, trained and opener.has_feature("expertise"))
 			if roll < container.lock_dc:
 				Audio.play_sfx("locked")
 				Events.toast_requested.emit("%s fails to pick the lock (%d vs DC %d)." % [opener.display_name, roll, container.lock_dc])

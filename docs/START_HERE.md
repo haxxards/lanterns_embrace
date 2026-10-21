@@ -252,6 +252,28 @@ member reaches 0 HP?
 **Try it:** in `data/creatures/creatures.json`, give the wolf `"hp": 1` and fight the pack.
 Then set its `"aggro"` to `20` and see how early they come for you. Put both back.
 
+### Spells, features and rests
+
+- [ ] Read [SPELLS.md](SPELLS.md), then GODOT_GUIDE *Phase 4, second half* (section 12).
+- [ ] The data: `data/spells/spells.json` and `data/classes/classes.json`.
+- [ ] In `scripts/rules/`: `spell_def.gd`, `spellcasting.gd` (slots, `save_dc`,
+      `damage_expr`, `apply_to_sheet`), `classes.gd` (`grant`), `features.gd`, `rest.gd`,
+      then `abilities.gd` (out of a fight).
+- [ ] In `scripts/combat/`: `combat_spells.gd` (`error`, `cone`, `preview`, `cast`),
+      `combat_features.gd`, and in `combat_manager.gd` the functions `abilities_for`,
+      `use_ability`, `confirm_target`, `deal_damage`, `_shield_reaction`, `to_dict` and
+      `restore`.
+- [ ] On screen: `scripts/ui/spells_screen.gd`, `scripts/ui/rest_dialog.gd`, and the
+      ability row in `combat_hud.gd`.
+- [ ] Tests: `tests/unit/test_spells.gd` and `tests/integration/test_spells.gd`.
+
+**Check yourself:** where does a 2nd-level Burning Hands get its extra 1d6? Why can Odran
+cast Cure Wounds from the spells screen but not Bless? What stops a turn that was playing
+out when you loaded a game from carrying on in the loaded fight?
+
+**Try it:** add Ray of Frost (the example in SPELLS.md, *Adding a spell*) and give it to
+wizards at level 1. Elowen gets it on the next load, with a button in the combat bar.
+
 ---
 
 ## Stop 10: saving and loading
@@ -349,6 +371,9 @@ failure, then remove it.
 | Add a dialogue condition or effect | `scripts/dialogue/conditions.gd`, `scripts/dialogue/effects.gd` |
 | Change a monster's stats or loot | `data/creatures/creatures.json` ([COMBAT.md](COMBAT.md)) |
 | Change how monsters fight | `scripts/combat/combat_ai.gd` |
+| Add or change a spell | `data/spells/spells.json` ([SPELLS.md](SPELLS.md)); new effects in `scripts/combat/combat_spells.gd` and `scripts/rules/spellcasting.gd` |
+| Change what a class gets at each level | `data/classes/classes.json` |
+| Change spell slots, save DCs, rests | `scripts/rules/spellcasting.gd`, `scripts/rules/rest.gd` |
 | Change attack, damage or death-save rules | `scripts/combat/combat_rules.gd`, `scripts/rules/character_sheet.gd` |
 | Change what a turn allows (actions, opportunity attacks) | `scripts/combat/combat_manager.gd`, `scripts/combat/combatant.gd` |
 | Change armour class or other 5e numbers | `scripts/rules/rules.gd` |
@@ -378,6 +403,7 @@ failure, then remove it.
 | [DIALOGUE.md](DIALOGUE.md) | Conversation files, conditions and effects |
 | [NPCS_AND_QUESTS.md](NPCS_AND_QUESTS.md) | Townsfolk, quests, shops, the temple |
 | [COMBAT.md](COMBAT.md) | Fights, creatures, the AI |
+| [SPELLS.md](SPELLS.md) | Spells, slots, class features, scrolls, resting, saving mid-fight |
 | [ASSETS.md](ASSETS.md) | Where the art comes from and how to replace or re-render it |
 | [TODO.md](TODO.md) | Every planned and requested item, flagged COMPLETE, PENDING or NOT STARTED |
 | [PAINTED_STYLE.md](PAINTED_STYLE.md) | The painted item icons: switching styles, and how the look is made, with the maths |

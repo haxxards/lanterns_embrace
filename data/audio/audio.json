@@ -17,7 +17,8 @@
 		"error": "res://assets/audio/sfx/error.ogg",
 		"hit": "res://assets/audio/sfx/hit.ogg",
 		"swing_miss": "res://assets/audio/sfx/swing_miss.ogg",
-		"combat_start": "res://assets/audio/sfx/combat_start.ogg"
+		"combat_start": "res://assets/audio/sfx/combat_start.ogg",
+		"spell_cast": "res://assets/audio/sfx/spell_cast.ogg"
 	},
 	"music": {
 		"village": "res://assets/audio/music/village.ogg",

@@ -1,0 +1,89 @@
+{
+	"_comment": "Classes and their features, from the 5e SRD (see docs/SPELLS.md). 'features' and 'spells' list what each level adds; a character gains them on reaching that level. 'slots': 'full' uses the full-caster spell slot table.",
+	"classes": {
+		"fighter": {
+			"name": "Fighter", "hit_die": "d10",
+			"features": {"1": ["fighting_style_defense", "second_wind"], "2": ["action_surge"]}
+		},
+		"rogue": {
+			"name": "Rogue", "hit_die": "d8",
+			"features": {"1": ["expertise", "sneak_attack", "thieves_cant"], "2": ["cunning_action"]}
+		},
+		"wizard": {
+			"name": "Wizard", "hit_die": "d6",
+			"spellcasting": {"ability": "int", "slots": "full"},
+			"features": {"1": ["arcane_recovery"]},
+			"spells": {
+				"1": ["fire_bolt", "light", "mage_hand", "magic_missile", "shield", "sleep", "burning_hands"],
+				"2": ["mage_armor"],
+				"3": ["scorching_ray", "misty_step"]
+			}
+		},
+		"cleric": {
+			"name": "Cleric", "hit_die": "d8",
+			"spellcasting": {"ability": "wis", "slots": "full"},
+			"features": {"1": ["divine_domain", "disciple_of_life"], "2": ["channel_divinity", "turn_undead", "preserve_life"]},
+			"spells": {
+				"1": ["sacred_flame", "guidance", "spare_the_dying", "bless", "cure_wounds", "healing_word", "guiding_bolt"],
+				"3": ["aid"]
+			}
+		}
+	},
+	"features": {
+		"fighting_style_defense": {
+			"name": "Fighting Style: Defense",
+			"description": "+1 armour class while wearing armour."
+		},
+		"second_wind": {
+			"name": "Second Wind", "cost": "bonus", "uses": 1, "recharge": "short",
+			"heal": "1d10", "heal_level": true, "target": "self",
+			"description": "A bonus action: regain 1d10 + fighter level hit points. Once per short rest."
+		},
+		"action_surge": {
+			"name": "Action Surge", "cost": "free", "uses": 1, "recharge": "short", "combat_only": true,
+			"description": "Take one more action this turn. Once per short rest."
+		},
+		"expertise": {
+			"name": "Expertise",
+			"description": "Double proficiency bonus when picking locks with thieves' tools."
+		},
+		"sneak_attack": {
+			"name": "Sneak Attack",
+			"description": "Once a turn, extra damage with a finesse or ranged weapon when you have advantage or an ally is next to the target."
+		},
+		"thieves_cant": {
+			"name": "Thieves' Cant",
+			"description": "The secret language of rogues."
+		},
+		"cunning_action": {
+			"name": "Cunning Action", "combat_only": true,
+			"description": "Dash or Disengage as a bonus action."
+		},
+		"arcane_recovery": {
+			"name": "Arcane Recovery", "uses": 1, "recharge": "long", "on": "short_rest",
+			"description": "Once a day, during a short rest, recover spell slots whose levels add up to half your wizard level (rounded up)."
+		},
+		"divine_domain": {
+			"name": "Divine Domain: Life",
+			"description": "A priest of the dawn, devoted to life and healing."
+		},
+		"disciple_of_life": {
+			"name": "Disciple of Life",
+			"description": "Healing spells of 1st level or higher restore an extra 2 + the spell's level hit points."
+		},
+		"channel_divinity": {
+			"name": "Channel Divinity", "uses": 1, "recharge": "short",
+			"description": "Channel divine power: Turn Undead or Preserve Life. Once per short rest."
+		},
+		"turn_undead": {
+			"name": "Turn Undead", "cost": "action", "uses_from": "channel_divinity", "combat_only": true,
+			"range_ft": 30,
+			"description": "Each undead within 30 feet makes a Wisdom save or flees for a minute (until it takes damage)."
+		},
+		"preserve_life": {
+			"name": "Preserve Life", "cost": "action", "uses_from": "channel_divinity",
+			"range_ft": 30, "target": "allies",
+			"description": "Share out 5 × cleric level hit points among allies within 30 feet, none above half their maximum."
+		}
+	}
+}

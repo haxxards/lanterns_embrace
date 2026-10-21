@@ -1,0 +1,104 @@
+{
+	"_comment": "Spells, from the 5e SRD (see docs/SPELLS.md for every key). range_ft and size_ft are in feet (5 ft = 1 hex). 'higher' is what each slot level above the spell's own adds.",
+	"spells": {
+		"fire_bolt": {
+			"name": "Fire Bolt", "level": 0, "school": "evocation", "classes": ["wizard"],
+			"cast": "action", "range_ft": 120, "target": "enemy",
+			"attack": "ranged", "damage": "1d10", "damage_type": "fire", "cantrip_dice": true,
+			"description": "Hurl a mote of fire: a ranged spell attack for 1d10 fire damage."
+		},
+		"light": {
+			"name": "Light", "level": 0, "school": "evocation", "classes": ["wizard", "cleric"],
+			"cast": "action", "range_ft": 5, "target": "ally", "utility": true,
+			"description": "Make an object shed bright light. (No effect in the game yet.)"
+		},
+		"mage_hand": {
+			"name": "Mage Hand", "level": 0, "school": "conjuration", "classes": ["wizard"],
+			"cast": "action", "range_ft": 30, "target": "self", "utility": true,
+			"description": "A spectral hand that can carry small things. (No effect in the game yet.)"
+		},
+		"sacred_flame": {
+			"name": "Sacred Flame", "level": 0, "school": "evocation", "classes": ["cleric"],
+			"cast": "action", "range_ft": 60, "target": "enemy",
+			"save": "dex", "damage": "1d8", "damage_type": "radiant", "cantrip_dice": true,
+			"description": "Radiance falls on a creature you can see: a Dexterity save, or 1d8 radiant damage."
+		},
+		"guidance": {
+			"name": "Guidance", "level": 0, "school": "divination", "classes": ["cleric"],
+			"cast": "action", "range_ft": 5, "target": "ally", "effect": "guidance", "dice": "1d4",
+			"description": "Touch an ally: they add 1d4 to their next ability check (picking a lock, say)."
+		},
+		"spare_the_dying": {
+			"name": "Spare the Dying", "level": 0, "school": "necromancy", "classes": ["cleric"],
+			"cast": "action", "range_ft": 5, "target": "ally", "effect": "stabilize",
+			"description": "Touch a dying ally: they become stable and stop making death saves."
+		},
+		"magic_missile": {
+			"name": "Magic Missile", "level": 1, "school": "evocation", "classes": ["wizard"],
+			"cast": "action", "range_ft": 120, "target": "enemy",
+			"darts": 3, "damage": "1d4+1", "damage_type": "force", "higher": {"darts": 1},
+			"description": "Three glowing darts that never miss, each 1d4+1 force damage. One more dart per slot level above 1st."
+		},
+		"burning_hands": {
+			"name": "Burning Hands", "level": 1, "school": "evocation", "classes": ["wizard"],
+			"cast": "action", "target": "area", "area": {"shape": "cone", "size_ft": 15},
+			"save": "dex", "half_on_save": true, "damage": "3d6", "damage_type": "fire", "higher": {"damage": "1d6"},
+			"description": "A 15-foot cone of flame: everyone in it makes a Dexterity save, taking 3d6 fire damage, or half on a success. Friends too."
+		},
+		"sleep": {
+			"name": "Sleep", "level": 1, "school": "enchantment", "classes": ["wizard"],
+			"cast": "action", "range_ft": 90, "target": "area", "area": {"shape": "circle", "size_ft": 20},
+			"effect": "sleep", "pool": "5d8", "higher": {"pool": "2d8"},
+			"description": "Roll 5d8: creatures within 20 feet of a point fall asleep, those with the fewest hit points first, until the roll is used up. Undead don't sleep. Friends in the area aren't spared."
+		},
+		"shield": {
+			"name": "Shield", "level": 1, "school": "abjuration", "classes": ["wizard"],
+			"cast": "reaction", "target": "self", "effect": "shield", "ac": 5,
+			"description": "When an attack would hit you, +5 armour class until your next turn, which may turn the hit into a miss. Cast for you automatically when it would."
+		},
+		"mage_armor": {
+			"name": "Mage Armor", "level": 1, "school": "abjuration", "classes": ["wizard"],
+			"cast": "action", "range_ft": 5, "target": "ally", "effect": "mage_armor",
+			"description": "Touch an ally who wears no armour: their armour class becomes 13 + Dexterity until a long rest."
+		},
+		"bless": {
+			"name": "Bless", "level": 1, "school": "enchantment", "classes": ["cleric"],
+			"cast": "action", "range_ft": 30, "target": "allies", "targets": 3, "concentration": true,
+			"effect": "bless", "dice": "1d4", "rounds": 10, "combat_only": true, "higher": {"targets": 1},
+			"description": "Up to three allies within 30 feet add 1d4 to attack rolls and saving throws for 1 minute (concentration). One more ally per slot level above 1st."
+		},
+		"cure_wounds": {
+			"name": "Cure Wounds", "level": 1, "school": "evocation", "classes": ["cleric"],
+			"cast": "action", "range_ft": 5, "target": "ally", "heal": "1d8", "higher": {"heal": "1d8"},
+			"description": "Touch an ally: they regain 1d8 + your Wisdom modifier hit points. Another 1d8 per slot level above 1st."
+		},
+		"healing_word": {
+			"name": "Healing Word", "level": 1, "school": "evocation", "classes": ["cleric"],
+			"cast": "bonus", "range_ft": 60, "target": "ally", "heal": "1d4", "higher": {"heal": "1d4"},
+			"description": "A bonus action: an ally within 60 feet regains 1d4 + your Wisdom modifier hit points."
+		},
+		"guiding_bolt": {
+			"name": "Guiding Bolt", "level": 1, "school": "evocation", "classes": ["cleric"],
+			"cast": "action", "range_ft": 120, "target": "enemy", "effect": "mark",
+			"attack": "ranged", "damage": "4d6", "damage_type": "radiant", "higher": {"damage": "1d6"},
+			"description": "A ranged spell attack for 4d6 radiant damage. The next attack against the target, before the end of your next turn, has advantage."
+		},
+		"scorching_ray": {
+			"name": "Scorching Ray", "level": 2, "school": "evocation", "classes": ["wizard"],
+			"cast": "action", "range_ft": 120, "target": "enemy",
+			"attack": "ranged", "rays": 3, "damage": "2d6", "damage_type": "fire", "higher": {"rays": 1},
+			"description": "Three rays of fire, each a ranged spell attack for 2d6 fire damage."
+		},
+		"misty_step": {
+			"name": "Misty Step", "level": 2, "school": "conjuration", "classes": ["wizard"],
+			"cast": "bonus", "range_ft": 30, "target": "hex", "effect": "teleport", "combat_only": true,
+			"description": "A bonus action: step through silver mist to an empty spot you can see within 30 feet, without provoking opportunity attacks."
+		},
+		"aid": {
+			"name": "Aid", "level": 2, "school": "abjuration", "classes": ["cleric"],
+			"cast": "action", "range_ft": 30, "target": "allies", "targets": 3,
+			"effect": "aid", "amount": 5, "higher": {"amount": 5},
+			"description": "Up to three allies gain 5 maximum and current hit points until a long rest. 5 more per slot level above 2nd."
+		}
+	}
+}

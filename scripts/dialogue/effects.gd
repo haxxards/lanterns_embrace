@@ -10,6 +10,7 @@ extends RefCounted
 ##   {"quest": "id", "stage": "started"}  advance a quest (see GameState.set_quest_stage)
 ##   {"xp": 50}                           every living member gains it
 ##   {"heal_party": true}                 everyone not dead is healed to full (the unconscious wake)
+##   {"long_rest": true}                  a night's sleep: hit points, spell slots, features (Rest.long_rest)
 ##   {"revive": true}                     the dead (and the unconscious) rise with 1 hit point
 ##   {"toast": "text"}
 ##
@@ -67,6 +68,10 @@ static func _apply_one(e: Dictionary, speaker: CharacterSheet) -> String:
 				s.heal(s.hp_max)
 		Audio.play_sfx("potion")
 		return "The party is healed."
+	if e.has("long_rest"):
+		Rest.long_rest(GameState.party)
+		Audio.play_sfx("potion")
+		return "The party sleeps the night through and wakes rested."
 	if e.has("revive"):
 		var raised := PackedStringArray()
 		for s in GameState.party:

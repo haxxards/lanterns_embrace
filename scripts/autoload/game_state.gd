@@ -30,9 +30,11 @@ var quests: Dictionary = {}
 ## Quest id -> stage ids reached so far, in order (the journal).
 var quest_log: Dictionary = {}
 
-## The fight in progress (a CombatManager), or null. Not saved: the game
-## can't be saved mid-fight.
+## The fight in progress (a CombatManager), or null. A save made during a
+## fight stores it (CombatManager.to_dict, under "combat").
 var combat: Node = null
+## A saved fight to pick up on the next map load (see World.load_map).
+var pending_combat: Dictionary = {}
 
 ## map id -> {container id -> ContainerState}
 var _containers: Dictionary = {}
@@ -58,6 +60,7 @@ func start_new_game() -> void:
 	_containers.clear()
 	_explored.clear()
 	_defeated.clear()
+	pending_combat = {}
 	combat = null
 	pending_positions.clear()
 	pending_camera = null
@@ -209,7 +212,7 @@ func award_xp(amount: int) -> void:
 		if not s.dead:
 			var levels := s.add_xp(amount)
 			if levels > 0:
-				Events.toast_requested.emit("%s reaches level %d!" % [s.display_name, s.level])
+				Events.toast_requested.emit(s.level_up_message())
 
 
 # --- quests -------------------------------------------------------------------------
@@ -404,6 +407,7 @@ func load_dict(d: Dictionary) -> bool:
 	for k in pos:
 		pending_positions[str(k)] = JsonUtil.to_vec2i(pos[k])
 	pending_camera = JsonUtil.to_vec2(d["camera"]) if d.has("camera") else null
+	pending_combat = (d.get("combat", {}) as Dictionary).duplicate(true) if d.get("combat") is Dictionary else {}
 	_containers.clear()
 	_explored.clear()
 	_defeated.clear()

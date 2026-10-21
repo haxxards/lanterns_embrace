@@ -10,6 +10,8 @@ const HOSTILE := "hostile"
 var actor: Actor
 var sheet: CharacterSheet
 var team: String = PARTY
+## Who it is, for saves: "party:<character id>" or "creature:<spawn id>".
+var key: String = ""
 var initiative: int = 0
 ## Feet of movement left this turn.
 var movement_left: float = 0.0
@@ -25,13 +27,97 @@ var sneak_attack_used: bool = false
 ## Made a light-weapon attack with the main hand this turn (enables the off hand).
 var attacked_light: bool = false
 
+# Spells and features --------------------------------------------------------
+## Asleep (Sleep): skips its turns and can't react; attacks against it have
+## advantage, and hits from next to it are critical. Damage wakes it, and it
+## wakes by itself after `asleep_rounds` of its turns.
+var asleep: bool = false
+var asleep_rounds: int = 0
+## Turned (Turn Undead) by this cleric: it flees and doesn't attack, until it
+## takes damage or `turned_rounds` of its turns have passed.
+var turned_by: Combatant = null
+var turned_rounds: int = 0
+## Blessed (Bless) by this caster: +1d4 to attack rolls and saving throws.
+var blessed_by: Combatant = null
+## Shield: extra armour class until the start of its next turn.
+var shield_ac: int = 0
+## Guiding Bolt: the next attack against it has advantage. Lasts until the end
+## of the marker's next turn (mark_age counts the marker's turns since).
+var marked_by: Combatant = null
+var mark_age: int = 0
+## A concentration spell it keeps up: {"spell": id, "targets": [Combatant], "rounds": left}.
+var concentration: Dictionary = {}
+## Spells cast this turn (5e: after a bonus-action spell, any other spell
+## this turn must be a cantrip; after a levelled spell, no bonus-action spell).
+var cast_bonus_spell: bool = false
+var cast_leveled_spell: bool = false
+
 
 static func for_actor(a: Actor, s: CharacterSheet, side: String) -> Combatant:
 	var c := Combatant.new()
 	c.actor = a
 	c.sheet = s
 	c.team = side
+	c.key = "creature:%s" % (a as Creature).spawn_id if a is Creature else "party:%s" % s.id
 	return c
+
+
+## Its state as plain data for a save (CombatManager.to_dict): the turn's
+## bookkeeping and conditions, with other combatants named by key.
+func to_dict() -> Dictionary:
+	var d := {
+		"key": key, "initiative": initiative, "movement_left": movement_left,
+		"action_used": action_used, "bonus_used": bonus_used, "reaction_used": reaction_used,
+		"dodging": dodging, "disengaged": disengaged, "prone": prone,
+		"sneak_attack_used": sneak_attack_used, "attacked_light": attacked_light,
+		"asleep": asleep, "asleep_rounds": asleep_rounds,
+		"turned_by": turned_by.key if turned_by != null else "", "turned_rounds": turned_rounds,
+		"blessed_by": blessed_by.key if blessed_by != null else "", "shield_ac": shield_ac,
+		"marked_by": marked_by.key if marked_by != null else "", "mark_age": mark_age,
+		"cast_bonus_spell": cast_bonus_spell, "cast_leveled_spell": cast_leveled_spell,
+	}
+	if not concentration.is_empty():
+		var keys: Array = []
+		for t in concentration.get("targets", []):
+			keys.append((t as Combatant).key)
+		d["concentration"] = {"spell": concentration["spell"], "targets": keys, "rounds": concentration["rounds"]}
+	if actor != null and not is_party():
+		d["hex"] = [actor.hex.x, actor.hex.y]
+		d["hp"] = sheet.hp_current
+	return d
+
+
+## Restores what to_dict saved. `others` maps keys to the restored
+## combatants, for the conditions that name someone (Bless, Turn Undead...).
+func load_dict(d: Dictionary, others: Dictionary) -> void:
+	initiative = int(d.get("initiative", 0))
+	movement_left = float(d.get("movement_left", 0.0))
+	action_used = bool(d.get("action_used", false))
+	bonus_used = bool(d.get("bonus_used", false))
+	reaction_used = bool(d.get("reaction_used", false))
+	dodging = bool(d.get("dodging", false))
+	disengaged = bool(d.get("disengaged", false))
+	prone = bool(d.get("prone", false))
+	sneak_attack_used = bool(d.get("sneak_attack_used", false))
+	attacked_light = bool(d.get("attacked_light", false))
+	asleep = bool(d.get("asleep", false))
+	asleep_rounds = int(d.get("asleep_rounds", 0))
+	turned_by = others.get(str(d.get("turned_by", "")))
+	turned_rounds = int(d.get("turned_rounds", 0))
+	blessed_by = others.get(str(d.get("blessed_by", "")))
+	shield_ac = int(d.get("shield_ac", 0))
+	marked_by = others.get(str(d.get("marked_by", "")))
+	mark_age = int(d.get("mark_age", 0))
+	cast_bonus_spell = bool(d.get("cast_bonus_spell", false))
+	cast_leveled_spell = bool(d.get("cast_leveled_spell", false))
+	concentration = {}
+	var conc: Variant = d.get("concentration")
+	if conc is Dictionary:
+		var targets: Array[Combatant] = []
+		for k in conc.get("targets", []):
+			if others.has(str(k)):
+				targets.append(others[str(k)])
+		concentration = {"spell": str(conc.get("spell", "")), "targets": targets, "rounds": int(conc.get("rounds", 0))}
 
 
 func is_party() -> bool:
@@ -46,9 +132,24 @@ func hex() -> Vector2i:
 	return actor.hex
 
 
-## Able to act: above 0 hit points.
+## Above 0 hit points (asleep or not).
 func is_conscious() -> bool:
 	return sheet.hp_current > 0
+
+
+## Able to take actions and reactions: conscious and awake.
+func can_act() -> bool:
+	return is_conscious() and not asleep
+
+
+## Armour class against an attack right now (Shield included).
+func armor_class() -> int:
+	return sheet.armor_class + shield_ac
+
+
+## An undead creature (Sleep doesn't affect it; Turn Undead does).
+func is_undead() -> bool:
+	return sheet is CreatureSheet and (sheet as CreatureSheet).def.creature_type == "undead"
 
 
 ## Gone from the fight for good: a dead party member or a slain creature.
@@ -74,6 +175,9 @@ func begin_turn() -> void:
 	disengaged = false
 	sneak_attack_used = false
 	attacked_light = false
+	shield_ac = 0
+	cast_bonus_spell = false
+	cast_leveled_spell = false
 	if prone and is_conscious():
 		prone = false  # standing up costs half the movement
 		movement_left -= speed_ft() / 2.0
@@ -88,7 +192,8 @@ func attacks() -> Array[Attack]:
 
 
 ## The attack used for a normal Attack action against a target `distance`
-## hexes away: the first that reaches, preferring melee up close.
+## hexes away: the first that reaches, preferring melee up close (so a dagger
+## is stabbed with next to the target and thrown from further away).
 func attack_for(distance: int) -> Attack:
 	var best: Attack = null
 	for a in attacks():

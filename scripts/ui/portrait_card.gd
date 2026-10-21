@@ -1,6 +1,7 @@
 class_name PortraitCard
 extends PanelContainer
-## Sidebar card for one party member: portrait, name, HP, quick stats.
+## Sidebar card for one party member: portrait, name, HP, quick stats, and
+## spell slots for casters (● left, ○ spent).
 ## Click selects (Shift adds), double-click centres the camera on them.
 ## Dropping an item from the inventory screen on a card gives it to them.
 
@@ -18,6 +19,7 @@ var _style_hover: StyleBoxFlat
 var _hp_bar: ProgressBar
 var _hp_label: Label
 var _stats_label: Label
+var _slots_label: Label
 var _hovered: bool = false
 var _selected: bool = false
 
@@ -73,6 +75,8 @@ func setup(m: PartyMember, i: int) -> void:
 
 	_stats_label = _label("", 11, UiTheme.TEXT_DIM)
 	col.add_child(_stats_label)
+	_slots_label = _label("", 11, UiTheme.GOLD)
+	col.add_child(_slots_label)
 
 	m.sheet.changed.connect(refresh)
 	mouse_entered.connect(_on_hover_changed.bind(true))
@@ -92,6 +96,9 @@ func refresh() -> void:
 	_hp_label.text = "HP %d / %d" % [s.hp_current, s.hp_max] if s.is_alive() else _down_text(s)
 	modulate = Color.WHITE if s.is_alive() else Color(0.6, 0.55, 0.55)
 	_stats_label.text = "AC %d   Speed %d ft" % [s.armor_class, s.effective_speed_ft()]
+	_slots_label.text = SpellsScreen.slot_pips(s) if Spellcasting.is_caster(s) else ""
+	_slots_label.visible = not _slots_label.text.is_empty()
+	_slots_label.tooltip_text = "Spell slots: %s" % Spellcasting.slots_text(s)
 
 
 func _exit_tree() -> void:

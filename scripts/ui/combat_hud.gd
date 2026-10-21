@@ -3,7 +3,8 @@ extends Control
 ## The fight's interface: the initiative order (order_panel, which the HUD puts
 ## along the top), the combat log at the bottom left, and the action bar for
 ## the party member whose turn it is: movement and actions left, Dash, Dodge,
-## Disengage and End turn, and a hint for what clicking would do.
+## Disengage and End turn, a row of their spells, features and scrolls
+## (CombatManager.abilities_for), and a hint for what clicking would do.
 
 const CARD_SIZE := Vector2(58, 58)
 
@@ -17,6 +18,9 @@ var _who: Label
 var _status: Label
 var _hint: Label
 var _buttons: Dictionary = {}
+## The current member's spells, features and scrolls; rebuilt when they change.
+var _abilities: HFlowContainer
+var _abilities_key: String = ""
 var _log_panel: PanelContainer
 var _log: RichTextLabel
 
@@ -32,6 +36,7 @@ func bind(c: CombatManager) -> void:
 	combat = c
 	c.started.connect(_on_started)
 	c.ended.connect(_on_ended)
+	c.aborted.connect(_on_aborted)
 	c.state_changed.connect(_refresh)
 	c.logged.connect(_on_logged)
 	c.hint_changed.connect(func(text: String) -> void: _hint.text = text)
@@ -52,6 +57,7 @@ func _on_started() -> void:
 
 
 func _on_ended(_victory: bool) -> void:
+	_abilities_key = ""
 	_bar.visible = false
 	order_panel.visible = false
 	_hint.text = ""
@@ -59,6 +65,13 @@ func _on_ended(_victory: bool) -> void:
 	var tw := create_tween()
 	tw.tween_interval(4.0)
 	tw.tween_callback(_hide_log_if_idle)
+
+
+## A fight stopped without a result (a game loaded mid-fight): everything goes at once.
+func _on_aborted() -> void:
+	_abilities_key = ""
+	_hint.text = ""
+	_set_shown(false)
 
 
 func _hide_log_if_idle() -> void:
@@ -87,6 +100,10 @@ func _refresh() -> void:
 		var parts := PackedStringArray()
 		parts.append("Movement %d ft" % roundi(maxf(0.0, c.movement_left)))
 		parts.append("Action: %s" % ("used" if c.action_used else "ready"))
+		parts.append("Bonus: %s" % ("used" if c.bonus_used else "ready"))
+		var slots := Spellcasting.slots_text(c.sheet)
+		if not slots.is_empty() and Spellcasting.is_caster(c.sheet):
+			parts.append("Slots %s" % slots)
 		if c.off_hand_attack() != null:
 			var off_ready := c.attacked_light and not c.bonus_used
 			parts.append("Off hand: %s" % ("ready" if off_ready else ("used" if c.bonus_used else "after a light attack")))
@@ -94,6 +111,10 @@ func _refresh() -> void:
 			parts.append("Dodging")
 		if c.disengaged:
 			parts.append("Disengaged")
+		if c.blessed_by != null:
+			parts.append("Blessed")
+		if not c.concentration.is_empty():
+			parts.append("Concentrating")
 		_status.text = "   ·   ".join(parts)
 	else:
 		_status.text = "Round %d" % combat.round_number
@@ -101,6 +122,40 @@ func _refresh() -> void:
 	if mine:
 		for key in ["dash", "dodge", "disengage"]:
 			(_buttons[key] as Button).disabled = c.action_used
+	_rebuild_abilities(c if mine else null)
+
+
+## One button per spell, feature and scroll of the member whose turn it is,
+## disabled (with the reason as its tooltip) when it can't be used now.
+func _rebuild_abilities(c: Combatant) -> void:
+	var list: Array[Dictionary] = []
+	if c != null:
+		list = combat.abilities_for(c)
+	var key := ""
+	for ab in list:
+		key += "%s|%s|%s|%s;" % [ab["name"], ab["error"], ab["kind"], str(combat.targeting.get("name", ""))]
+	if key == _abilities_key:
+		return
+	_abilities_key = key
+	for child in _abilities.get_children():
+		child.queue_free()
+	_abilities.visible = not list.is_empty()
+	for ab in list:
+		var b := Button.new()
+		b.text = str(ab["name"])
+		b.focus_mode = Control.FOCUS_NONE
+		b.add_theme_font_size_override("font_size", 13)
+		var err := str(ab["error"])
+		b.disabled = not err.is_empty()
+		b.tooltip_text = str(ab["tooltip"]) + ("
+
+" + err if not err.is_empty() else "")
+		if not combat.targeting.is_empty() and combat.targeting.get("name") == ab["name"]:
+			b.add_theme_color_override("font_color", UiTheme.GOLD)
+		b.pressed.connect(func() -> void:
+			Audio.play_sfx("ui_click")
+			combat.use_ability(ab))
+		_abilities.add_child(b)
 
 
 func _set_buttons_enabled(on: bool) -> void:
@@ -202,6 +257,11 @@ func _build() -> void:
 	(_buttons["dodge"] as Button).pressed.connect(func() -> void: combat.dodge())
 	(_buttons["disengage"] as Button).pressed.connect(func() -> void: combat.disengage())
 	(_buttons["end"] as Button).pressed.connect(func() -> void: combat.end_turn())
+	_abilities = HFlowContainer.new()
+	_abilities.add_theme_constant_override("h_separation", 6)
+	_abilities.add_theme_constant_override("v_separation", 6)
+	_abilities.visible = false
+	v.add_child(_abilities)
 	_hint = Label.new()
 	_hint.add_theme_color_override("font_color", UiTheme.TEXT)
 	_hint.text = ""
