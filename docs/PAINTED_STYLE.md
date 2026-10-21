@@ -126,8 +126,13 @@ After rendering, open the project in the Godot editor once (or run
 ## 2. What we were aiming for
 
 The project owner shared a sheet of painted fantasy item art: swords, shields, potions,
-robes and armour. It isn't in the repository, since we don't own it. Comparing it with the
-classic icons gave this list of differences:
+robes and armour. It is kept here as
+[`images/painted_style/reference.webp`](images/painted_style/reference.webp), for comparison
+only: nothing in the game uses it.
+
+![The reference sheet](images/painted_style/reference.webp)
+
+Comparing it with the classic icons gave this list of differences:
 
 | The painted references have... | The classic icons had... |
 |---|---|
@@ -137,6 +142,11 @@ classic icons gave this list of differences:
 | Visible material: wood grain, mail rings, leather stitching, scratches | Smooth colour with a little noise |
 | Shapes with detail: fullers, wrapped grips, rivets, buckles | Simple shapes (a box for a guard, a sphere for a pommel) |
 | Flat strokes of colour and a dark outline | Smooth CG shading and no outline |
+
+The four items the style was first tried on, against the matching pieces of the reference
+(made by `tools/art/docs/compare_with_reference.py`):
+
+![Reference, classic and painted](images/painted_style/reference_compared.png)
 
 A human painter gets these effects by hand. We don't have a painter, and hand-painted
 icons couldn't be re-rendered when an item changes. So the approach is to **keep the 3D
@@ -705,6 +715,8 @@ style switch is ready for that: their files would go in `assets/characters/paint
 | `tools/art/blender/style_test.py` | The Garrick experiment from section 10 |
 | `tools/art/docs/style_diagrams.py` | The diagrams in this document (numpy and Pillow only) |
 | `tools/art/docs/compare_icon_styles.py` | The classic-and-painted sheet at the top of this document |
+| `tools/art/docs/compare_with_reference.py` | The reference, classic and painted sheet in section 2 |
+| `docs/images/painted_style/reference.webp` | The reference art the look was matched to (not used by the game) |
 | `scripts/autoload/game_config.gd` | `art_style`, `ART_STYLES`, `styled_path()` |
 | `scripts/autoload/data_registry.gd` | `set_art_style()` |
 | `scripts/ui/game_menu.gd` | The **Item icons** button |
@@ -714,4 +726,5 @@ style switch is ready for that: their files would go in `assets/characters/paint
 .venv-art/bin/python tools/art/blender/painted_breakdown.py      # shield stages, close-ups, tone strip
 python3 tools/art/docs/style_diagrams.py                          # diagrams
 python3 tools/art/docs/compare_icon_styles.py                     # icon comparison sheet
+python3 tools/art/docs/compare_with_reference.py                  # against the reference
 ```

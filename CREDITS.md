@@ -18,6 +18,14 @@ procedural 3D scenes rendered with [Blender](https://www.blender.org) (GPL; the 
 images are not covered by Blender's licence) via `tools/art/blender/`. No third-party
 textures or models are included.
 
+### Painted-style reference
+
+`docs/images/painted_style/reference.webp` is a sheet of painted fantasy item art supplied
+by the project owner as the target for the painted item icons
+([docs/PAINTED_STYLE.md](docs/PAINTED_STYLE.md)). It is documentation only: it is not part
+of the game, nothing in `assets/` is copied from it, and the icons were modelled and
+rendered from scratch to resemble its style. Its rights stay with its creator.
+
 ### Portraits
 
 The portraits in `assets/portraits/` are crops of public-domain paintings from
