@@ -29,6 +29,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_entered.connect(_set_hover.bind(true))
 	mouse_exited.connect(_set_hover.bind(false))
+	Events.art_style_changed.connect(func(_kind: String, _style: String) -> void: queue_redraw())
 
 
 func _set_hover(value: bool) -> void:

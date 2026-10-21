@@ -82,8 +82,23 @@ func _load_items() -> void:
 	var defs: Dictionary = d.get("items", {})
 	for item_id in defs:
 		var it := ItemDef.from_dict(item_id, defs[item_id])
-		it.icon = load_texture(it.icon_path)
+		it.icon = load_texture(GameConfig.styled_path(it.icon_path))
 		items[item_id] = it
+
+
+## Switches one kind of art to another style while the game runs (the Esc
+## menu's "Item icons" button) and reloads what uses it. game_config.json sets
+## the style the game starts with. Returns false for an unknown style.
+func set_art_style(kind: String, style: String) -> bool:
+	if not GameConfig.ART_STYLES.has(style):
+		push_warning("Unknown art style '%s'" % style)
+		return false
+	GameConfig.art_style[kind] = style
+	if kind == "items":
+		for it: ItemDef in items.values():
+			it.icon = load_texture(GameConfig.styled_path(it.icon_path))
+	Events.art_style_changed.emit(kind, style)
+	return true
 
 
 func _load_npcs() -> void:

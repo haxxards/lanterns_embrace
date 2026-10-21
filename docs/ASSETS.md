@@ -14,7 +14,7 @@ track, and every file is a drop-in placeholder you can replace with your own art
 for the wilds a campfire, a ridge tent, ruined walls, broken columns, rubble and a carved
 standing stone; set dressing such as reeds, ferns, wildflowers, logs, stumps, barrels, crates, hay, lamp posts, market stalls and a cart. |
 | Character sprites | `tools/art/blender/render_characters.py` | Posable 3D figures with class gear, plus townsfolk outfits (innkeeper's apron, smith's leather apron, priest's robes, the reeve's coat, villagers) and foes: hooded bandits (a scimitar, or a bow and quiver), skeletons built bone by bone (with rusted scraps, or a bow), and a four-legged wolf with a trotting gait. Each is rendered as a sprite sheet: 5 facings × (idle + 8-frame walk), mirrored in game for the other 3 facings. |
-| Item icons | `tools/art/blender/render_items.py` | 64×64 icons of small procedural models (blades, armour, potions, coins...) under a studio light rig, with a soft drop shadow. |
+| Item icons | `tools/art/blender/render_items.py` (classic), `render_items_painted.py` (painted) | 64×64 icons of small procedural models (blades, armour, potions, coins...) under a studio light rig, with a soft drop shadow. The painted set has more detailed models, worn and grimy materials, and a brush-stroke finish with an outline: see [PAINTED_STYLE.md](PAINTED_STYLE.md). |
 | Interiors | `tools/art/blender/render_interiors.py` | Room backdrops (floorboards or flagstones, back wall with hearth or forge and lit windows, side walls leaning out as a cutaway; the temple nave has stained glass, a dais, candles and a runner) and furniture props: chests, drawers, cupboards, tables, beds, the bar and its shelves, an anvil, a rug, pews, an altar, a pile of items on the ground, the exit mat. |
 | Sounds and music | `tools/audio/generate_placeholder_audio.py` | Synthesised placeholders, see [AUDIO.md](AUDIO.md). |
 | Portraits | `tools/art/portraits/make_portraits.py` | Crops of CC0 public-domain paintings from the Met (see below). |
@@ -26,9 +26,10 @@ Blender is used as a Python module (`bpy`). It needs **Python 3.13**:
 ```sh
 python3.13 -m venv .venv-art
 .venv-art/bin/pip install bpy==5.2.2 numpy pillow
-.venv-art/bin/python tools/art/blender/render_all.py                 # everything (~45 min on 4 cores)
+.venv-art/bin/python tools/art/blender/render_all.py                 # everything (~55 min on 4 cores)
 .venv-art/bin/python tools/art/blender/render_all.py terrain:grass props:tree_oak characters
 .venv-art/bin/python tools/art/blender/render_all.py items interiors:chest interiors:inn_hall
+.venv-art/bin/python tools/art/blender/render_all.py --style painted items:mace   # one style only
 ```
 
 Rendering a prop writes its looks (texture, anchor pixel `origin`, door pixel) back into
@@ -54,19 +55,14 @@ the interior maps. You never edit those numbers by hand.
   plus local lights (hearth, windows, forge), and furniture is rendered under the same
   light so it matches the room.
 
-### Painted style (a test, not used yet)
+### Two styles of item icon
 
-`tools/art/blender/painted.py` is a trial of a more hand-painted look: materials with worn
-edges, grime in the crevices, wood grain and mail rings, a warmer studio light, then a
-brush-stroke filter (Kuwahara) and an inked outline on the finished image.
-`tools/art/blender/style_test.py` uses it to re-make four icons (longsword, shield,
-healing potion, chain mail) and Garrick's sprite into a folder of your choice, without
-touching `assets/`:
-
-```sh
-.venv-art/bin/python tools/art/blender/style_test.py /tmp/style_test             # all five
-.venv-art/bin/python tools/art/blender/style_test.py /tmp/style_test shield potion
-```
+Item icons come in a **classic** and a **painted** look, chosen by `"art_style"` in
+`data/config/game_config.json` (or switched in the game from the Esc menu). The painted
+icons are in `assets/items/painted/`, under the same file names, and are made by
+`render_items_painted.py` with the materials and finishing pass in `painted.py` and
+`paint_filter.py`. [PAINTED_STYLE.md](PAINTED_STYLE.md) explains how the look is made,
+step by step, and how to switch.
 
 ## Portraits
 

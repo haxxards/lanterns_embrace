@@ -1,5 +1,6 @@
-"""A painted look for rendered art (style test, not yet used by the game).
+"""The painted look for rendered art (used by the "painted" item icons).
 
+docs/PAINTED_STYLE.md explains every step here, with pictures and the maths.
 Three things move a clean 3D render towards hand-painted fantasy art:
 
 1. Materials that look handled: bright worn edges (Cycles' Bevel node compared
@@ -8,19 +9,25 @@ Three things move a clean 3D render towards hand-painted fantasy art:
    lighting, and broad colour variation. See `metal`, `wood`, `leather`,
    `cloth`, `chain`, `glass`, `glow`.
 2. A studio rig with a warm key, a cool rim and a soft fill (`studio`).
-3. A finishing pass on the rendered image (`finish_painted`): a generalised
-   Kuwahara filter (flat, brushy patches that keep edges sharp, as in an oil
-   painting), a little more colour, and a dark outline.
+3. A finishing pass on the rendered image (`finish_painted`, in
+   paint_filter.py): a generalised Kuwahara filter (flat, brushy patches that
+   keep edges sharp, as in an oil painting), a little more colour, and a dark
+   outline.
 """
-import math
-
 import bpy
-import numpy as np
 from mathutils import Vector
-from PIL import Image, ImageFilter
-from scipy.signal import fftconvolve
 
 import lib
+import paint_filter
+
+# Set by tools/art/blender/painted_breakdown.py to render one stage of the
+# recipe in `_painted` instead of the finished material (for the docs):
+#   "flat"      base colour only
+#   "variation" + broad colour variation and the top-down gradient
+#   "grime"     + dark grime in the crevices
+#   "cavity"    the crevice mask itself, as black (crevice) to white (open)
+#   "edges"     the worn-edge mask itself, white on worn edges
+PREVIEW = None
 
 
 # --------------------------------------------------------------------------
@@ -129,23 +136,35 @@ def _painted(name, base, dark, edge_col, rough, metallic, edge_strength=1.0, gri
     in the crevices, wear on the edges."""
     mat, nt, bsdf = _nodes(name)
     col = base_fn(nt) if base_fn is not None else _rgb(nt, base)
+    stages = {"flat": col}
     # Broad, soft colour variation, like uneven paint, and smaller smudges.
     v = _map(nt, _noise(nt, 3.0, 2.0), 0.0, 1.0, 1.0 - var, 1.0 + var)
     col = _mix(nt, col, _value_rgb(nt, v), 1.0, 'MULTIPLY')
     sm = _map(nt, _noise(nt, 14.0, 5.0), 0.25, 0.75, 1.0 - var * 0.8, 1.0 + var * 0.5)
     col = _mix(nt, col, _value_rgb(nt, sm), 1.0, 'MULTIPLY')
     col = _mix(nt, col, _value_rgb(nt, height_gradient(nt, *grad)), 1.0, 'MULTIPLY')
+    stages["variation"] = col
     # Grime in the creases.
     cav = cavity(nt, ao_dist)
     col = _mix(nt, _rgb(nt, dark), col, _map(nt, cav, 0.0, 1.0, 1.0 - grime, 1.0))
+    stages["grime"] = col
     # Worn, bright edges.
     e = edge_mask(nt, bevel, chip=chip)
     col = _mix(nt, col, _rgb(nt, edge_col), _math(nt, 'MULTIPLY', e, edge_strength, clamp=True))
-    nt.links.new(col, bsdf.inputs["Base Color"])
+    nt.links.new(stages.get(PREVIEW, col), bsdf.inputs["Base Color"])
     bsdf.inputs["Metallic"].default_value = metallic
     r = _mix_value(nt, rough, max(0.12, rough - 0.25), e)
     nt.links.new(r, bsdf.inputs["Roughness"])
+    if PREVIEW in ("cavity", "edges"):
+        _show_mask(nt, cav if PREVIEW == "cavity" else e)
     return mat, nt, bsdf
+
+
+def _show_mask(nt, value):
+    """Replaces the material's surface with the mask as flat grey (for the docs)."""
+    em = nt.nodes.new("ShaderNodeEmission")
+    nt.links.new(_value_rgb(nt, value), em.inputs["Color"])
+    nt.links.new(em.outputs["Emission"], nt.nodes["Material Output"].inputs["Surface"])
 
 
 def _value_rgb(nt, v):
@@ -312,6 +331,44 @@ def chain(name="Mail", color="#8a8f96", rings=55.0):
     return mat
 
 
+def pages(name="Pages", color="#e6d9bc"):
+    """Paper seen edge-on: fine light and dark lines, one per leaf, along Z."""
+    holder = {}
+
+    def lines(nt):
+        tc = nt.nodes.new("ShaderNodeTexCoord")
+        wave = nt.nodes.new("ShaderNodeTexWave")
+        wave.bands_direction = 'Z'
+        wave.inputs["Scale"].default_value = 90.0
+        wave.inputs["Distortion"].default_value = 1.5
+        nt.links.new(tc.outputs["Object"], wave.inputs["Vector"])
+        holder["wave"] = wave.outputs["Fac"]
+        return _mix(nt, _rgb(nt, _shade(color, 0.72)), _rgb(nt, color), wave.outputs["Fac"])
+
+    mat, nt, bsdf = _painted(name, color, _shade(color, 0.45), _shade(color, 1.1, 0.03), 0.85, 0.0,
+                             edge_strength=0.4, grime=0.8, chip=0.2, base_fn=lines, var=0.1)
+    return mat
+
+
+def fruit(name, color="#a8231a", streak="#d0a03a", gloss=0.32):
+    """Fruit skin: streaks of a second colour running from stalk to base, waxy shine."""
+    def streaks(nt):
+        tc = nt.nodes.new("ShaderNodeTexCoord")
+        mp = nt.nodes.new("ShaderNodeMapping")
+        mp.inputs["Scale"].default_value = (9.0, 9.0, 1.2)
+        nt.links.new(tc.outputs["Object"], mp.inputs["Vector"])
+        n = nt.nodes.new("ShaderNodeTexNoise")
+        n.inputs["Scale"].default_value = 3.0
+        n.inputs["Detail"].default_value = 6.0
+        nt.links.new(mp.outputs["Vector"], n.inputs["Vector"])
+        return _mix(nt, _rgb(nt, color), _rgb(nt, streak), _map(nt, n.outputs["Fac"], 0.5, 0.8, 0.0, 0.8))
+
+    mat, nt, bsdf = _painted(name, color, _shade(color, 0.4), _shade(streak, 1.2, 0.05), gloss, 0.0,
+                             edge_strength=0.2, grime=0.6, chip=0.0, base_fn=streaks, var=0.1)
+    bsdf.inputs["Coat Weight"].default_value = 0.4
+    return mat
+
+
 def glass(name="Glass", tint="#e8f0ee"):
     mat, nt, bsdf = _nodes(name)
     bsdf.inputs["Base Color"].default_value = (*lib.lin(tint), 1.0)
@@ -322,8 +379,9 @@ def glass(name="Glass", tint="#e8f0ee"):
     return mat
 
 
-def glow(name, color, strength=3.0, core="#fff2c8"):
-    """A liquid or gem lit from inside: brighter at its heart (object centre)."""
+def glow(name, color, strength=3.0, core="#fff2c8", gloss=True):
+    """A liquid or gem lit from inside: brighter at its heart (object centre).
+    gloss=False for things with no surface to shine, like a flame."""
     mat, nt, bsdf = _nodes(name)
     tc = nt.nodes.new("ShaderNodeTexCoord")
     grad = nt.nodes.new("ShaderNodeTexGradient")
@@ -336,8 +394,10 @@ def glow(name, color, strength=3.0, core="#fff2c8"):
     nt.links.new(col, bsdf.inputs["Base Color"])
     nt.links.new(col, bsdf.inputs["Emission Color"])
     bsdf.inputs["Emission Strength"].default_value = strength
-    bsdf.inputs["Roughness"].default_value = 0.08
-    bsdf.inputs["Coat Weight"].default_value = 1.0
+    bsdf.inputs["Roughness"].default_value = 0.08 if gloss else 1.0
+    bsdf.inputs["Coat Weight"].default_value = 1.0 if gloss else 0.0
+    if not gloss:
+        bsdf.inputs["Specular IOR Level"].default_value = 0.0
     return mat
 
 
@@ -366,59 +426,9 @@ def studio(key=520.0, rim=520.0, fill=150.0):
     vs.look = 'AgX - Punchy'
 
 
-
 # --------------------------------------------------------------------------
-# Finishing pass
+# Finishing pass (on the rendered picture): see paint_filter.py
 # --------------------------------------------------------------------------
 
-def kuwahara(rgb, alpha, radius=5, sectors=8, q=6.0):
-    """Generalised Kuwahara filter (Papari et al.): each pixel takes the mean
-    of the least varied of eight soft pie slices around it, so flat areas
-    become brush-like patches while edges stay sharp. Alpha-weighted so the
-    transparent background doesn't bleed in."""
-    r = radius
-    y, x = np.mgrid[-r:r + 1, -r:r + 1].astype(np.float64)
-    ang = np.arctan2(y, x)
-    dist = np.hypot(x, y)
-    gauss = np.exp(-(dist ** 2) / (2 * (r / 2.0) ** 2)) * (dist <= r + 0.5)
-    w = alpha.astype(np.float64)
-    num = np.zeros(rgb.shape, np.float64)
-    den = np.zeros(rgb.shape[:2], np.float64)
-    for k in range(sectors):
-        mid = -math.pi + (k + 0.5) * 2 * math.pi / sectors
-        d = np.angle(np.exp(1j * (ang - mid)))
-        mask = np.exp(-(d ** 2) / (2 * (math.pi / sectors) ** 2)) * gauss
-        mask[r, r] = gauss[r, r]
-        mask /= mask.sum()
-        sw = fftconvolve(w, mask, mode='same') + 1e-6
-        m = np.stack([fftconvolve(rgb[..., c] * w, mask, mode='same') for c in range(3)], -1) / sw[..., None]
-        s2 = np.stack([fftconvolve(rgb[..., c] ** 2 * w, mask, mode='same') for c in range(3)], -1) / sw[..., None]
-        sigma = np.sqrt(np.clip(s2 - m ** 2, 0, None)).sum(-1)
-        wk = 1.0 / (1e-4 + sigma) ** q
-        num += wk[..., None] * m
-        den += wk
-    return np.clip(num / den[..., None], 0, 1)
-
-
-def finish_painted(img, radius=5, outline_px=3, outline="#1a120c", saturation=1.12, contrast=1.06):
-    """Turns a straight-alpha RGBA render into the painted look: Kuwahara
-    brushwork, a touch more colour and contrast, and a dark outline."""
-    a = np.asarray(img.convert("RGBA")).astype(np.float64) / 255.0
-    rgb, alpha = a[..., :3], a[..., 3]
-    out = kuwahara(rgb, alpha, radius) if radius > 0 else rgb
-    lum = out @ np.array([0.299, 0.587, 0.114])
-    out = lum[..., None] + (out - lum[..., None]) * saturation
-    out = (out - 0.5) * contrast + 0.5
-    out = np.clip(out, 0, 1)
-    body = Image.fromarray((np.dstack([out, alpha]) * 255).astype(np.uint8), "RGBA")
-    if outline_px <= 0:
-        return body
-    a_img = Image.fromarray((alpha * 255).astype(np.uint8))
-    ring = a_img.filter(ImageFilter.MaxFilter(outline_px * 2 + 1)).filter(ImageFilter.GaussianBlur(outline_px * 0.35))
-    col = tuple(int(outline[i:i + 2], 16) for i in (1, 3, 5))
-    line = Image.new("RGBA", body.size, (*col, 0))
-    line.putalpha(ring.point(lambda v: int(v * 0.92)))
-    res = Image.new("RGBA", body.size, (0, 0, 0, 0))
-    res.alpha_composite(line)
-    res.alpha_composite(body)
-    return res
+finish_painted = paint_filter.finish_painted
+kuwahara = paint_filter.kuwahara

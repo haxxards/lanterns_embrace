@@ -12,6 +12,10 @@
 	"save_slots": 8,
 	"debug_keys": true,
 
+	"art_style": {
+		"items": "painted"
+	},
+
 	"fog_of_war": {
 		"enabled": true,
 		"sight_radius": 9,

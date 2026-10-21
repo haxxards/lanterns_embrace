@@ -32,3 +32,6 @@ signal shop_requested(npc: Npc, buyer: CharacterSheet)
 signal quest_updated(quest_id: String, stage: String)
 ## Every party member has fallen.
 signal party_defeated
+## The art style of one kind of art changed (Data.set_art_style), so anything
+## drawing that art should redraw.
+signal art_style_changed(kind: String, style: String)

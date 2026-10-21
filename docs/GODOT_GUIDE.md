@@ -509,6 +509,15 @@ can be changed by editing code and re-running:
 Every asset is a drop-in placeholder: replace the PNG/OGG at the same path, or point the
 JSON at a new file. [ASSETS.md](ASSETS.md) lists sizes and pivots.
 
+**Art styles.** The item icons exist twice: `assets/items/longsword.png` (classic) and
+`assets/items/painted/longsword.png` (painted). The JSON always names the classic file;
+when the game loads a texture it passes the path through `GameConfig.styled_path()`,
+which swaps in the style's subfolder if `"art_style"` in `game_config.json` asks for it
+and the file exists. Changing style while the game runs is `Data.set_art_style()`, which
+reloads the icons and emits `Events.art_style_changed` so the inventory slots redraw: the
+same "emit a signal, let the UI react" pattern as everywhere else. How the painted look
+itself is made is in [PAINTED_STYLE.md](PAINTED_STYLE.md).
+
 ---
 
 ## 11. A reading order for the code

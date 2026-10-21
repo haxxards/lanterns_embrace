@@ -274,6 +274,10 @@ in the middle of a fight?
       `render_props.py` (trees, houses, the temple, camp gear), `render_characters.py`
       (posable figures and the wolf, walk cycles, sprite sheets), `render_interiors.py`
       (room backdrops, furniture), `render_items.py` (icons) or `render_terrain.py`.
+- [ ] The painted item icons: read [PAINTED_STYLE.md](PAINTED_STYLE.md), which walks one
+      shield through the whole look step by step. Then `painted.py` (materials and lights),
+      `paint_filter.py` (the brush-stroke pass) and `render_items_painted.py` (the models).
+      The game picks a style with `GameConfig.styled_path()`.
 - [ ] Portraits: `tools/art/portraits/make_portraits.py` and `portraits.json` (crops of CC0
       paintings).
 - [ ] Sound: `tools/audio/generate_placeholder_audio.py`, and `scripts/autoload/audio.gd`
@@ -283,7 +287,8 @@ in the middle of a fight?
 needs updating so it stands in the right place? How would you swap the village music for a
 real recording?
 
-**Try it** (needs the Blender module set up as in ASSETS.md):
+**Try it:** press Esc in the game and click **Item icons** to flip between the classic and
+painted icons, then open the inventory. With the Blender module set up as in ASSETS.md,
 `.venv-art/bin/python tools/art/blender/render_all.py props:campfire` re-renders one prop.
 
 ---
@@ -352,6 +357,8 @@ failure, then remove it.
 | Change the sidebar, windows or combat bar | `scripts/ui/` (`hud.gd` builds the layout) |
 | Change what is saved | `GameState.to_dict`/`load_dict` in `scripts/autoload/game_state.gd` |
 | Replace art | the PNGs under `assets/` (same names), or re-render with `tools/art/blender/` ([ASSETS.md](ASSETS.md)) |
+| Switch the item icons between classic and painted | `"art_style"` in `data/config/game_config.json` ([PAINTED_STYLE.md](PAINTED_STYLE.md)) |
+| Change how the painted icons look | `tools/art/blender/painted.py` and `paint_filter.py` ([PAINTED_STYLE.md](PAINTED_STYLE.md), section 8) |
 | Replace a sound or the music | the files under `assets/audio/`, or point `data/audio/audio.json` elsewhere ([AUDIO.md](AUDIO.md)) |
 | Find a function by name | your editor's project search, or `grep -rn "func name" scripts/` |
 
@@ -369,4 +376,5 @@ failure, then remove it.
 | [NPCS_AND_QUESTS.md](NPCS_AND_QUESTS.md) | Townsfolk, quests, shops, the temple |
 | [COMBAT.md](COMBAT.md) | Fights, creatures, the AI |
 | [ASSETS.md](ASSETS.md) | Where the art comes from and how to replace or re-render it |
+| [PAINTED_STYLE.md](PAINTED_STYLE.md) | The painted item icons: switching styles, and how the look is made, with the maths |
 | [AUDIO.md](AUDIO.md) | Sounds, music and ambience |

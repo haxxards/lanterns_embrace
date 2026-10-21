@@ -25,6 +25,17 @@ Godot explained along the way.
 
 ## Status: Phase 4 (first half), combat
 
+### Painted item icons
+
+- **Two looks for every item icon:** the original *classic* renders, and a *painted* set
+  with more detailed models, worn edges, grime in the crevices, warm and cool light, brush
+  strokes and an inked outline, closer to hand-painted fantasy RPG icons. `"art_style"` in
+  `game_config.json` picks one, and the Esc menu's **Item icons** button flips between
+  them in the game. [docs/PAINTED_STYLE.md](docs/PAINTED_STYLE.md) explains, step by step
+  and with the maths, how the look is made and how its settings were chosen.
+
+![Item icons, classic and painted](docs/images/painted_style/icons_compared.png)
+
 ### Phase 4, first half: combat
 
 - **Turn-based fights on the hex grid** (5e, simplified). When creatures see the party
@@ -193,7 +204,7 @@ Godot explained along the way.
 | `1`–`9` in a conversation | Pick an answer (or click it) |
 | `I` | Inventory (drag to move or equip, right-click to use) |
 | `J` | Journal: quests and XP |
-| Esc | Menu: save, load, quicksave, quickload, quit (also closes windows) |
+| Esc | Menu: save, load, quicksave, quickload, item icon style, quit (also closes windows) |
 | F5 / F9 | Quicksave / quickload |
 | Double-click a portrait | Centre the camera on that member |
 | WASD / arrows / screen edge / middle drag | Pan |
@@ -236,6 +247,8 @@ Godot explained along the way.
 - Press **I**, drag a ring onto a ring slot and watch the AC change, or give someone a
   potion by dropping it on their portrait.
 - Save with Esc → Save game, change things, and load it back.
+- Press Esc and click **Item icons** to flip between the classic and painted icons, then
+  open the inventory (I).
 
 All the feel-related numbers are in [`data/config/game_config.json`](data/config/game_config.json):
 
@@ -251,12 +264,14 @@ All the feel-related numbers are in [`data/config/game_config.json`](data/config
 | `audio_volume_db.*` | Volume per audio bus |
 | `terrain_blend.*` | How terrain types blend: weight-map resolution, blur, edge warp and noise |
 | `post.*` | Colour grade: contrast, saturation, warmth, vignette (or `enabled: false`) |
+| `art_style.items` | Item icons: `"painted"` or `"classic"` ([docs/PAINTED_STYLE.md](docs/PAINTED_STYLE.md)) |
 | `camera.*` | Pan speed, edge scrolling, zoom limits |
 
 ## Project layout
 
 ```
-assets/            Placeholder art (terrain, props, characters, portraits)
+assets/            Placeholder art (terrain, props, characters, portraits, item icons in
+                   items/ and painted ones in items/painted/)
 data/
   config/          game_config.json: global tunables
   characters/      Character sheets (JSON), one per file
@@ -291,7 +306,8 @@ scripts/
   ui/              HUD, portrait cards, minimap, inventory/shop screen, item slots,
                    dialogue window, journal, combat HUD, menus, theme
 tests/             Headless test runner, unit and integration tests
-tools/             make_character.py, art renderers (tools/art/blender), portrait cropper
+tools/             make_character.py, art renderers (tools/art/blender, classic and painted),
+                   painted-style diagram makers (tools/art/docs), portrait cropper
                    (tools/art/portraits), map generators (tools/maps), sound synthesiser
                    (tools/audio), run_tests.sh
 ```
@@ -331,6 +347,7 @@ tools/             make_character.py, art renderers (tools/art/blender), portrai
   map's `"npcs"`. See [docs/NPCS_AND_QUESTS.md](docs/NPCS_AND_QUESTS.md).
 - **New terrain or prop:** add an entry to `data/terrain/terrain.json` or `data/props/props.json`.
 - **Real art:** overwrite the PNGs, or change the paths in the JSON. See [docs/ASSETS.md](docs/ASSETS.md).
+  A new item icon can come in both styles: see [docs/PAINTED_STYLE.md](docs/PAINTED_STYLE.md), section 9.
 
 ## Tests
 

@@ -5,6 +5,9 @@ extends Node
 ## camera feel) lives in that JSON file so it can change without code edits.
 
 const CONFIG_PATH := "res://data/config/game_config.json"
+## The looks the art can come in (see docs/PAINTED_STYLE.md). "classic" is the
+## original set; every other style is a subfolder of the same name.
+const ART_STYLES: PackedStringArray = ["classic", "painted"]
 
 var max_party_size: int = 4
 var starting_party_path: String = "res://data/party/starting_party.json"
@@ -47,6 +50,11 @@ var audio_volume_db: Dictionary = {"Master": 0.0, "Music": -8.0, "SFX": -2.0, "A
 
 ## Developer hotkeys (Ctrl+K knocks out the leader, to test the temple).
 var debug_keys: bool = true
+
+## Which look each kind of art uses, by its folder under res://assets:
+## {"items": "painted"} shows the inventory icons from assets/items/painted/.
+## Kinds not listed use "classic". See styled_path().
+var art_style: Dictionary = {}
 
 var camera_pan_speed: float = 900.0
 var camera_edge_pan: bool = true
@@ -99,6 +107,13 @@ func load_config(path: String) -> void:
 
 	save_slots = maxi(1, int(cfg.get("save_slots", save_slots)))
 	debug_keys = bool(cfg.get("debug_keys", debug_keys))
+	var styles: Dictionary = cfg.get("art_style", {})
+	for kind in styles:
+		var style := str(styles[kind])
+		if ART_STYLES.has(style):
+			art_style[str(kind)] = style
+		else:
+			push_warning("GameConfig: unknown art style '%s' for %s (use one of %s)" % [style, kind, ART_STYLES])
 	var audio: Dictionary = cfg.get("audio_volume_db", {})
 	for bus in audio:
 		audio_volume_db[str(bus)] = float(audio[bus])
@@ -111,3 +126,30 @@ func load_config(path: String) -> void:
 	camera_zoom_max = float(cam.get("zoom_max", camera_zoom_max))
 	camera_zoom_step = float(cam.get("zoom_step", camera_zoom_step))
 	camera_zoom_default = float(cam.get("zoom_default", camera_zoom_default))
+
+
+## The art style in use for one kind of art ("items"...).
+func art_style_of(kind: String) -> String:
+	return str(art_style.get(kind, "classic"))
+
+
+## The file to load for an art `path` under its kind's current style. The kind
+## is the first folder under res://assets, and a style's files sit in a
+## subfolder named after it, under the same names:
+##   res://assets/items/longsword.png  ->  res://assets/items/painted/longsword.png
+## A file the style doesn't have falls back to the classic one, so new art can
+## be added in one style first.
+func styled_path(path: String) -> String:
+	const PREFIX := "res://assets/"
+	if not path.begins_with(PREFIX):
+		return path
+	var rest := path.trim_prefix(PREFIX)
+	var slash := rest.find("/")
+	if slash < 0:
+		return path
+	var kind := rest.substr(0, slash)
+	var style := art_style_of(kind)
+	if style == "classic":
+		return path
+	var styled := PREFIX + kind.path_join(style).path_join(rest.substr(slash + 1))
+	return styled if ResourceLoader.exists(styled) else path

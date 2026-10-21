@@ -11,7 +11,7 @@ containers and saves only ever store **stacks**: an item id and a quantity,
 | `name` | string | Display name. |
 | `kind` | string | `weapon`, `ammo`, `armor`, `shield`, `helmet`, `cloak`, `ring`, `amulet`, `boots`, `gloves`, `potion`, `food`, `gear`, `tool`, `book`, `gem`, `key`, `currency`. Mostly descriptive. |
 | `slot` | string | Equipment slot it can be worn in: `helmet`, `amulet`, `armor`, `cloak`, `gloves`, `main_hand`, `off_hand`, `boots`, or `ring` (either ring slot). Leave out for items that can't be worn. Any weapon may be tried in the off hand. |
-| `icon` | string | 64×64 PNG (see [ASSETS.md](ASSETS.md)). |
+| `icon` | string | 64×64 PNG of the classic icon (see [ASSETS.md](ASSETS.md)). The painted icon, if there is one, has the same file name in `assets/items/painted/` and is used instead when `"art_style"` says so ([PAINTED_STYLE.md](PAINTED_STYLE.md)). |
 | `weight` | number | Pounds. |
 | `value` | number | Gold pieces (0.1 = 1 sp, 0.01 = 1 cp). |
 | `stack` | int | Maximum stack size (default 1). |
