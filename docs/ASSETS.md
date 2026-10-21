@@ -54,6 +54,20 @@ the interior maps. You never edit those numbers by hand.
   plus local lights (hearth, windows, forge), and furniture is rendered under the same
   light so it matches the room.
 
+### Painted style (a test, not used yet)
+
+`tools/art/blender/painted.py` is a trial of a more hand-painted look: materials with worn
+edges, grime in the crevices, wood grain and mail rings, a warmer studio light, then a
+brush-stroke filter (Kuwahara) and an inked outline on the finished image.
+`tools/art/blender/style_test.py` uses it to re-make four icons (longsword, shield,
+healing potion, chain mail) and Garrick's sprite into a folder of your choice, without
+touching `assets/`:
+
+```sh
+.venv-art/bin/python tools/art/blender/style_test.py /tmp/style_test             # all five
+.venv-art/bin/python tools/art/blender/style_test.py /tmp/style_test shield potion
+```
+
 ## Portraits
 
 Portraits are head-and-shoulders crops of real paintings (van Dyck, Hals, El Greco,
