@@ -1,6 +1,7 @@
 extends TestCase
-## Phase 2 end to end on the real main scene: entering and leaving buildings,
-## containers and locks, the inventory screen, fog of war, and save/load.
+## Phase 2 end to end on the real main scene: entering and leaving buildings
+## (only from the hexes in front of a door), containers and locks, the
+## inventory screen, fog of war, and save/load.
 
 const DT := 1.0 / 30.0
 const SAVE_DIR := "user://test_saves"
@@ -109,6 +110,70 @@ func test_enter_a_building_and_come_back_out() -> void:
 	var door: Vector2i = cottage.entry_hex(world.grid)
 	var leader := world.party.members[0]
 	check(Hex.distance(leader.hex, door) <= 3, "arrived at the cottage door (%d hexes away)" % Hex.distance(leader.hex, door))
+
+
+func test_buildings_are_entered_only_from_the_door_zone() -> void:
+	var cottage := _prop("millbrook_miller")
+	var zone := world.door_zone_of(cottage)
+	var door: Vector2i = cottage.door_hex(world.grid)
+	check(not zone.is_empty(), "the cottage has a door zone")
+	for h in zone:
+		check(world.grid.is_walkable(h) and not cottage.cells.has(h), "zone hex %s is open ground outside" % h)
+		check_eq(Hex.distance(h, door), 1, "zone hex %s touches the door" % h)
+	world.party.select_all()
+	var leader := world.party.leader()
+	# Walking onto the zone with an ordinary move order doesn't go in.
+	world.party.move_selected_to(zone[0])
+	check(_walk_until_idle(), "party walks to the door")
+	await _settle()
+	check_eq(world.map.id, "millbrook_outskirts", "a move order onto the zone stays outside")
+	world.fog.refresh()
+	check_eq(world.door_at(zone[0]), cottage, "the zone belongs to the cottage")
+	# Round the back: ground the cottage's picture overlaps (behind its roof).
+	var ring: Array[Vector2i] = []
+	for c in cottage.cells:
+		for n in Hex.neighbors(c):
+			if not cottage.cells.has(n) and not ring.has(n) and world.grid.is_walkable(n):
+				ring.append(n)
+	var behind := ring[0]
+	for h in ring:
+		if world.grid.hex_to_world(h).y < world.grid.hex_to_world(behind).y:
+			behind = h
+	check(cottage.sprite_rect().has_point(world.grid.hex_to_world(behind)), "the hex behind is under the picture")
+	check(not zone.has(behind), "the hex behind isn't in the door zone")
+	world._on_click(world.grid.hex_to_world(behind), false)
+	check(leader.pending_interaction == null, "a click behind the cottage is just a move")
+	check(_walk_until_idle(), "party walks round the back")
+	await _settle()
+	check_eq(world.map.id, "millbrook_outskirts", "walking round the cottage stays outside")
+	check(Hex.distance(leader.hex, behind) <= 1, "leader got round the back")
+	# The walls and roof aren't a way in either.
+	world._on_click(world.grid.hex_to_world(cottage.cells[cottage.cells.size() / 2]), false)
+	check(leader.pending_interaction == null, "a click on the roof is just a move")
+	_walk_until_idle()
+	await _settle()
+	check_eq(world.map.id, "millbrook_outskirts", "clicking the roof stays outside")
+	# Hovering: the zone lights up on the zone, and shows faintly on the building.
+	var canvas := runner.get_viewport().get_canvas_transform()
+	world._mouse_screen = canvas * world.grid.hex_to_world(zone[0])
+	world._refresh_hover(true)
+	check_eq(world.cursor.door_zone.size(), zone.size(), "hovering the zone shows it")
+	check(world.cursor.door_zone_hot and cottage.highlighted, "and lights it up")
+	var roof := Vector2.ZERO
+	for c in cottage.cells:
+		if cottage.is_opaque_at(world.grid.hex_to_world(c)):
+			roof = world.grid.hex_to_world(c)
+			break
+	world._mouse_screen = canvas * roof
+	world._refresh_hover(true)
+	check(not world.cursor.door_zone.is_empty() and not world.cursor.door_zone_hot, "the building shows where its door zone is")
+	check(not cottage.highlighted, "but isn't something to click")
+	# A click on the zone goes in.
+	world._on_click(world.grid.hex_to_world(zone[0]), false)
+	check(leader.pending_interaction == cottage, "a click on the zone heads for the door")
+	check(_walk_until_idle(), "party gathers at the door")
+	await _settle()
+	check_eq(world.map.id, "millbrook_miller", "inside the cottage")
 
 
 func test_open_a_container_and_take_everything() -> void:

@@ -251,8 +251,14 @@ the live copies in `GameState.party` (`Data.new_character()` makes a copy).
 ### Walking through a door
 
 1. A house prop has `"interaction": "enter"` and its placement names an `interior` map and
-   an `entry`. `interact_with()` sends the leader to the door and the rest of the party to
-   gather nearby.
+   an `entry`. When a map loads, `World._build_door_zones()` records each building's
+   **door zone**: the walkable hexes touching its door hex, outside its footprint
+   (`Prop.approach_hexes`). Only a click on a door zone hex goes in (`World.door_at`);
+   buildings are left out of `_interactable_at`, so a click on a wall, a roof or the ground
+   behind a building's picture is an ordinary move. Pointing at a building shows its zone
+   faintly (`CursorOverlay.door_zone`); pointing at the zone lights it up.
+   `interact_with()` then sends the leader to the door and the rest of the party to gather
+   nearby.
 2. When the last member stops, the door's `interact()` emits
    `Events.map_change_requested(path, entry)`.
 3. `scripts/main.gd` handles it with `call_deferred`: the request comes from inside a

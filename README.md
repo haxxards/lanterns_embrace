@@ -118,10 +118,11 @@ Godot explained along the way.
   character's feet. Dropped items form a pile on the map that stays there (and in saves)
   until picked up.
 - **Building interiors as separate maps**, each exactly the size of its building
-  (cottages 8×6 hexes, the inn 12×8, the temple 8×8). Click a building and the party
-  gathers at the door and goes in; the way out leads back to the same door. Six
-  pre-rendered rooms (an inn with a bar, a smithy with a forge, three cottages, a temple
-  nave) with furniture the party walks around. Furnishing add-ons ("bar", "tables:4") lay
+  (cottages 8×6 hexes, the inn 12×8, the temple 8×8). Click the ground right in front of
+  a door (point at a building to see where) and the party gathers there and goes in;
+  anywhere else, the party just walks, so it can go all the way round a building. The way
+  out leads back to the same door. Six pre-rendered rooms (an inn with a bar, a smithy
+  with a forge, three cottages, a temple nave) with furniture the party walks around. Furnishing add-ons ("bar", "tables:4") lay
   out a tavern in any house.
 - **Fog of war:** black where nobody has been, dimmed where the party has been but can't
   see now, with line of sight blocked by buildings. On the minimap too. Off indoors, and
@@ -196,7 +197,7 @@ Godot explained along the way.
 | Ctrl+A | Select the whole party |
 | Left click a signpost | Leader walks over and reads it |
 | Left click a chest, drawers, cupboard | Leader walks over and opens it |
-| Left click a building or a way out | The party gathers at the door and goes through |
+| Left click the hexes in front of a door, or a way out | The party gathers at the door and goes through (pointing at a building lights up its door hexes; clicking the building itself only walks there) |
 | Left click a person | Leader walks over and talks to them |
 | Left click a creature | Start a fight |
 | In a fight: left click ground / an enemy | Move within the shaded area / attack (stepping up first if needed) |
@@ -247,6 +248,8 @@ Godot explained along the way.
 - Press **I**, drag a ring onto a ring slot and watch the AC change, or give someone a
   potion by dropping it on their portrait.
 - Save with Esc → Save game, change things, and load it back.
+- Walk right round the back of the inn: nothing happens until you click one of the two
+  hexes in front of its door (point at the inn to see them).
 - Press Esc and click **Item icons** to flip between the classic and painted icons, then
   open the inventory (I).
 
@@ -376,9 +379,10 @@ Any engine or script error raised during a test fails that test.
 
 ## Roadmap
 
-This order follows the plan agreed before Phase 1. See the end of
-[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phases 3 and 4 were added and where the rest of Phase 4
-plugs into the code.
+This order follows the plan agreed before Phase 1. **[docs/ROADMAP.md](docs/ROADMAP.md)**
+checks every item of that plan: what's done, what isn't, and what was added that the plan
+didn't include. See the end of [docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md) for how Phases 3
+and 4 were added and where the rest of Phase 4 plugs into the code.
 
 1. ~~**Foundation:** hex grid, pathfinding, party selection and movement, camera, minimap, sample map~~
 2. ~~**Items and places:** item and equipment data, inventory and paper doll, chests and

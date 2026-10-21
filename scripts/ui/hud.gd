@@ -11,7 +11,8 @@ Left click ground  –  move selected
 Left click member / portrait  –  select   (Shift: add)
 Left drag  –  box select        Ctrl+A  –  select all
 1-%d  –  select member        Right click  –  deselect
-Left click a sign / chest / door  –  read / open / go in
+Left click a sign / chest  –  read / open
+Left click the hexes in front of a door  –  go in (point at a building to see them)
 Left click a townsperson  –  talk (1-9 picks an answer)
 In a fight: click ground to move, an enemy to attack  ·  Space  –  end turn
 I  –  inventory        J  –  journal        Esc  –  menu
@@ -382,6 +383,8 @@ func _on_hover_info(info: Dictionary) -> void:
 		lines.append(str(info["member"]))
 	elif info.has("prop"):
 		lines.append(str(info["prop"]))
+	if info.has("action"):
+		lines.append(str(info["action"]))
 	if info.has("path_hexes"):
 		lines.append("Path  %d hexes · %d ft" % [info["path_hexes"], info["path_feet"]])
 	_info_label.text = "\n".join(lines)

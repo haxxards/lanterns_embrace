@@ -30,6 +30,7 @@ var faded: bool = false:
 			_update_modulate()
 
 var _sprite: Sprite2D
+var _image: Image  # the texture's pixels, read on first use (is_opaque_at)
 
 
 func setup(placement: MapData.Placement, grid: HexGrid) -> void:
@@ -123,6 +124,22 @@ func target_entry() -> String:
 ## World-space rectangle covered by the sprite.
 func sprite_rect() -> Rect2:
 	return Rect2(global_position + _sprite.offset, _sprite.texture.get_size())
+
+
+## True if the sprite actually draws something at `world_pos` (not just
+## somewhere inside its rectangle).
+func is_opaque_at(world_pos: Vector2) -> bool:
+	var rect := sprite_rect()
+	if not rect.has_point(world_pos):
+		return false
+	if _image == null:
+		_image = _sprite.texture.get_image()
+		if _image == null:
+			return true
+		if _image.is_compressed():
+			_image.decompress()
+	var px := Vector2i(world_pos - rect.position).clamp(Vector2i.ZERO, _image.get_size() - Vector2i.ONE)
+	return _image.get_pixelv(px).a > 0.5
 
 
 ## Walkable hexes where a character stands to interact: next to the door for

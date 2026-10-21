@@ -8,7 +8,11 @@ extends Node2D
 ##   left drag            box-select members (Shift: add)
 ##   left click sign      leader walks over and reads it
 ##   left click chest     leader walks over and opens it
-##   left click door      the party gathers at the door and goes in
+##   left click door zone the party gathers at the door and goes in. A door
+##                        zone is the ground hexes right in front of a
+##                        building's door (door_zones); clicks anywhere else
+##                        on a building just walk the party there, so it can
+##                        walk all round a building without going in.
 ##   left click someone   leader walks over and talks to them
 ##   left click a foe     start a fight
 ##   right click          clear selection
@@ -26,6 +30,8 @@ var map: MapData
 var grid: HexGrid
 var props: Array[Prop] = []
 var props_by_hex: Dictionary = {}  # Vector2i -> Prop
+## Ground hexes in front of building doors -> the building (see _build_door_zones).
+var door_zones: Dictionary = {}    # Vector2i -> Prop
 var _pile_props: Dictionary = {}   # Vector2i -> Prop (items dropped on the ground)
 
 var terrain: TerrainRenderer
@@ -131,6 +137,7 @@ func load_map(path: String, entry: String = "") -> bool:
 			_spawn_prop(placement)
 	_spawn_saved_piles()
 	grid.rebuild_pathfinding()
+	_build_door_zones()
 
 	var view_bounds := grid.world_bounds()
 	if map.backdrop_path.is_empty():
@@ -209,6 +216,7 @@ func _clear() -> void:
 		p.queue_free()
 	props.clear()
 	props_by_hex.clear()
+	door_zones.clear()
 	_pile_props.clear()
 	for n in npcs:
 		n.queue_free()
@@ -217,6 +225,31 @@ func _clear() -> void:
 	_hover_prop = null
 	_hover_member = null
 	_hover_hex = NO_HEX
+
+
+## Each building's door zone: the walkable hexes touching its door, outside its
+## footprint (Prop.approach_hexes). Clicking one of them is the only way in.
+func _build_door_zones() -> void:
+	door_zones.clear()
+	for p in props:
+		if p.interaction() == "enter":
+			for h in p.approach_hexes(grid):
+				door_zones[h] = p
+
+
+## The building whose door zone `h` is in (once the building has been seen), or null.
+func door_at(h: Vector2i) -> Prop:
+	var p: Prop = door_zones.get(h)
+	return p if p != null and _seen(p) else null
+
+
+## The hexes of one building's door zone.
+func door_zone_of(building: Prop) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for h in door_zones:
+		if door_zones[h] == building:
+			out.append(h)
+	return out
 
 
 func _spawn_prop(placement: MapData.Placement) -> Prop:
@@ -542,6 +575,10 @@ func _on_click(world_pos: Vector2, shift: bool) -> void:
 		if not party.interact_with(person):
 			person.end_talk()
 		return
+	var door := door_at(grid.world_to_hex(world_pos))
+	if door and party.leader():
+		party.interact_with(door)
+		return
 	var prop := _interactable_at(world_pos)
 	if prop and party.leader():
 		party.interact_with(prop)
@@ -583,17 +620,33 @@ func focus_selection() -> void:
 
 
 ## Interactable prop under the cursor: sprite rectangle first, then footprint.
-## Props still under black fog can't be picked.
+## Props still under black fog can't be picked, and buildings aren't picked
+## at all: they are entered from their door zones (door_at).
 func _interactable_at(world_pos: Vector2) -> Prop:
 	var best: Prop = null
 	for p in props:
-		if p.is_interactable() and p.sprite_rect().has_point(world_pos) and _seen(p):
+		if _clickable(p) and p.sprite_rect().has_point(world_pos):
 			if best == null or p.position.y > best.position.y:  # front-most wins
 				best = p
 	if best:
 		return best
 	var under: Prop = props_by_hex.get(grid.world_to_hex(world_pos))
-	return under if under and under.is_interactable() and _seen(under) else null
+	return under if under and _clickable(under) else null
+
+
+func _clickable(p: Prop) -> bool:
+	return p.is_interactable() and p.interaction() != "enter" and _seen(p)
+
+
+## The building drawn under the cursor (its visible pixels, not its whole
+## picture rectangle), front-most first, or null.
+func _building_at(world_pos: Vector2) -> Prop:
+	var best: Prop = null
+	for p in props:
+		if p.interaction() == "enter" and _seen(p) and p.is_opaque_at(world_pos):
+			if best == null or p.position.y > best.position.y:
+				best = p
+	return best
 
 
 func _seen(p: Prop) -> bool:
@@ -683,7 +736,9 @@ func _refresh_hover(force: bool = false) -> void:
 	var member := party.member_at(world_pos)
 	var foe := creature_at(world_pos) if member == null else null
 	var person := npc_at(world_pos) if member == null and foe == null else null
-	var prop := _interactable_at(world_pos) if person == null and foe == null and not combat.active else null
+	var free := member == null and foe == null and person == null and not combat.active
+	var door := door_at(h) if free else null
+	var prop := door if door else (_interactable_at(world_pos) if person == null and foe == null and not combat.active else null)
 	if not force and h == _hover_hex and member == _hover_member and prop == _hover_prop and person == _hover_npc \
 			and foe == _hover_creature:
 		return
@@ -715,6 +770,7 @@ func _refresh_hover(force: bool = false) -> void:
 		"in_bounds": grid.in_bounds(h),
 	}
 	cursor.preview_path.clear()
+	cursor.door_zone = []
 	if not combat.active:
 		cursor.reachable = {}
 	cursor.hover_hex = null
@@ -754,6 +810,13 @@ func _refresh_hover(force: bool = false) -> void:
 	elif person:
 		cursor.hover_hex = null
 		cursor_shape = Input.CURSOR_POINTING_HAND
+	elif door:
+		# In front of a door: the whole zone lights up and a click goes in.
+		cursor.hover_color = CursorOverlay.HOVER_INTERACT
+		cursor.door_zone = door_zone_of(door)
+		cursor.door_zone_hot = true
+		cursor_shape = Input.CURSOR_POINTING_HAND
+		info["action"] = "Click to go in"
 	elif prop:
 		cursor.hover_color = CursorOverlay.HOVER_INTERACT
 		cursor_shape = Input.CURSOR_POINTING_HAND
@@ -775,5 +838,14 @@ func _refresh_hover(force: bool = false) -> void:
 	else:
 		# Nothing selected: no movement option, so no hex highlight.
 		cursor.hover_hex = null
+	if free and door == null and prop == null:
+		# On a building's walls or roof: a click only walks there, so show
+		# where its door zone is.
+		var building := _building_at(world_pos)
+		if building:
+			cursor.door_zone = door_zone_of(building)
+			cursor.door_zone_hot = false
+			info["prop"] = building.display_name()
+			info["action"] = "Click in front of the door to go in"
 	Input.set_default_cursor_shape(cursor_shape)
 	Events.hover_info_changed.emit(info)

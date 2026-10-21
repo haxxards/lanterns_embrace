@@ -193,6 +193,9 @@ knowing the HUD exists? What pauses the game when the inventory opens?
 - [ ] The generators that write the maps: `tools/maps/generate_millbrook.py`,
       `tools/maps/generate_interiors.py` (rooms, furniture, add-ons, who lives where) and
       `tools/maps/generate_old_temple_road.py`.
+- [ ] Door zones: `_build_door_zones`, `door_at` and `_clickable` in `world.gd`, and
+      `approach_hexes` in `prop.gd`. Buildings are entered only from the hexes in front of
+      their doors.
 - [ ] Items on the ground: `World.ground_pile`, `_on_pile_changed` and `_seed_item_pile` in
       `world.gd` (the reeve's key by the well is one).
 - [ ] Tests: `tests/integration/test_phase2.gd`; `tests/unit/test_data.gd` checks every map.
@@ -376,5 +379,6 @@ failure, then remove it.
 | [NPCS_AND_QUESTS.md](NPCS_AND_QUESTS.md) | Townsfolk, quests, shops, the temple |
 | [COMBAT.md](COMBAT.md) | Fights, creatures, the AI |
 | [ASSETS.md](ASSETS.md) | Where the art comes from and how to replace or re-render it |
+| [ROADMAP.md](ROADMAP.md) | The original four-phase plan: what's done, what isn't, what was added |
 | [PAINTED_STYLE.md](PAINTED_STYLE.md) | The painted item icons: switching styles, and how the look is made, with the maths |
 | [AUDIO.md](AUDIO.md) | Sounds, music and ambience |

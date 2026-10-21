@@ -91,7 +91,9 @@ Prop types live in `data/props/props.json`:
   - `"enter"` takes the party into the instance's `interior` map, arriving at its `entry`;
   - `"exit"` takes the party to the instance's `map`, arriving at its `entry`.
 - `door_pixel`: where the door is drawn in the texture. The door hex is the footprint hex
-  nearest to it, and characters enter from the hexes in front of it.
+  nearest to it. The walkable hexes touching it outside the footprint are the building's
+  **door zone**: clicking one of them is the only way in (elsewhere around a building the
+  party just walks), and the party arriving from inside appears there.
 - `fade_when_occluding`: override the automatic see-through behaviour.
 
 The six axial directions are `[1,0]` E, `[1,-1]` NE, `[0,-1]` NW, `[-1,0]` W,
