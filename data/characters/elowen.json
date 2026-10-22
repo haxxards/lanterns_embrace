@@ -54,6 +54,10 @@
 		{
 			"item": "potion_of_healing",
 			"qty": 1
+		},
+		{
+			"item": "scroll_of_hold_person",
+			"qty": 1
 		}
 	],
 	"gold": 20,

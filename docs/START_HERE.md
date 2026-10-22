@@ -377,6 +377,7 @@ failure, then remove it.
 | Change how an attack or spell looks | `"fx"` in the item, creature or spell data; the effects in `scripts/combat/combat_fx.gd` and `scripts/combat/fx/` ([COMBAT_FX.md](COMBAT_FX.md)) |
 | Add or change a spell | `data/spells/spells.json` ([SPELLS.md](SPELLS.md)); new effects in `scripts/combat/combat_spells.gd` and `scripts/rules/spellcasting.gd` |
 | Change what a class gets at each level | `data/classes/classes.json` |
+| Change a race's type or traits, or a creature's type, race or condition immunities | `data/races/races.json`, `data/creatures/creatures.json`; the rules in `scripts/rules/creature_types.gd` |
 | Change spell slots, save DCs, rests | `scripts/rules/spellcasting.gd`, `scripts/rules/rest.gd` |
 | Change attack, damage or death-save rules | `scripts/combat/combat_rules.gd`, `scripts/rules/character_sheet.gd` |
 | Change what a turn allows (actions, opportunity attacks) | `scripts/combat/combat_manager.gd`, `scripts/combat/combatant.gd` |

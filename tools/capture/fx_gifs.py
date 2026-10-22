@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Turns the frames recorded by tests/tools/fx_capture.tscn (tests/output/fx/)
-into the docs' pictures: docs/images/fx_sword.gif, fx_magic_missile.gif and
-the labelled strip fx_all.jpg.
+into the docs' pictures: docs/images/fx_sword.gif, fx_magic_missile.gif,
+fx_sleep.gif, fx_hold_person.gif, the labelled strip fx_all.jpg and the
+still spell_conditions.jpg.
 
     pip install pillow
     python3 tools/capture/fx_gifs.py
@@ -64,7 +65,14 @@ def strip(out, keys, tile=(300, 200)):
 if __name__ == "__main__":
     gif("sword", OUT / "fx_sword.gif", stop=44)
     gif("magic_missile", OUT / "fx_magic_missile.gif", stop=80, width=360)
+    gif("sleep", OUT / "fx_sleep.gif", stop=100, width=360, hold=1200)
+    gif("hold_person", OUT / "fx_hold_person.gif", stop=90, width=360, hold=1200)
+    still = Image.open(FRAMES / "conditions.png").convert("RGB")
+    still.save(OUT / "spell_conditions.jpg", quality=86)
+    print("wrote", OUT / "spell_conditions.jpg")
     strip(OUT / "fx_all.jpg", [("Longsword: slash", "sword", 10), ("Mace: smash", "mace", 12),
                                ("Thrown dagger", "thrown", 16), ("Arrow", "arrow", 14),
                                ("Fire Bolt", "fire_bolt", 22), ("Magic Missile", "magic_missile", 30),
-                               ("Wolf: bite", "bite", 10), ("Impact", "sword", 14)])
+                               ("Wolf: bite", "bite", 10), ("Impact", "sword", 14),
+                               ("Sleep: mist", "sleep", 40), ("Sleep: asleep", "sleep", 85),
+                               ("Hold Person: ribbon", "hold_person", 24), ("Hold Person: held", "hold_person", 70)])

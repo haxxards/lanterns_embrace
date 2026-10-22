@@ -55,7 +55,7 @@ keys).
 | `schema_version` | int | `1`. Sheets newer than the game are reported. |
 | `id` ● | string | Unique key, used by party lists and saves. |
 | `name` ● | string | Display name. |
-| `ancestry` | string | `human`, `elf`, `dwarf`, `halfling`, `gnome`, `half-elf`, `half-orc`, `dragonborn`, `tiefling` |
+| `ancestry` | string | `human`, `elf`, `dwarf`, `halfling`, `gnome`, `half-elf`, `half-orc`, `dragonborn`, `tiefling`. Looked up in `data/races/races.json` for the creature type spells check (all are humanoid, so Hold Person works on them) and racial traits (elves and half-elves have Fey Ancestry: magic can't put them to sleep). See [SPELLS.md](SPELLS.md#who-a-spell-works-on-creature-types-and-races). |
 | `class` ● | string | Any SRD class id (`fighter`, `wizard`, `cleric`, `rogue`, ...). |
 | `level` | int | 1–20. |
 | `xp` | int | Experience points (thresholds in `scripts/rules/rules.gd`). |

@@ -8,6 +8,7 @@ extends Node2D
 ##   bolt    a glowing ball with a fading trail, in a straight line (spells)
 ##   dart    a small glowing streak with a long trail on a curving path
 ##           (Magic Missile: several fan out and converge on the target)
+##   ribbon  a slow, broad streamer of light that curls on its way (Hold Person)
 ##
 ## The path is a quadratic Bézier curve: from `start` to `end`, pulled towards
 ## a `control` point. Raising the control point above the midpoint gives an
@@ -28,7 +29,7 @@ var t: float = 0.0:
 	set(value):
 		t = value
 		_trail.append(point(t))
-		if _trail.size() > (TRAIL if kind == "dart" else TRAIL >> 1):
+		if _trail.size() > (TRAIL if kind in ["dart", "ribbon"] else TRAIL >> 1):
 			_trail.remove_at(0)
 		queue_redraw()
 var fade: float = 1.0:
@@ -99,6 +100,10 @@ func _draw() -> void:
 				draw_set_transform(p, t * TAU * 2.5, Vector2.ONE)
 				draw_texture_rect(icon, Rect2(Vector2(-size, -size) / 2.0, Vector2(size, size)), false, Color(1, 1, 1, fade))
 				draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		"ribbon":
+			_draw_trail(7.0, 0.55)
+			draw_circle(p, 9.0, Color(color, 0.3 * fade))
+			draw_circle(p, 4.5, Color(color.lightened(0.6), fade))
 		"dart":
 			_draw_trail(4.0, 0.7)
 			draw_circle(p, 7.0, Color(color, 0.3 * fade))

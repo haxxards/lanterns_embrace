@@ -270,7 +270,10 @@ func test_reading_scrolls() -> void:
 	check(not r["ok"] and garrick.inventory.has("scroll_of_cure_wounds"), "a fighter can't read it: %s" % r["text"])
 	var elowen := GameState.member("elowen")
 	elowen.inventory.add_item("scroll_of_magic_missile", 2)
-	check_eq(Abilities.scrolls(elowen).size(), 1, "one entry per kind of scroll")
-	check_eq(int(Abilities.scrolls(elowen)[0]["count"]), 2, "with how many")
+	var kinds := {}
+	for sc in Abilities.scrolls(elowen):
+		kinds[sc["item"]] = int(sc["count"])
+	check(kinds.has("scroll_of_hold_person"), "Elowen starts with a scroll of Hold Person")
+	check_eq(kinds.get("scroll_of_magic_missile", 0), 2, "one entry per kind of scroll, with how many")
 	r = Abilities.read_scroll(elowen, "scroll_of_magic_missile", null, GameState.party)
 	check(not r["ok"] and elowen.inventory.count("scroll_of_magic_missile") == 2, "Magic Missile waits for a fight")

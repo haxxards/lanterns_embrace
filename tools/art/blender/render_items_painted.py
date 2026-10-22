@@ -1,6 +1,6 @@
 """Inventory icons in the "painted" style.
 
-The same 37 items as render_items.py, re-modelled with more detail (fullered
+The same 38 items as render_items.py, re-modelled with more detail (fullered
 blades, wrapped grips, riveted rims, mail rings, buckles...) and rendered with
 the painted materials, lighting and finishing pass from painted.py. Which set
 the game shows is chosen by "art_style" in data/config/game_config.json.
@@ -1199,6 +1199,11 @@ def scroll_of_magic_missile(root):
 @item("scroll_of_burning_hands", 55)
 def scroll_of_burning_hands(root):
     scroll(root, "#c0501a", "#7a1410", "#ff8a2a")
+
+
+@item("scroll_of_hold_person", 55)
+def scroll_of_hold_person(root):
+    scroll(root, "#8a6ac8", "#3a3a6a", "#d4b8ff")
 
 
 # --------------------------------------------------------------------------

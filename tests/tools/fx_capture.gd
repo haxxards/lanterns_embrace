@@ -68,10 +68,14 @@ func _free_at(from: Vector2i, dist: int) -> Vector2i:
 
 
 ## Records `frames` frames (every `step`th) around a and b while `action` plays.
-func _record(name: String, a: Combatant, b: Combatant, action: Callable, frames: int = 60, step: int = 1) -> void:
+func _record(name: String, a: Combatant, b: Combatant, action: Callable, frames: int = 60, step: int = 1,
+		heal: bool = true) -> void:
+	var kept := {}
 	for c in [a, b]:
-		c.sheet.hp_max = maxi(c.sheet.hp_max, 200)
-		c.sheet.hp_current = c.sheet.hp_max
+		kept[c] = [c.sheet.hp_max, c.sheet.hp_current]
+		if heal:  # so blows don't kill anyone mid-recording
+			c.sheet.hp_max = maxi(c.sheet.hp_max, 200)
+			c.sheet.hp_current = c.sheet.hp_max
 	var far := a.actor.global_position.distance_to(b.actor.global_position) > 150.0
 	world.camera.zoom = Vector2(1.1, 1.1) if far else Vector2(1.6, 1.6)
 	world.camera.center_on((a.actor.global_position + b.actor.global_position) / 2.0 + Vector2(0, -24), true)
@@ -96,6 +100,11 @@ func _record(name: String, a: Combatant, b: Combatant, action: Callable, frames:
 		img.get_region(rect).save_png("res://tests/output/fx/%s_%03d.png" % [name, n])
 		n += 1
 	Engine.time_scale = 1.0
+	for c in kept:  # put hit points back as they were
+		if heal and not c.sheet.dead:
+			c.sheet.hp_max = kept[c][0]
+			c.sheet.hp_current = clampi(kept[c][1], 1, kept[c][0])
+			c.sheet.changed.emit()
 	await _wait(1.5)
 
 
@@ -155,4 +164,40 @@ func _run() -> void:
 	var wolf := combat._add_creature(cr)
 	await _record("bite", wolf, wren, func() -> void:
 		combat.attack_with(wolf, wren, wolf.attacks()[0], false, false))
+	# Sleep on two bandits standing together, then Hold Person on a third.
+	combat.abort()  # a fresh fight, at the bandit camp
+	world.load_map("res://data/maps/old_temple_road.json", "west")
+	_place_party(Vector2i(16, 25))
+	await _wait(1.0)
+	await _until_player_turn()
+	elowen = _member("elowen")
+	var bandits: Array[Combatant] = []
+	for c in combat.combatants:
+		if not c.is_party() and (c.sheet as CreatureSheet).def.id == "bandit":
+			bandits.append(c)
+	if bandits.size() >= 2 and elowen != null:
+		var spot := _free_at(elowen.hex(), 5)
+		bandits[0].actor.place_at(spot)
+		bandits[1].actor.place_at(_free_at(spot, 1))
+		for b in bandits:
+			b.sheet.hp_current = 3
+		var sleep: SpellDef = Data.spells["sleep"]
+		await _record("sleep", elowen, bandits[0], func() -> void:
+			CombatSpells.cast(combat, elowen, sleep, 1, bandits[0].hex(), null), 100, 1, false)
+		var target: Combatant = bandits[2] if bandits.size() > 2 else _foe("bandit_archer")
+		if target != null:
+			target.actor.place_at(_free_at(elowen.hex(), 4))
+			target.sheet.abilities["wis"] = -30  # for the picture: it fails the save
+			await _record("hold_person", elowen, target, func() -> void:
+				CombatSpells.cast(combat, elowen, Data.spells["hold_person"], 2, target.hex(), target), 90, 1, false)
+			# A still of the whole screen: the sleepers, the held bandit, the badges.
+			world.camera.zoom = Vector2(1.25, 1.25)
+			world.camera.center_on((elowen.actor.global_position + bandits[0].actor.global_position
+					+ target.actor.global_position) / 3.0, true)
+			hud._info_panel.visible = true
+			world._mouse_screen = get_viewport().get_canvas_transform() * target.actor.global_position
+			world._refresh_hover(true)
+			await _wait(0.8)
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_png("res://tests/output/fx/conditions.png")
 	get_tree().quit()

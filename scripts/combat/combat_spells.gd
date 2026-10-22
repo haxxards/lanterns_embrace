@@ -110,11 +110,13 @@ static func nearby_allies(m: CombatManager, c: Combatant, spell: SpellDef, slot:
 
 
 ## Who Sleep would put to sleep, given the hit points `pool` rolled: the
-## conscious, awake, living (not undead) in the area, fewest hit points first.
-static func sleep_victims(m: CombatManager, hexes: Array[Vector2i], center: Vector2i, pool: int) -> Array[Combatant]:
+## conscious and awake in the area that the spell works on (not undead, not
+## immune to being charmed or to sleep, as elves are), fewest hit points first.
+static func sleep_victims(m: CombatManager, spell: SpellDef, hexes: Array[Vector2i], center: Vector2i,
+		pool: int) -> Array[Combatant]:
 	var cands: Array[Combatant] = []
 	for o in combatants_in(m, hexes):
-		if o.is_conscious() and not o.asleep and not o.is_undead():
+		if o.is_conscious() and not o.asleep and CreatureTypes.spell_refusal(spell, o.sheet).is_empty():
 			cands.append(o)
 	cands.sort_custom(func(a: Combatant, b: Combatant) -> bool:
 		if a.sheet.hp_current != b.sheet.hp_current:
@@ -150,7 +152,14 @@ static func preview(m: CombatManager, c: Combatant, spell: SpellDef, slot: int, 
 				return _no(hexes, "%s is out of range (%d ft)." % [who.display_name(), maxi(1, spell.range_hexes) * feet])
 			if dist > 1 and not m.world.line_of_sight(c.hex(), h):
 				return _no(hexes, "No clear line to %s." % who.display_name())
+			var refusal := CreatureTypes.spell_refusal(spell, who.sheet)
+			if not refusal.is_empty():
+				return _no(hexes, refusal)  # Hold Person on a wolf: it isn't a humanoid
 			if spell.target == "enemy":
+				if spell.effect == "hold":
+					for o in hold_targets(m, c, spell, slot, who):
+						if not hexes.has(o.hex()):
+							hexes.append(o.hex())
 				return {"ok": true, "hexes": hexes, "text": _enemy_text(m, c, spell, slot, who)}
 			var why := _ally_error(spell, who)
 			if not why.is_empty():
@@ -170,8 +179,17 @@ static func preview(m: CombatManager, c: Combatant, spell: SpellDef, slot: int, 
 			for o in caught:
 				names.append(o.display_name())
 			if spell.effect == "sleep":
-				return {"ok": true, "hexes": hexes, "text": "Sleep: %s in the area (fewest hit points sleep first)."
-						% (", ".join(names) if not names.is_empty() else "nobody")}
+				var may := PackedStringArray()
+				var spared := PackedStringArray()
+				for o in caught:
+					if CreatureTypes.spell_refusal(spell, o.sheet).is_empty():
+						if not o.asleep:
+							may.append(o.display_name())
+					else:
+						spared.append("%s (%s)" % [o.display_name(), _short_refusal(spell, o)])
+				return {"ok": true, "hexes": hexes, "text": "Sleep: %s may sleep (fewest hit points first)%s." % [
+						", ".join(may) if not may.is_empty() else "nobody",
+						"; unaffected: " + ", ".join(spared) if not spared.is_empty() else ""]}
 			return {"ok": true, "hexes": hexes, "text": "%s catches: %s." % [spell.display_name,
 					", ".join(names) if not names.is_empty() else "nobody"]}
 		"hex":
@@ -188,6 +206,32 @@ static func preview(m: CombatManager, c: Combatant, spell: SpellDef, slot: int, 
 
 static func _no(hexes: Array[Vector2i], text: String) -> Dictionary:
 	return {"ok": false, "hexes": hexes, "text": text}
+
+
+## Why a spell passes `o` by, in a word or two: "undead", "Fey Ancestry".
+static func _short_refusal(spell: SpellDef, o: Combatant) -> String:
+	var source := CreatureTypes.immunity_source(o.sheet, spell.condition)
+	return source if not source.is_empty() else CreatureTypes.type_of(o.sheet)
+
+
+## Who Hold Person (and spells like it) would hold: the chosen creature, and
+## with a higher slot more of its kind within 30 ft of it (nearest first) that
+## the caster can reach and see.
+@warning_ignore("integer_division")
+static func hold_targets(m: CombatManager, c: Combatant, spell: SpellDef, slot: int, who: Combatant) -> Array[Combatant]:
+	var out: Array[Combatant] = [who]
+	var extra := int(Spellcasting.scaled(spell, "targets", slot)) - 1
+	if extra <= 0:
+		return out
+	var near := 30 / maxi(1, GameConfig.feet_per_hex)
+	var cands: Array[Combatant] = []
+	for o in m.conscious_enemies_of(c):
+		if o != who and not o.is_held() and m.distance(o, who) <= near and m.distance(o, c) <= spell.range_hexes \
+				and m.world.line_of_sight(c.hex(), o.hex()) and CreatureTypes.spell_refusal(spell, o.sheet).is_empty():
+			cands.append(o)
+	cands.sort_custom(func(a: Combatant, b: Combatant) -> bool: return m.distance(a, who) < m.distance(b, who))
+	out.append_array(cands.slice(0, extra))
+	return out
 
 
 static func _ally_error(spell: SpellDef, who: Combatant) -> String:
@@ -220,10 +264,21 @@ static func _enemy_text(m: CombatManager, c: Combatant, spell: SpellDef, slot: i
 	if spell.darts > 0:
 		var darts := int(Spellcasting.scaled(spell, "darts", slot))
 		return "%s %s: %d darts, %s %s each, never miss" % [spell.display_name, who.display_name(), darts, dmg, spell.damage_type]
+	if not spell.save.is_empty() and spell.damage.is_empty() and not spell.condition.is_empty():
+		var extra := hold_targets(m, c, spell, slot, who).size() - 1 if spell.effect == "hold" else 0
+		return "%s %s%s: %s save against DC %d, or %s for up to %d rounds%s" % [spell.display_name, who.display_name(),
+				" and %d more" % extra if extra > 0 else "", Rules.ABILITY_NAMES.get(spell.save, spell.save),
+				Spellcasting.save_dc(c.sheet), spell.condition, spell.rounds,
+				" (saves again each turn)" if spell.repeat_save else ""]
 	if not spell.save.is_empty():
 		return "%s %s: %s save against DC %d, or %s %s" % [spell.display_name, who.display_name(),
 				Rules.ABILITY_NAMES.get(spell.save, spell.save), Spellcasting.save_dc(c.sheet), dmg, spell.damage_type]
 	return "%s %s" % [spell.display_name, who.display_name()]
+
+
+## The spell's effect colour ("fx": {"color"}), else its damage type's, else white.
+static func _color(spell: SpellDef) -> Color:
+	return Color(str(spell.fx.get("color", CombatFx.DAMAGE_COLORS.get(spell.damage_type, "#ffffff"))))
 
 
 ## A spell attack as an Attack, so it shares advantage and the attack roll.
@@ -327,7 +382,7 @@ static func cast(m: CombatManager, c: Combatant, spell: SpellDef, slot: int, h: 
 	m.state_changed.emit()
 
 
-## Healing, buffs, Sleep, Bless, Aid, Misty Step.
+## Healing, buffs, Sleep, Hold Person, Bless, Aid, Misty Step.
 static func _cast_effect(m: CombatManager, c: Combatant, spell: SpellDef, slot: int, h: Vector2i, who: Combatant,
 		how: String) -> void:
 	var head := "%s casts %s%s" % [c.display_name(), spell.display_name, how]
@@ -335,15 +390,53 @@ static func _cast_effect(m: CombatManager, c: Combatant, spell: SpellDef, slot: 
 		"sleep":
 			var hexes := area_hexes(m, c, spell, h)
 			var pool := Rules.roll_expr(str(Spellcasting.scaled(spell, "pool", slot)), m.rng)
-			var victims := sleep_victims(m, hexes, h, pool)
+			var victims := sleep_victims(m, spell, hexes, h, pool)
+			await CombatFx.cast_sleep(m, c, hexes, _color(spell))
 			var names := PackedStringArray()
 			for v in victims:
 				v.asleep = true
 				v.asleep_rounds = 10
+				v.prone = true  # a sleeper drops where it stands
 				names.append(v.display_name())
 				m.float_text(v, "Asleep", Color(0.7, 0.8, 1.0), 16)
+				CombatFx.refresh_status(m, v)
 			m.log_line("%s (%d hit points' worth): %s." % [head, pool,
 					"%s falls asleep" % ", ".join(names) if not names.is_empty() else "nobody falls asleep"])
+			for o in combatants_in(m, hexes):
+				var refusal := CreatureTypes.spell_refusal(spell, o.sheet)
+				if not refusal.is_empty() and o.is_conscious():
+					m.log_line(refusal)
+					m.float_text(o, "Unaffected", Color(0.85, 0.85, 0.85), 14)
+		"hold":
+			var dc := Spellcasting.save_dc(c.sheet)
+			m.end_concentration(c)  # one concentration spell at a time
+			var held: Array[Combatant] = []
+			for t in hold_targets(m, c, spell, slot, who):
+				var refusal := CreatureTypes.spell_refusal(spell, t.sheet)
+				if not refusal.is_empty():
+					m.log_line("%s: %s" % [head, refusal])
+					m.float_text(t, "Unaffected", Color(0.85, 0.85, 0.85), 14)
+					continue
+				var sv := m.save_throw(t, spell.save, dc, spell.condition)
+				var save_text := "%s save %d vs DC %d" % [Rules.ABILITY_NAMES.get(spell.save, spell.save), sv["total"], dc]
+				await CombatFx.cast_hold(m, c, t, not sv["success"], _color(spell))
+				if not m.in_fight(c) or not m.in_fight(t):
+					return
+				if sv["success"]:
+					m.log_line("%s on %s: resisted (%s)." % [head, t.display_name(), save_text])
+					m.float_text(t, "Resisted", Color(0.85, 0.85, 0.85), 15)
+					continue
+				t.held_by = c
+				t.held_save = spell.save
+				t.held_dc = dc
+				t.held_spell = spell.id
+				held.append(t)
+				m.log_line("%s on %s: paralyzed (%s). It tries again at the end of each of its turns." % [
+						head, t.display_name(), save_text])
+				m.float_text(t, "Held", Color(0.8, 0.7, 1.0), 16)
+				CombatFx.refresh_status(m, t)
+			if not held.is_empty():
+				c.concentration = {"spell": spell.id, "targets": held, "rounds": spell.rounds}
 		"bless":
 			var allies := nearby_allies(m, c, spell, slot)
 			m.end_concentration(c)

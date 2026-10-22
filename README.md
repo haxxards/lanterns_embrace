@@ -71,6 +71,13 @@ Godot explained along the way.
 - **Spell scrolls** (Cure Wounds, Magic Missile, Burning Hands), with icons in both art
   styles: read by anyone with the spell on their class list, no slot needed. Wenna sells
   them and two chests on the Old Temple Road hold them.
+- **Sleep and Hold Person, shown on the figures:** a glittering mist settles and sleepers
+  lie down under a drifting Zzz (an ally can spend an action to wake them); Hold Person
+  binds a humanoid in bands of light until it saves at the end of a turn or the caster's
+  concentration breaks. Every creature now has a type and race (wolves are beasts, bandits
+  humans, skeletons undead; elves can't be magically slept), and spells say who they work
+  on, so Hold Person refuses a wolf and the cursor says why. Elowen starts with a scroll
+  of Hold Person to try it. See [docs/SPELLS.md](docs/SPELLS.md#sleep-and-hold-person).
 - **The rest of combat:** thrown weapons (Wren throws her dagger when she can't reach; it
   lands at the target's feet), **getting away** from a fight by breaking line of sight or
   distance, and **saving mid-fight** on a party member's turn (the fight resumes on load).

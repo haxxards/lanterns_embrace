@@ -45,13 +45,16 @@ func _refresh_alive() -> void:
 		modulate = Color(0.4, 0.36, 0.36, 0.8)
 	else:
 		modulate = Color(0.7, 0.66, 0.66, 0.9)
-	_sprite.rotation = 0.0 if is_alive() else -PI / 2.0
-	_sprite_rest = Vector2.ZERO if is_alive() else Vector2(_sprite.get_rect().size.y * 0.42, -6.0)
-	_sprite.position = _sprite_rest
+	_update_pose()
 	if not is_alive():
 		stop()
 		pending_interaction = null
 	queue_redraw()
+
+
+## Down members lie on the ground too.
+func _lying() -> bool:
+	return not is_alive() or super()
 
 
 func move_speed() -> float:

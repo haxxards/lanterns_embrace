@@ -15,7 +15,10 @@ extends RefCounted
 ##     then shoot; failing that, close in.
 ## turned (Turn Undead)
 ##   - Dash as far from the cleric as it can, and don't attack.
-## (Asleep creatures don't get here: their turns pass.)
+## waking (Sleep)
+##   - a humanoid with no enemy next to it shakes a sleeping ally beside it
+##     awake (its action); beasts and the undead don't think to.
+## (Asleep and held creatures don't get here: their turns pass.)
 
 
 static func take_turn(m: CombatManager, c: Combatant) -> void:
@@ -24,11 +27,28 @@ static func take_turn(m: CombatManager, c: Combatant) -> void:
 	if c.turned_by != null:
 		await _flee(m, c, c.turned_by)
 		return
+	if _wake_an_ally(m, c):
+		return
 	var def := (c.sheet as CreatureSheet).def if c.sheet is CreatureSheet else null
 	if def != null and def.ai == "ranged" and c.ranged_attack() != null:
 		await _ranged_turn(m, c)
 	else:
 		await _melee_turn(m, c)
+
+
+## Shakes a sleeping ally awake if `c` is a humanoid with no enemy next to it.
+## Returns true if it did (that was its action).
+static func _wake_an_ally(m: CombatManager, c: Combatant) -> bool:
+	if CreatureTypes.type_of(c.sheet) != "humanoid" or c.action_used:
+		return false
+	for e in m.conscious_enemies_of(c):
+		if m.distance(e, c) <= 1:
+			return false
+	for o in m.combatants:
+		if o.team == c.team and o != c and o.asleep and o.is_conscious() and m.distance(o, c) <= 1:
+			m.wake_ally(c, o)
+			return true
+	return false
 
 
 ## Dash to the reachable hex furthest from `from` (the cheapest of those).

@@ -52,7 +52,7 @@ by hex, not with the free-walking smoothing used when exploring.
   weapons; the better of the two for finesse weapons) plus proficiency if trained.
   Versatile weapons use the larger die when the other hand is empty. Bows use up arrows.
 - **Advantage** (roll two d20s, keep the higher) for attacking someone **prone** from next
-  to them, someone **unconscious** or **asleep**, someone marked by **Guiding Bolt**, and
+  to them, someone **unconscious**, **asleep** or **paralyzed** (Hold Person), someone marked by **Guiding Bolt**, and
   for a wolf's **Pack Tactics** (an ally next to the target). **Bless** adds 1d4 to the
   roll. **Disadvantage** (keep the lower) against someone **dodging**, against a
   prone target from range, at **long range**, and for a ranged attack with an enemy next
@@ -111,6 +111,8 @@ by hex, not with the free-walking smoothing used when exploring.
 - **Ranged** creatures use their melee weapon on anyone next to them; otherwise they shoot
   the most wounded target in range and in sight, moving first to a spot in range and in
   sight (and not next to the party) if they need to.
+- Humanoids with no enemy next to them shake a **sleeping** ally beside them awake (their
+  action); beasts and the undead don't.
 - **Turned** undead Dash as far from the cleric as they can and don't attack. **Asleep**
   creatures' turns pass.
 
@@ -136,6 +138,8 @@ by hex, not with the free-walking smoothing used when exploring.
 | `xp` | Shared by the party when it is slain. |
 | `attacks` | `to_hit` and `damage` as written in the stat block; `reach_ft` for melee, or `range_ft: [normal, long]` for ranged. `on_hit` adds a saving throw and a condition (only `prone` so far). |
 | `traits` | `pack_tactics` so far. |
+| `type`, `race` | The 5e creature type (`beast`, `humanoid`, `undead`) and, for humanoids, the race (`human`). Spells check them: Hold Person only holds humanoids, Sleep never touches the undead, Turn Undead only turns the undead. Shown when hovering a creature. |
+| `condition_immunities` | Conditions it can't suffer (skeletons: `poisoned`, `exhaustion`). |
 | `vulnerable`, `resistant`, `immune` | Damage type lists. |
 | `ai` | `melee` or `ranged`. |
 | `aggro` | Hexes within which it notices the party (in sight). |

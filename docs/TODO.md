@@ -194,6 +194,21 @@ under [Not started](#not-started-ideas-and-gaps).
     exported from the 3D models) - **COMPLETE**
   - Strike frames on the character sprites (option A plus frames) - **NOT STARTED**: to
     decide after seeing option A
+- Two spells shown end to end on the figures, to see the mechanics against the art - **COMPLETE**
+  ([SPELLS.md](SPELLS.md#sleep-and-hold-person)):
+  - Sleep: mist over the area, sleepers lie down with a drifting Zzz, fall prone, wake
+    on damage, on an ally's action (a Wake button; humanoid enemies do it too) or after
+    a minute - **COMPLETE**
+  - Hold Person (new): paralyzed in bands of light, a Wisdom save each turn,
+    concentration, advantage and critical hits against the held, more targets with
+    higher slots; a scroll of it in Elowen's pack and Wenna's shop - **COMPLETE**
+  - Creature types and races for every creature and party member (races.json; "type",
+    "race", "condition_immunities" in creatures.json), so spells can say who they work
+    on ("affects") - **COMPLETE**
+  - Racial traits: Fey Ancestry (elves and half-elves can't be magically slept),
+    advantage on saves against a condition - **COMPLETE**
+  - Conditions shown in the interface: badges on the turn order, type and conditions on
+    hover, "can't act" on the portrait cards - **COMPLETE**
 
 ## Added without being asked
 
@@ -246,8 +261,13 @@ None of these were promised; they are the known limits, listed so nothing is for
 - Enemy spellcasters - **NOT STARTED**
 - Hiding and stealth (Cunning Action's Hide) - **NOT STARTED**
 - A game clock (resting doesn't move time on) - **NOT STARTED**
-- Effects for the spells without an attack roll (Burning Hands, Sacred Flame, Sleep,
+- Effects for the other spells without an attack roll (Burning Hands, Sacred Flame,
   Bless, healing) and for Shield and the class features - **NOT STARTED**
+- More "hold X" spells (Hold Monster) and other condition spells (Charm Person,
+  frightened...): the data model is there, the spells aren't - **NOT STARTED**
+- Racial traits beyond saves and condition immunities (darkvision, a halfling's Lucky,
+  dwarven poison resistance) - **NOT STARTED**
+- Reading a scroll of a spell above the levels you can cast needs no ability check yet - **NOT STARTED**
 - Weapons drawn as separate sprites, so swings show the equipped weapon in the hand - **NOT STARTED**
 - Choosing Bless's and Aid's targets by hand (they take the nearest allies) - **NOT STARTED**
 - Concentration spells other than Bless, and more spells beyond 2nd level - **NOT STARTED**

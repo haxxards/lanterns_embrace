@@ -16,7 +16,7 @@
 			"spells": {
 				"1": ["fire_bolt", "light", "mage_hand", "magic_missile", "shield", "sleep", "burning_hands"],
 				"2": ["mage_armor"],
-				"3": ["scorching_ray", "misty_step"]
+				"3": ["scorching_ray", "misty_step", "hold_person"]
 			}
 		},
 		"cleric": {
@@ -25,7 +25,7 @@
 			"features": {"1": ["divine_domain", "disciple_of_life"], "2": ["channel_divinity", "turn_undead", "preserve_life"]},
 			"spells": {
 				"1": ["sacred_flame", "guidance", "spare_the_dying", "bless", "cure_wounds", "healing_word", "guiding_bolt"],
-				"3": ["aid"]
+				"3": ["aid", "hold_person"]
 			}
 		}
 	},

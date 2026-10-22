@@ -37,6 +37,14 @@ var asleep_rounds: int = 0
 ## takes damage or `turned_rounds` of its turns have passed.
 var turned_by: Combatant = null
 var turned_rounds: int = 0
+## Paralyzed (Hold Person) by this caster: can't move, act or react, fails
+## Strength and Dexterity saves; attacks against it have advantage, and hits
+## from within 5 ft are critical. At the end of each of its turns it repeats
+## `held_save` against `held_dc` and breaks free on a success.
+var held_by: Combatant = null
+var held_save: String = ""
+var held_dc: int = 0
+var held_spell: String = ""
 ## Blessed (Bless) by this caster: +1d4 to attack rolls and saving throws.
 var blessed_by: Combatant = null
 ## Shield: extra armour class until the start of its next turn.
@@ -73,6 +81,8 @@ func to_dict() -> Dictionary:
 		"asleep": asleep, "asleep_rounds": asleep_rounds,
 		"turned_by": turned_by.key if turned_by != null else "", "turned_rounds": turned_rounds,
 		"blessed_by": blessed_by.key if blessed_by != null else "", "shield_ac": shield_ac,
+		"held_by": held_by.key if held_by != null else "", "held_save": held_save, "held_dc": held_dc,
+		"held_spell": held_spell,
 		"marked_by": marked_by.key if marked_by != null else "", "mark_age": mark_age,
 		"cast_bonus_spell": cast_bonus_spell, "cast_leveled_spell": cast_leveled_spell,
 	}
@@ -105,6 +115,10 @@ func load_dict(d: Dictionary, others: Dictionary) -> void:
 	turned_by = others.get(str(d.get("turned_by", "")))
 	turned_rounds = int(d.get("turned_rounds", 0))
 	blessed_by = others.get(str(d.get("blessed_by", "")))
+	held_by = others.get(str(d.get("held_by", "")))
+	held_save = str(d.get("held_save", ""))
+	held_dc = int(d.get("held_dc", 0))
+	held_spell = str(d.get("held_spell", ""))
 	shield_ac = int(d.get("shield_ac", 0))
 	marked_by = others.get(str(d.get("marked_by", "")))
 	mark_age = int(d.get("mark_age", 0))
@@ -137,9 +151,40 @@ func is_conscious() -> bool:
 	return sheet.hp_current > 0
 
 
-## Able to take actions and reactions: conscious and awake.
+## Able to take actions and reactions: conscious, awake and not held.
 func can_act() -> bool:
-	return is_conscious() and not asleep
+	return is_conscious() and not asleep and held_by == null
+
+
+func is_held() -> bool:
+	return held_by != null
+
+
+## Can't move or act, and so fails Strength and Dexterity saves: down, asleep or held.
+func is_incapacitated() -> bool:
+	return not is_conscious() or asleep or held_by != null
+
+
+## Its conditions, for the interface: "asleep", "paralyzed", "prone", "blessed"...
+func conditions() -> PackedStringArray:
+	var out := PackedStringArray()
+	if asleep:
+		out.append("asleep")
+	if held_by != null:
+		out.append("paralyzed")
+	if prone:
+		out.append("prone")
+	if turned_by != null:
+		out.append("turned")
+	if blessed_by != null:
+		out.append("blessed")
+	if marked_by != null:
+		out.append("marked")
+	if dodging:
+		out.append("dodging")
+	if not concentration.is_empty():
+		out.append("concentrating")
+	return out
 
 
 ## Armour class against an attack right now (Shield included).
@@ -149,7 +194,7 @@ func armor_class() -> int:
 
 ## An undead creature (Sleep doesn't affect it; Turn Undead does).
 func is_undead() -> bool:
-	return sheet is CreatureSheet and (sheet as CreatureSheet).def.creature_type == "undead"
+	return CreatureTypes.type_of(sheet) == "undead"
 
 
 ## Gone from the fight for good: a dead party member or a slain creature.

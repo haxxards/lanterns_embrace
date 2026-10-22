@@ -41,8 +41,10 @@ own `progress` from 0 to 1 and frees itself at the end.
 | Class | Styles | What it draws |
 |---|---|---|
 | `SwingFx` | `slash`, `smash`, `thrust`, `punch`, `bite`, `claw` | A crescent swept around the shoulder (slash: sideways past the aim; smash: from overhead down onto the target), a jab (thrust, punch), or marks drawn on the target (jaws closing; three raking lines). The weapon's inventory icon rides the leading edge, half transparent. |
-| `ProjectileFx` | `arrow`, `thrown`, `bolt`, `dart` | An arrow (shaft, head, red fletching), the thrown weapon's icon spinning, a glowing bolt with a trail, or a small dart with a long trail. |
-| `BurstFx` | `hit`, `charge`, `dust` | A flash and a spray of sparks; a glow swelling before a spell; a flattened ring on the ground. |
+| `ProjectileFx` | `arrow`, `thrown`, `bolt`, `dart`, `ribbon` | An arrow (shaft, head, red fletching), the thrown weapon's icon spinning, a glowing bolt with a trail, a small dart with a long trail, or a broad curling streamer (Hold Person). |
+| `BurstFx` | `hit`, `charge`, `dust`, `shatter` | A flash and a spray of sparks; a glow swelling before a spell; a flattened ring on the ground; a ring of light breaking apart (a spell resisted or shaken off). |
+| `AreaFx` | `mist` | A glittering haze over a whole area of hexes, filled edge to edge so it has the targeting preview's shape (Sleep). |
+| `StatusFx` | `asleep`, `held` | A condition on a figure for as long as it lasts: a slow "z Z z" rising from the head; three bands of violet light wrapped round the body. A child of the Actor, so it follows it. |
 
 `scripts/combat/combat_fx.gd` (**CombatFx**) is the director: it picks the style, moves the
 bodies and places the effects.
@@ -73,6 +75,33 @@ bodies and places the effects.
   darts 560), never under about a tenth of a second.
 - **Trails** remember the last few positions and draw lines between them that get thinner
   and fainter towards the oldest.
+
+## Conditions on the figures (Sleep, Hold Person)
+
+![Sleep](images/fx_sleep.gif) ![Hold Person](images/fx_hold_person.gif)
+
+A condition shows on the creature for as long as it lasts, not just when it starts:
+
+- `Actor.show_status(kind, on)` adds or removes a `StatusFx` child and updates the pose:
+  a sleeper's sprite is turned a quarter onto its side and shifted to lie across its hex
+  (the same pose as a party member who is down), and the sprite is tinted (cool blue
+  asleep, violet held). `Actor.anchor()` turns its offsets with the sprite, so a lying
+  figure's "head" is where the head now is, and the Zzz rises from there.
+- `CombatFx.refresh_status(m, c)` makes the figure match the combatant's conditions. The
+  rules call it whenever one starts or ends (falling asleep, waking, being held, breaking
+  free), after a saved fight is restored, and the fight's end clears them all.
+- The pose only resets when lying down or standing up actually changes, so a hit on a
+  party member doesn't cut short their flinch.
+
+The bands are three ellipses (the ground is seen from 45° up, so rings look flat) at
+three heights. Each is drawn in two halves: the far half (the top of the ellipse on screen)
+faint, the near half bright. That is enough to make them seem to wrap round the figure.
+A short bright arc runs round each at its own speed, and the whole pulses
+(`0.75 + 0.25 × sin(4t)`).
+
+The Zzz are three letters, each a third of a cycle behind the last. Over its 2.1-second
+cycle a letter rises 26 px and drifts 14 px to the side (plus a little sideways wobble),
+grows from 10 to 18 px, and fades in and out (`alpha = sin(π u)`).
 
 ## Where the hands are: anchors
 

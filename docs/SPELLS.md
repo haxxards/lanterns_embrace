@@ -34,7 +34,7 @@ scrolls and rests. The rules follow the 5e SRD, simplified where noted.
 | Spare the Dying | cantrip | cleric | Touch: a dying companion becomes stable. |
 | Magic Missile | 1st | wizard | Three darts of 1d4+1 force that never miss (one more per slot level above 1st). |
 | Burning Hands | 1st | wizard | 15-ft cone, Dexterity save, 3d6 fire, half on a save (+1d6 per slot level). |
-| Sleep | 1st | wizard | 20-ft circle up to 90 ft away: 5d8 hit points' worth of creatures fall asleep, fewest hit points first (+2d8 per slot level). Undead are immune. Allies in the circle count too. |
+| Sleep | 1st | wizard | 20-ft circle up to 90 ft away: 5d8 hit points' worth of creatures fall asleep (and prone), fewest hit points first (+2d8 per slot level). Not undead, nor anything that can't be charmed, nor elves. Allies in the circle count too. See [Sleep and Hold Person](#sleep-and-hold-person). |
 | Shield | 1st | wizard | Reaction, cast for you: +5 armour class until your next turn, when that turns a hit into a miss. |
 | Mage Armor | 1st | wizard | Touch, no armour worn: armour class 13 + Dex until a long rest. |
 | Bless | 1st | cleric | Up to three allies within 30 ft add 1d4 to attack rolls and saving throws; concentration, 10 rounds. |
@@ -44,10 +44,12 @@ scrolls and rests. The rules follow the 5e SRD, simplified where noted.
 | Scorching Ray | 2nd | wizard | Three rays, a spell attack each, 2d6 fire (one more ray per slot level). |
 | Misty Step | 2nd | wizard | Bonus action: teleport to a spot you can see within 30 ft. |
 | Aid | 2nd | cleric | Up to three allies gain 5 hit points (current and maximum) until a long rest (+5 per slot level). |
+| Hold Person | 2nd | wizard, cleric | A humanoid within 60 ft: Wisdom save or paralyzed (concentration, up to 10 rounds), saving again at the end of each of its turns. One more humanoid per slot level. See [Sleep and Hold Person](#sleep-and-hold-person). |
 
 Elowen (wizard) and Odran (cleric) start with the level 1 spells; Mage Armor comes at
-level 2, and the 2nd-level spells (Scorching Ray, Misty Step, Aid) at level 3, when full
-casters get their first 2nd-level slots.
+level 2, and the 2nd-level spells (Scorching Ray, Misty Step, Aid, Hold Person) at level
+3, when full casters get their first 2nd-level slots. Elowen also starts with a **scroll
+of Hold Person**, so it can be tried at level 1.
 
 ## The numbers
 
@@ -121,13 +123,14 @@ The 5e rules measure areas in feet; the game uses 5 ft per hex (`feet_per_hex` i
 
 | | |
 |---|---|
-| **Asleep** (Sleep) | Skips its turns and can't react. Attacks against it have advantage; hits from next to it are critical. Damage wakes it; it wakes by itself after 10 of its turns. |
+| **Asleep** (Sleep) | Falls prone, skips its turns and can't react; fails Strength and Dexterity saves. Attacks against it have advantage; hits from next to it are critical. Damage wakes it, so does an ally next to it spending an action ("Wake ..." on the combat bar), and it wakes by itself after 10 of its turns. It is still prone when it wakes. |
+| **Paralyzed** (Hold Person) | Skips its turns, can't move or react; fails Strength and Dexterity saves. Attacks against it have advantage; hits from next to it are critical. At the end of each of its turns it repeats the save and breaks free on a success. It also goes free when the caster's concentration ends. |
 | **Turned** (Turn Undead) | Spends its turns dashing away from the cleric, doesn't attack or make opportunity attacks. Ends when it takes damage or after 10 of its turns. |
 | **Blessed** (Bless) | +1d4 to attack rolls and saving throws while the caster concentrates. |
 | **Marked** (Guiding Bolt) | The next attack against it, before the end of the caster's next turn, has advantage. |
 | **Shield** | +5 armour class until the start of the wizard's next turn. |
 
-**Concentration** (Bless): a caster keeps up one concentration spell at a time; casting
+**Concentration** (Bless, Hold Person): a caster keeps up one concentration spell at a time; casting
 another ends the first. Taking damage calls for a Constitution save, DC 10 or half the
 damage if higher; failing ends the spell. It also ends when its rounds run out or the
 caster drops.
@@ -172,14 +175,106 @@ Armor, Aid) and Second Wind and Preserve Life can be used from here. A spell for
 asks whom to cast it on. Spells that only make sense in a fight are greyed out, with the
 reason in the tooltip. Outside a fight the party stands together, so range doesn't apply.
 
+## Sleep and Hold Person
+
+These two show how a spell that imposes a condition works, from the data to the sprite.
+
+![Sleep: a glittering mist settles over the circle, and the bandits drop where they stand](images/fx_sleep.gif)
+![Hold Person: a ribbon of light from Elowen's staff binds the archer in bands of light](images/fx_hold_person.gif)
+
+![Two sleeping bandits and a held archer: badges on the turn order, conditions on hover](images/spell_conditions.jpg)
+
+### Who a spell works on: creature types and races
+
+Every creature has a **type** (5e: humanoid, beast, undead...), and humanoids a **race**:
+
+| Who | Where it comes from | Type (race) |
+|---|---|---|
+| Party members | Their sheet's `ancestry`, looked up in [`data/races/races.json`](../data/races/races.json) | humanoid (human, elf, dwarf, halfling) |
+| Bandits, bandit archers | `"type"` and `"race"` in [`data/creatures/creatures.json`](../data/creatures/creatures.json) | humanoid (human) |
+| Wolves | the same | beast |
+| Skeletons, skeleton archers | the same | undead |
+
+A race's **traits** and a creature's **condition_immunities** list conditions it can't
+suffer. An elf's **Fey Ancestry** makes it immune to `asleep` ("magic can't put you to
+sleep") and gives advantage on saves against being `charmed`; skeletons can't be
+`poisoned` or exhausted.
+
+A spell says who it works on with `"affects"`, and what it does with `"condition"`:
+
+```json
+"hold_person": {"save": "wis", "effect": "hold", "condition": "paralyzed",
+                "affects": {"types": ["humanoid"]}, "concentration": true, "repeat_save": true, ...}
+"sleep":       {"effect": "sleep", "condition": "asleep",
+                "affects": {"not_types": ["undead"], "not_immune_to": ["charmed"]}, ...}
+```
+
+| `affects` key | Meaning |
+|---|---|
+| `types` | Only these creature types (Hold Person: humanoids). |
+| `not_types` | Never these (Sleep: undead). |
+| `not_immune_to` | Nothing immune to these conditions (Sleep: anything that can't be charmed). |
+
+Anything immune to the spell's own `condition` is passed by too (elves and Sleep).
+`CreatureTypes.spell_refusal(spell, sheet)` puts all of this together and says why in
+words ("Hold Person only works on humanoids; Wolf is a beast."). The targeting preview
+shows that reason on the cursor, Sleep's preview lists who would be unaffected, and the
+log names them when it is cast.
+
+**The "hold X" family** is then just data. Hold Monster (5th level) is the same spell with
+`"affects": {"not_types": ["undead"]}`; a hold for beasts would be
+`"affects": {"types": ["beast"]}`. Add the entry, give it to a class, and it works; the
+unit tests build a Hold Monster this way.
+
+### How they play
+
+- **Sleep** rolls its pool (5d8), takes the creatures in the circle that it works on,
+  fewest hit points first, while the pool lasts. Each falls asleep and prone. A sleeper
+  wakes when damaged, when an ally next to it uses an action to shake it (a **Wake**
+  button on the combat bar for the party; humanoid enemies with no foe next to them do
+  it too, beasts and the undead don't), or after 10 of its turns.
+- **Hold Person** takes the action and concentration (ending any other concentration
+  spell). The target makes a Wisdom save against the caster's DC; on a failure it is
+  paralyzed. Each of its turns passes; at the end of each it saves again and breaks free
+  on a success. When the last held creature is free, or the caster's concentration
+  breaks (damage and a failed Constitution save, a new concentration spell, 10 rounds),
+  the spell ends. With a higher slot it also targets the nearest other humanoids within
+  30 ft of the first (the preview lights them up).
+- Both conditions make attacks against the creature roll with advantage, make hits from
+  next to it critical, and make it fail Strength and Dexterity saves (Burning Hands'
+  Dexterity save, for one).
+- Asleep and held foes still count as being in the fight: it isn't won until they are
+  dealt with, and they still stop the party from "getting away" while near.
+
+### How they look
+
+- **Sleep**: a glow gathers at the caster's staff, then a glittering mist drifts down over
+  the whole circle. Those who fall asleep lie down on their side, tinted cool, with a slow
+  "z Z z" rising from their heads. They stand up when they wake.
+- **Hold Person**: a ribbon of violet light curls from the caster's focus to the target.
+  On a failed save it flares and three bands of light stay wrapped round the figure,
+  pulsing, their far halves fainter so they seem to circle it, and the figure is tinted
+  violet. On a successful save, or when it breaks free later, the light shatters.
+- The turn order shows a **Zzz** or **Held** badge on the portrait; hovering a creature
+  shows its type, race and conditions ("Bandit (3/11 HP) · humanoid (human) · asleep,
+  prone"); a party member's card says "Asleep, can't act" or "Held, can't act".
+
+The code: `Actor.show_status()` adds a `StatusFx` node (the Zzz or the bands) to the
+figure and lays it down or tints it; `CombatFx.refresh_status()` keeps the figures in step
+with the conditions; `CombatFx.cast_sleep()` and `cast_hold()` play the casting; `AreaFx`
+draws the mist. See [COMBAT_FX.md](COMBAT_FX.md).
+
 ## Spell scrolls
 
-`scroll_of_cure_wounds`, `scroll_of_magic_missile` and `scroll_of_burning_hands` (items
+`scroll_of_cure_wounds`, `scroll_of_magic_missile`, `scroll_of_burning_hands` and
+`scroll_of_hold_person` (items
 with `"use": {"cast": "<spell id>"}`). Anyone whose class has the spell on its list can read
 one; reading it casts the spell at its own level without a slot, and uses the scroll up.
 In a fight they appear on the combat bar ("Scroll: Magic Missile"); outside one, use them
 from the inventory (right-click, on the reader) or the spells screen. Wenna sells Cure
-Wounds scrolls; the bandits' strongbox and the ruined temple's chest each hold one.
+Wounds scrolls and a Hold Person scroll; the bandits' strongbox and the ruined temple's
+chest each hold one; Elowen starts with a Hold Person scroll. A scroll can be read even if
+its spell is above the levels the reader can cast yet (a simplification of 5e).
 
 ## Resting (R)
 
@@ -223,7 +318,10 @@ back and carries on that turn (`CombatManager.restore`).
    | `damage`, `damage_type`, `cantrip_dice` | Dice per hit (per dart, per ray). |
    | `heal` | Healing dice. |
    | `darts`, `rays`, `targets`, `pool`, `amount` | Counts and pools that `higher` can grow. |
-   | `effect` | A named effect the code knows: `sleep`, `shield`, `bless`, `mark`, `stabilize`, `guidance`, `mage_armor`, `aid`, `teleport`. |
+   | `effect` | A named effect the code knows: `sleep`, `hold`, `shield`, `bless`, `mark`, `stabilize`, `guidance`, `mage_armor`, `aid`, `teleport`. |
+   | `condition` | The condition it imposes (`asleep`, `paralyzed`); creatures immune to it are unaffected. |
+   | `affects` | Who it works on: `{"types": [...]}`, `{"not_types": [...]}`, `{"not_immune_to": [...]}` (see [Sleep and Hold Person](#who-a-spell-works-on-creature-types-and-races)). |
+   | `repeat_save` | The target saves again at the end of each of its turns. |
    | `concentration`, `rounds` | Concentration and how long it lasts. |
    | `combat_only` | Only castable in a fight. |
    | `higher` | What each slot level above adds: `{"damage": "1d6"}`, `{"darts": 1}`... |
@@ -241,8 +339,16 @@ and upcast dice, healing with Disciple of Life, slots running out, scrolls and c
 level-up grants, feature uses, short and long rests, Guidance and Expertise, saving sheets,
 and casting and features outside a fight.
 
+`tests/unit/test_creature_types.gd` covers creature types and races, Fey Ancestry, which
+creatures Sleep and Hold Person work on, a Hold Monster built from data alone, Hold
+Person's data and class tables, and the held state in a save.
+
 `tests/integration/test_spells.gd` fights on the real map: Fire Bolt and Magic Missile,
 Burning Hands' cone, Sleep and waking, Shield as a reaction, Bless and concentration, the
 bonus-action spell rule, Guiding Bolt's mark, scrolls in a fight, Second Wind, Action
 Surge, Cunning Action, Turn Undead, a thrown dagger, getting away, saving and loading
-mid-fight, the spells screen, resting, and reading a scroll from the inventory.
+mid-fight, the spells screen, resting, and reading a scroll from the inventory; and
+Hold Person paralyzing a bandit (advantage, failed Dexterity saves, a save each turn,
+breaking free), refusing wolves, critical hits on the held, concentration freeing them,
+Sleep sparing elves and the undead, sleepers falling prone and being woken by an ally,
+bandits waking their friends, and the conditions showing on the figures.

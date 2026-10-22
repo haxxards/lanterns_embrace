@@ -5,6 +5,8 @@ extends Node2D
 ##   hit     a quick flash and a spray of sparks of different lengths
 ##   charge  a glow swelling at a caster's hand or staff before a spell leaves
 ##   dust    a flattened ring on the ground (a heavy blow, a missed arrow)
+##   shatter shards of light flying apart and a broken ring (a spell resisted
+##           or shaken off: Hold Person)
 ##
 ## `size` scales it (a critical hit is bigger). `progress` (0 to 1) plays it;
 ## spawn() tweens it and frees the node.
@@ -50,6 +52,13 @@ func _draw() -> void:
 			draw_circle(Vector2.ZERO, r * 1.8, Color(color, 0.2 * alpha))
 			draw_circle(Vector2.ZERO, r, Color(color, 0.55 * alpha))
 			draw_circle(Vector2.ZERO, r * 0.45, Color(color.lightened(0.7), alpha))
+		"shatter":
+			var r := (8.0 + 22.0 * progress) * size
+			for i in _sparks.size():  # the ring, broken into pieces flying outwards
+				var mid := _sparks[i]
+				draw_arc(Vector2.ZERO, r, mid - 0.22, mid + 0.22, 4, Color(color, 0.9 * a), 2.5, true)
+				var d := Vector2.from_angle(mid + 0.4)
+				draw_line(d * r * 0.6, d * (r * 0.6 + _lengths[i] * 0.6), Color(color.lightened(0.5), a), 1.5, true)
 		"dust":
 			var r := (8.0 + 18.0 * progress) * size
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.45))

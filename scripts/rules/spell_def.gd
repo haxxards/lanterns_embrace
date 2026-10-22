@@ -34,9 +34,18 @@ var heal: String = ""
 ## Magic Missile's darts and Scorching Ray's rays.
 var darts: int = 0
 var rays: int = 0
-## Named effects: "sleep", "shield", "bless", "mark", "stabilize", "guidance",
-## "mage_armor", "aid", "teleport".
+## Named effects: "sleep", "hold", "shield", "bless", "mark", "stabilize",
+## "guidance", "mage_armor", "aid", "teleport".
 var effect: String = ""
+## The condition it imposes ("asleep", "paralyzed"); a creature immune to it is unaffected.
+var condition: String = ""
+## Who it works on (CreatureTypes.spell_refusal): {"types": [...]} only these
+## creature types, {"not_types": [...]} never these, {"not_immune_to": [...]}
+## nothing immune to these conditions. {} = anyone.
+var affects: Dictionary = {}
+## The target repeats the saving throw at the end of each of its turns,
+## and shakes the effect off on a success (Hold Person).
+var repeat_save: bool = false
 var dice: String = ""
 var rounds: int = 0
 var targets: int = 1
@@ -80,6 +89,9 @@ static func from_dict(spell_id: String, d: Dictionary) -> SpellDef:
 	s.darts = int(d.get("darts", 0))
 	s.rays = int(d.get("rays", 0))
 	s.effect = str(d.get("effect", ""))
+	s.condition = str(d.get("condition", ""))
+	s.affects = d.get("affects", {})
+	s.repeat_save = bool(d.get("repeat_save", false))
 	s.dice = str(d.get("dice", ""))
 	s.rounds = int(d.get("rounds", 0))
 	s.targets = maxi(1, int(d.get("targets", 1)))
@@ -106,7 +118,7 @@ func needs_target() -> bool:
 
 ## Harms its targets (cast on enemies, or an area that may catch them).
 func is_harmful() -> bool:
-	return not damage.is_empty() or effect == "sleep"
+	return not damage.is_empty() or effect in ["sleep", "hold"]
 
 
 ## "1st", "2nd", "3rd", "4th"...

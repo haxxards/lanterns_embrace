@@ -84,6 +84,9 @@ func bind(w: World) -> void:
 	world = w
 	world.camera.right_ui_width = SIDEBAR_WIDTH
 	_combat_hud.bind(w.combat)
+	w.combat.state_changed.connect(func() -> void:
+		for c in _cards:
+			c.refresh())
 
 
 func _unhandled_input(event: InputEvent) -> void:

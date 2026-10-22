@@ -51,7 +51,9 @@
 			"name": "Sleep", "level": 1, "school": "enchantment", "classes": ["wizard"],
 			"cast": "action", "range_ft": 90, "target": "area", "area": {"shape": "circle", "size_ft": 20},
 			"effect": "sleep", "pool": "5d8", "higher": {"pool": "2d8"},
-			"description": "Roll 5d8: creatures within 20 feet of a point fall asleep, those with the fewest hit points first, until the roll is used up. Undead don't sleep. Friends in the area aren't spared."
+			"condition": "asleep", "affects": {"not_types": ["undead"], "not_immune_to": ["charmed"]},
+			"fx": {"color": "#9ab8ff"},
+			"description": "Roll 5d8: creatures within 20 feet of a point fall asleep, those with the fewest hit points first, until the roll is used up. A sleeper drops prone and wakes when hurt, when an ally next to it spends an action to shake it, or after a minute. Undead, creatures that can't be charmed, and elves (Fey Ancestry) don't sleep. Friends in the area aren't spared."
 		},
 		"shield": {
 			"name": "Shield", "level": 1, "school": "abjuration", "classes": ["wizard"],
@@ -103,6 +105,14 @@
 			"cast": "action", "range_ft": 30, "target": "allies", "targets": 3,
 			"effect": "aid", "amount": 5, "higher": {"amount": 5},
 			"description": "Up to three allies gain 5 maximum and current hit points until a long rest. 5 more per slot level above 2nd."
+		},
+		"hold_person": {
+			"name": "Hold Person", "level": 2, "school": "enchantment", "classes": ["cleric", "wizard"],
+			"cast": "action", "range_ft": 60, "target": "enemy", "save": "wis",
+			"effect": "hold", "condition": "paralyzed", "affects": {"types": ["humanoid"]},
+			"concentration": true, "rounds": 10, "repeat_save": true, "targets": 1, "higher": {"targets": 1},
+			"fx": {"color": "#c9a8ff"},
+			"description": "A humanoid within 60 feet makes a Wisdom saving throw or is paralyzed for up to a minute (concentration). It can't move, act or react; it fails Strength and Dexterity saves; attacks against it have advantage, and hits from within 5 feet are critical. At the end of each of its turns it tries the save again and breaks free on a success. Beasts, undead and anything else that isn't humanoid are unaffected. One more humanoid within 30 feet of the first per slot level above 2nd."
 		}
 	}
 }

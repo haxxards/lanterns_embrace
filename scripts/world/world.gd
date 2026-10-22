@@ -345,6 +345,14 @@ func _spawn_creatures() -> void:
 		creatures.append(cr)
 
 
+## "  ·  asleep, prone" for someone in the fight with conditions, else "".
+func _conditions_text(actor: Node) -> String:
+	var c := combat.combatant_of(actor) if combat.active else null
+	if c == null or c.conditions().is_empty():
+		return ""
+	return "  ·  " + ", ".join(c.conditions())
+
+
 ## The visible, living creature under a world position (front-most first).
 func creature_at(world_pos: Vector2) -> Creature:
 	var best: Creature = null
@@ -829,9 +837,11 @@ func _refresh_hover(force: bool = false) -> void:
 	elif any_prop:
 		info["prop"] = any_prop.display_name()
 	if member:
-		info["member"] = member.sheet.display_name
+		info["member"] = "%s  ·  %s%s" % [member.sheet.display_name, CreatureTypes.describe(member.sheet),
+				_conditions_text(member)]
 	if foe:
-		info["member"] = "%s  (%d/%d HP)" % [foe.def.display_name, foe.sheet.hp_current, foe.sheet.hp_max]
+		info["member"] = "%s  (%d/%d HP)  ·  %s%s" % [foe.def.display_name, foe.sheet.hp_current, foe.sheet.hp_max,
+				CreatureTypes.describe(foe.sheet), _conditions_text(foe)]
 	if combat.active:
 		_combat_hover(h, foe, info)
 		Events.hover_info_changed.emit(info)

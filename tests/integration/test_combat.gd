@@ -305,6 +305,19 @@ func test_defeat_ends_the_fight_with_game_over() -> void:
 	check(hud._game_over.visible, "game over")
 
 
+func test_defeat_with_everyone_down_but_alive() -> void:
+	_spawn("wolf", _leader_cell() + Vector2i(5, 0))
+	await _frames()
+	check(combat.active, "fighting")
+	for s in GameState.party:
+		s.damage(s.hp_current)  # down, not dead
+	await _frames()
+	check(not combat.active, "the fight ends (once, without recursing)")
+	check(hud._game_over.visible, "game over")
+	for s in GameState.party:
+		check(s.stable and not s.dead, "%s lies stable" % s.display_name)
+
+
 func test_wolves_wait_in_the_woods() -> void:
 	var wolves: Array[Creature] = []
 	for cr in world.creatures:

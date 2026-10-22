@@ -15,6 +15,7 @@ const QUESTS_PATH := "res://data/quests/quests.json"
 const CREATURES_PATH := "res://data/creatures/creatures.json"
 const SPELLS_PATH := "res://data/spells/spells.json"
 const CLASSES_PATH := "res://data/classes/classes.json"
+const RACES_PATH := "res://data/races/races.json"
 
 var terrain: Dictionary = {}            # id -> TerrainDef
 var terrain_by_symbol: Dictionary = {}  # symbol -> TerrainDef
@@ -26,6 +27,8 @@ var creatures: Dictionary = {}          # id -> CreatureDef
 var spells: Dictionary = {}             # id -> SpellDef
 var classes: Dictionary = {}            # id -> class entry from classes.json (Dictionary)
 var features: Dictionary = {}           # id -> feature entry from classes.json (Dictionary)
+var races: Dictionary = {}              # id -> race entry from races.json (Dictionary)
+var race_traits: Dictionary = {}        # id -> trait entry from races.json (Dictionary)
 var _dialogues: Dictionary = {}         # path -> Dialogue (loaded on first use)
 var characters: Dictionary = {}         # id -> CharacterSheet (template, never mutated)
 
@@ -117,6 +120,9 @@ func _load_spells_and_classes() -> void:
 	var c: Variant = JsonUtil.load_json(CLASSES_PATH)
 	classes = (c.get("classes", {}) as Dictionary).duplicate(true) if c is Dictionary else {}
 	features = (c.get("features", {}) as Dictionary).duplicate(true) if c is Dictionary else {}
+	var r: Variant = JsonUtil.load_json(RACES_PATH)
+	races = (r.get("races", {}) as Dictionary).duplicate(true) if r is Dictionary else {}
+	race_traits = (r.get("traits", {}) as Dictionary).duplicate(true) if r is Dictionary else {}
 
 
 func _load_npcs() -> void:

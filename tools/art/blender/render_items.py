@@ -722,6 +722,10 @@ def scroll_of_burning_hands():
     scroll("scroll_of_burning_hands", "#c0501a", "#7a1410", "#ff8a2a")
 
 
+def scroll_of_hold_person():
+    scroll("scroll_of_hold_person", "#8a6ac8", "#3a3a6a", "#d4b8ff")
+
+
 ALL = {
     "longsword": longsword, "shortsword": shortsword, "dagger": dagger, "rapier": rapier, "greataxe": greataxe,
     "mace": mace,
@@ -735,7 +739,7 @@ ALL = {
     "rations": rations, "apple": apple, "torch": torch, "lantern": lantern, "holy_symbol": holy_symbol,
     "thieves_tools": thieves_tools, "spellbook": spellbook, "garnet": garnet, "key": key, "gold": gold,
     "scroll_of_cure_wounds": scroll_of_cure_wounds, "scroll_of_magic_missile": scroll_of_magic_missile,
-    "scroll_of_burning_hands": scroll_of_burning_hands,
+    "scroll_of_burning_hands": scroll_of_burning_hands, "scroll_of_hold_person": scroll_of_hold_person,
 }
 
 

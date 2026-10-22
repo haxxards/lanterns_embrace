@@ -96,6 +96,10 @@ func refresh() -> void:
 	_hp_label.text = "HP %d / %d" % [s.hp_current, s.hp_max] if s.is_alive() else _down_text(s)
 	modulate = Color.WHITE if s.is_alive() else Color(0.6, 0.55, 0.55)
 	_stats_label.text = "AC %d   Speed %d ft" % [s.armor_class, s.effective_speed_ft()]
+	var fight := GameState.combat as CombatManager
+	var c := fight.combatant_of(member) if fight != null and fight.active else null
+	if c != null and (c.asleep or c.is_held()):  # what stops them acting, in a fight
+		_stats_label.text = ("Asleep" if c.asleep else "Held") + ", can't act"
 	_slots_label.text = SpellsScreen.slot_pips(s) if Spellcasting.is_caster(s) else ""
 	_slots_label.visible = not _slots_label.text.is_empty()
 	_slots_label.tooltip_text = "Spell slots: %s" % Spellcasting.slots_text(s)

@@ -545,3 +545,164 @@ func test_anchors_follow_the_facing() -> void:
 	off = m.anchor("weapon") - m.global_position
 	check(off.is_equal_approx(Vector2(-float(east[0]), float(east[1]))), "facing west: mirrored %s" % off)
 
+
+# --- Sleep and Hold Person ------------------------------------------------------------
+
+## Ends party turns until `done` returns true (enemy turns resolve at once
+## with animation off). Returns whether it did.
+func _turns_until(done: Callable, max_steps: int = 60) -> bool:
+	for i in max_steps:
+		if done.call():
+			return true
+		if not combat.active:
+			break
+		if combat.is_player_turn():
+			combat.end_turn()
+		await _frames(1)
+	return done.call()
+
+
+func test_hold_person_paralyzes_a_humanoid() -> void:
+	var foe: Combatant = await _fight("bandit", true)
+	foe.sheet.abilities["wis"] = -30  # it can't make the save
+	var me := await _turn_of("elowen")
+	check(me != null, "Elowen's turn")
+	foe.actor.place_at(_hex_at(me.hex(), 4))
+	var ab := _ability(me, "hold_person", "scroll")
+	check(not ab.is_empty() and str(ab["error"]).is_empty(), "Elowen can read her scroll of Hold Person")
+	await combat.use_ability(ab)
+	var p := combat.preview_target(foe.hex(), foe)
+	check(p["ok"] and str(p["text"]).contains("paralyzed"), "the preview: %s" % p["text"])
+	await combat.confirm_target(foe.hex(), foe)
+	check(foe.is_held() and foe.held_by == me, "the bandit is held")
+	check_eq(str(me.concentration.get("spell", "")), "hold_person", "Elowen concentrates on it")
+	check(not me.sheet.inventory.has("scroll_of_hold_person"), "the scroll is used up")
+	check(not foe.can_act(), "it can't act")
+	check(combat.advantage(_member("garrick"), foe, _member("garrick").attacks()[0])["why"].has("target paralyzed"),
+			"attacks against it have advantage")
+	check(not combat.save_throw(foe, "dex", 1)["success"], "it fails Dexterity saves outright")
+	check(await _turns_until(func() -> bool: return _log_has("strains against")), "its turn passes, held fast")
+	check(_log_has("held fast"), "it can't move")
+	check(foe.is_held(), "and it fails to break free (Wisdom save)")
+	foe.sheet.abilities["wis"] = 99
+	check(await _turns_until(func() -> bool: return not foe.is_held()),
+			"with a good save it breaks free at the end of its turn")
+	check(_log_has("breaks free"), "and the log says so")
+	check(me.concentration.is_empty(), "Elowen's concentration ends with no one left held")
+
+
+func test_hold_person_refuses_beasts_and_undead() -> void:
+	var wolf: Combatant = await _fight("wolf")
+	var me := await _turn_of("elowen")
+	await combat.use_ability(_ability(me, "hold_person", "scroll"))
+	var p := combat.preview_target(wolf.hex(), wolf)
+	check(not p["ok"] and str(p["text"]).contains("humanoid"), "not a wolf: %s" % p["text"])
+	await combat.confirm_target(wolf.hex(), wolf)
+	check(not wolf.is_held(), "nothing happens")
+	check(me.sheet.inventory.has("scroll_of_hold_person"), "and the scroll is kept")
+
+
+func test_hits_on_the_held_are_critical_and_concentration_frees_them() -> void:
+	var foe: Combatant = await _fight("bandit", true)
+	check(await _until_player_turn(), "a party turn")
+	foe.asleep = false
+	var elowen := _member("elowen")
+	var garrick := _member("garrick")
+	foe.held_by = elowen
+	foe.held_save = "wis"
+	foe.held_dc = 13
+	foe.held_spell = "hold_person"
+	elowen.concentration = {"spell": "hold_person", "targets": [foe], "rounds": 10}
+	foe.actor.place_at(_hex_at(garrick.hex(), 1))
+	foe.sheet.hp_max = 200
+	foe.sheet.hp_current = 200
+	foe.sheet.armor_class = 0
+	await combat.attack_with(garrick, foe, garrick.attacks()[0], false, false)
+	check(_log_has("critical hit"), "a hit from next to a held creature is critical")
+	combat.end_concentration(elowen, "Elowen loses concentration.")
+	check(not foe.is_held(), "losing concentration frees it")
+
+
+func test_sleep_spares_elves_and_the_undead() -> void:
+	var skeleton: Combatant = await _fight("skeleton")
+	check(await _until_player_turn(), "a party turn")
+	var elowen := _member("elowen")
+	var garrick := _member("garrick")
+	skeleton.asleep = false
+	skeleton.actor.place_at(_hex_at(garrick.hex(), 1))
+	var spell: SpellDef = Data.spells["sleep"]
+	var hexes: Array[Vector2i] = [elowen.hex(), garrick.hex(), skeleton.hex()]
+	var victims := CombatSpells.sleep_victims(combat, spell, hexes, garrick.hex(), 999)
+	check(victims.has(garrick), "Garrick would sleep")
+	check(not victims.has(elowen), "Elowen wouldn't (Fey Ancestry)")
+	check(not victims.has(skeleton), "nor would the skeleton (undead)")
+	var me := await _turn_of("elowen")
+	await combat.use_ability(_ability(me, "sleep"))
+	var p := combat.preview_target(garrick.hex(), garrick)
+	check(str(p["text"]).contains("unaffected") and str(p["text"]).contains("Fey Ancestry"),
+			"the preview names who is spared: %s" % p["text"])
+
+
+func test_sleepers_fall_prone_and_can_be_woken() -> void:
+	var wolf: Combatant = await _fight("wolf", true)
+	var me := await _turn_of("elowen")
+	var far: Variant = _hex_at(me.hex(), 12, 6)
+	wolf.actor.place_at(far)
+	wolf.sheet.hp_current = 1
+	await combat.use_ability(_ability(me, "sleep"))
+	await combat.confirm_target(wolf.hex(), null)
+	check(wolf.asleep and wolf.prone, "the wolf drops asleep, prone")
+	combat.deal_damage(wolf, 0, "fire")
+	check(wolf.asleep, "no damage, no waking")
+	combat.end_turn()
+	await _frames(1)
+	var garrick := _member("garrick")
+	garrick.asleep = true
+	garrick.asleep_rounds = 10
+	var waker := await _turn_of("odran")
+	check(waker != null, "Odran's turn")
+	waker.actor.place_at(_hex_at(garrick.hex(), 1))
+	var ab := _ability(waker, "wake")
+	check(not ab.is_empty() and str(ab["error"]).is_empty(), "Odran can shake Garrick awake: %s" % ab)
+	await combat.use_ability(ab)
+	check(not garrick.asleep and waker.action_used, "Garrick wakes, and that was Odran's action")
+
+
+func test_humanoids_wake_their_sleeping_friends() -> void:
+	var first: Combatant = await _fight("bandit", true)
+	check(await _until_player_turn(), "a party turn")
+	var cr := _spawn("bandit", _leader_cell() + Vector2i(14, 0), "test")
+	var second := combat._add_creature(cr)
+	var spot: Variant = _hex_at(world.party.members[0].hex, 9, 6)
+	first.actor.place_at(spot)
+	second.actor.place_at(_hex_at(first.hex(), 1))
+	first.asleep = true
+	first.asleep_rounds = 10
+	second.begin_turn()
+	await CombatAI.take_turn(combat, second)
+	check(not first.asleep, "the other bandit shakes it awake")
+	check(_log_has("shakes"), "and the log says so")
+
+
+func test_conditions_show_on_the_figures() -> void:
+	var foe: Combatant = await _fight("bandit", true)
+	check(await _until_player_turn(), "a party turn")
+	combat.animate = true
+	foe.asleep = true
+	foe.asleep_rounds = 10
+	CombatFx.refresh_status(combat, foe)
+	check(foe.actor.has_status("asleep"), "a sleeper shows as asleep")
+	check(not is_zero_approx(foe.actor._sprite.rotation), "lying down")
+	combat.deal_damage(foe, 1, "fire")
+	check(not foe.actor.has_status("asleep") and is_zero_approx(foe.actor._sprite.rotation), "damage wakes it: it stands")
+	var elowen := _member("elowen")
+	foe.held_by = elowen
+	foe.held_spell = "hold_person"
+	elowen.concentration = {"spell": "hold_person", "targets": [foe], "rounds": 10}
+	CombatFx.refresh_status(combat, foe)
+	check(foe.actor.has_status("held"), "a held creature shows its bands")
+	combat.end_concentration(elowen)
+	check(not foe.actor.has_status("held"), "and they go when it is freed")
+	combat.abort()
+	check(foe.actor._status.is_empty(), "conditions end with the fight")
+

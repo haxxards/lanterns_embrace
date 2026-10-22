@@ -1,0 +1,28 @@
+{
+	"_comment": "Playable races (a character sheet's 'ancestry'): the creature type spells check (Hold Person works on humanoids), and racial traits. A trait's 'condition_immunities' can't be imposed on that race (Fey Ancestry: magic can't put elves to sleep); 'save_advantage' gives advantage on saves against those conditions. Creatures in creatures.json give their own 'type', 'race' and 'condition_immunities'. See docs/SPELLS.md.",
+	"races": {
+		"human": {"name": "Human", "type": "humanoid"},
+		"elf": {"name": "Elf", "type": "humanoid", "traits": ["fey_ancestry"]},
+		"dwarf": {"name": "Dwarf", "type": "humanoid", "traits": ["dwarven_resilience"]},
+		"halfling": {"name": "Halfling", "type": "humanoid", "traits": ["brave"]},
+		"gnome": {"name": "Gnome", "type": "humanoid"},
+		"half-elf": {"name": "Half-Elf", "type": "humanoid", "traits": ["fey_ancestry"]},
+		"half-orc": {"name": "Half-Orc", "type": "humanoid"},
+		"dragonborn": {"name": "Dragonborn", "type": "humanoid"},
+		"tiefling": {"name": "Tiefling", "type": "humanoid"}
+	},
+	"traits": {
+		"fey_ancestry": {
+			"name": "Fey Ancestry", "condition_immunities": ["asleep"], "save_advantage": ["charmed"],
+			"description": "Advantage on saving throws against being charmed, and magic can't put you to sleep."
+		},
+		"dwarven_resilience": {
+			"name": "Dwarven Resilience", "save_advantage": ["poisoned"],
+			"description": "Advantage on saving throws against poison."
+		},
+		"brave": {
+			"name": "Brave", "save_advantage": ["frightened"],
+			"description": "Advantage on saving throws against being frightened."
+		}
+	}
+}

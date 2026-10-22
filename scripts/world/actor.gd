@@ -56,6 +56,8 @@ var _sprite_rest := Vector2.ZERO
 ## The combat body motion playing (nudge), if any.
 var _nudge_tween: Tween
 var _flash_tween: Tween
+## Conditions shown on the figure (StatusFx nodes), by kind: "asleep", "held".
+var _status: Dictionary = {}
 
 
 ## Creates the sprite: an animation sheet if `animation_path` loads, else a
@@ -170,6 +172,8 @@ func anchor(kind: String) -> Vector2:
 		off = JsonUtil.to_vec2(list[row])
 		if facing[1]:
 			off.x = -off.x
+		if _sprite != null:
+			off = off.rotated(_sprite.rotation)  # someone lying down
 	else:
 		var h := _sprite.get_rect().size.y if _sprite != null and _sprite.texture != null else 56.0
 		var side := -1.0 if _sprite != null and _sprite.flip_h else 1.0
@@ -196,6 +200,58 @@ func nudge(offset: Vector2, out_s: float, back_s: float = 0.0, squash: Vector2 =
 		_nudge_tween.chain().tween_property(_sprite, "position", _sprite_rest, back_s) \
 				.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		_nudge_tween.tween_property(_sprite, "scale", Vector2.ONE, back_s)
+
+
+## Shows or hides a condition on the figure (CombatFx.refresh_status):
+## "asleep" lies it down with a drifting Zzz; "held" binds it in bands of
+## light and tints it violet.
+func show_status(kind: String, on: bool) -> void:
+	if on == _status.has(kind):
+		return
+	if on:
+		var f := StatusFx.create(self, kind)
+		add_child(f)
+		_status[kind] = f
+	else:
+		(_status[kind] as Node).queue_free()
+		_status.erase(kind)
+	_update_pose()
+
+
+func has_status(kind: String) -> bool:
+	return _status.has(kind)
+
+
+func clear_status() -> void:
+	for kind in _status.keys():
+		show_status(kind, false)
+
+
+## Whether the figure lies on the ground (asleep; PartyMember adds "down").
+func _lying() -> bool:
+	return _status.has("asleep")
+
+
+## Puts the sprite in its resting pose: lying on its side (turned a quarter
+## and shifted to lie across its hex) or standing; tinted for its conditions.
+func _update_pose() -> void:
+	if _sprite == null:
+		return
+	var lying := _lying()
+	if lying != (_sprite.rotation != 0.0):  # only a change of pose stops a lunge or flinch
+		if _nudge_tween != null:
+			_nudge_tween.kill()
+		_sprite.rotation = -PI / 2.0 if lying else 0.0
+		_sprite_rest = Vector2(_sprite.get_rect().size.y * 0.42, -6.0) if lying else Vector2.ZERO
+		_sprite.position = _sprite_rest
+		_sprite.scale = Vector2.ONE
+	if _status.has("held"):
+		_sprite.modulate = Color(0.86, 0.8, 1.15)
+	elif _status.has("asleep"):
+		_sprite.modulate = Color(0.82, 0.86, 1.0)
+	else:
+		_sprite.modulate = Color.WHITE
+	queue_redraw()
 
 
 ## Tints the sprite `color` (above 1 brightens) and fades back over `seconds`.

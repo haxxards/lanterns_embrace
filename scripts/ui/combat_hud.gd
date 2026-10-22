@@ -177,8 +177,10 @@ func _order_card(c: Combatant, current: bool) -> Control:
 	var border := UiTheme.GOLD if current else (UiTheme.BORDER if c.is_party() else Color("8c3b2e"))
 	panel.add_theme_stylebox_override("panel", UiTheme.panel_box(Color(0.08, 0.07, 0.06, 0.92), border,
 			3 if current else 1, 3, 3))
-	panel.tooltip_text = "%s  ·  initiative %d  ·  %d/%d HP" % [c.display_name(), c.initiative,
-			c.sheet.hp_current, c.sheet.hp_max]
+	var conds := c.conditions()
+	panel.tooltip_text = "%s  ·  %s  ·  initiative %d  ·  %d/%d HP%s" % [c.display_name(),
+			CreatureTypes.describe(c.sheet), c.initiative, c.sheet.hp_current, c.sheet.hp_max,
+			"\n" + ", ".join(conds) if not conds.is_empty() else ""]
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
 	panel.add_child(box)
@@ -189,7 +191,21 @@ func _order_card(c: Combatant, current: bool) -> Control:
 	pic.texture = Data.load_texture(c.sheet.portrait_path if c.is_party() else c.sheet.sprite_path)
 	if not c.is_conscious():
 		pic.modulate = Color(0.45, 0.4, 0.4)
+	elif c.is_held():
+		pic.modulate = Color(0.8, 0.72, 1.1)
+	elif c.asleep:
+		pic.modulate = Color(0.65, 0.72, 0.95)
 	box.add_child(pic)
+	var tag := "Zzz" if c.asleep else ("Held" if c.is_held() else "")
+	if not tag.is_empty():  # a badge on the portrait
+		var badge := Label.new()
+		badge.text = tag
+		badge.add_theme_font_size_override("font_size", 12)
+		badge.add_theme_color_override("font_color", StatusFx.HOLD_COLOR if c.is_held() else StatusFx.SLEEP_COLOR)
+		badge.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		badge.add_theme_constant_override("outline_size", 4)
+		badge.position = Vector2(3, 1)
+		pic.add_child(badge)
 	var bar := ProgressBar.new()
 	bar.custom_minimum_size = Vector2(CARD_SIZE.x, 5)
 	bar.show_percentage = false

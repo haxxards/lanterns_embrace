@@ -5,8 +5,13 @@ extends RefCounted
 
 var id: String = ""
 var display_name: String = ""
-## SRD creature type: "beast", "humanoid", "undead"... (Sleep and Turn Undead check it).
+## SRD creature type: "beast", "humanoid", "undead"... (spells such as Sleep,
+## Hold Person and Turn Undead check it; see CreatureTypes).
 var creature_type: String = ""
+## For humanoids, the race ("human" for bandits); "" for others.
+var race: String = ""
+## Conditions it can't suffer ("poisoned" for skeletons).
+var condition_immunities: PackedStringArray = PackedStringArray()
 var armor_class: int = 10
 var hp: int = 1
 var speed_ft: int = 30
@@ -36,6 +41,8 @@ static func from_dict(creature_id: String, d: Dictionary) -> CreatureDef:
 	c.id = creature_id
 	c.display_name = str(d.get("name", creature_id.capitalize()))
 	c.creature_type = str(d.get("type", ""))
+	c.race = str(d.get("race", ""))
+	c.condition_immunities = PackedStringArray(d.get("condition_immunities", []))
 	c.armor_class = int(d.get("ac", 10))
 	c.hp = maxi(1, int(d.get("hp", 1)))
 	c.speed_ft = int(d.get("speed_ft", 30))

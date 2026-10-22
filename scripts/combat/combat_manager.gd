@@ -221,6 +221,8 @@ func restore(d: Dictionary) -> bool:
 	for n in world.npcs:
 		n.hold()
 	_log("[i]The fight goes on (loaded from a save).[/i]")
+	for c in combatants:
+		CombatFx.refresh_status(self, c)  # sleepers lie down again, the held glow
 	started.emit()
 	state_changed.emit()
 	_run.call_deferred(current != null)
@@ -240,6 +242,7 @@ func _cleanup() -> void:
 			continue
 		c.actor.smooth_paths = true
 		c.prone = false
+		c.actor.clear_status()  # conditions end with the fight
 		if c.actor is Creature:
 			(c.actor as Creature).active = false
 			(c.actor as Creature).in_combat = false
@@ -255,11 +258,16 @@ func _cleanup() -> void:
 func _finish(outcome: String) -> void:
 	if not active:
 		return
+	var downed: Array[CharacterSheet] = []
 	for c in combatants:
 		if c.is_party() and c.sheet.is_down():
-			c.sheet.stable = true
-			c.sheet.changed.emit()
+			downed.append(c.sheet)
+	# Over first: a down member's sheet changing can report the party defeated,
+	# which would otherwise finish the fight again from inside this call.
 	_cleanup()
+	for s in downed:
+		s.stable = true
+		s.changed.emit()
 	for n in world.npcs:
 		n.end_talk()
 	if outcome == "defeat":
@@ -307,7 +315,8 @@ func _check_end() -> bool:
 
 ## From the second round on: if no conscious foe is within its aggro range
 ## (+2) of a conscious party member, with a clear line of sight, the party
-## has got away and the fight ends. Returns true if it did.
+## has got away and the fight ends. Returns true if it did. (Sleeping and
+## held foes count: walking away from them is still walking away.)
 func _check_escape() -> bool:
 	if round_number < 2:
 		return false
@@ -422,13 +431,26 @@ func _start_of_turn(c: Combatant) -> bool:
 			_log("%s sleeps." % c.display_name())
 			_float(c, "Zzz", Color(0.7, 0.8, 1.0), 15)
 			return false
-		c.asleep = false
-		_log("%s wakes up." % c.display_name())
+		wake(c, "%s wakes up." % c.display_name())
+	if c.is_held():
+		_log("%s is held fast and can't move." % c.display_name())
+		_float(c, "Held", Color(0.8, 0.7, 1.0), 15)
+		return false  # its end of turn still comes, with another save
 	return true
 
 
-## Guiding Bolt's mark lasts until the end of the marker's next turn.
+## Guiding Bolt's mark lasts until the end of the marker's next turn; a held
+## creature tries its save again (Hold Person).
 func _end_of_turn(c: Combatant) -> void:
+	if c.is_held() and c.is_conscious():
+		var spell: SpellDef = Data.spells.get(c.held_spell)
+		if spell == null or spell.repeat_save:
+			var sv := save_throw(c, c.held_save, c.held_dc, spell.condition if spell != null else "")
+			var text := "%s save %d vs DC %d" % [Rules.ABILITY_NAMES.get(c.held_save, c.held_save), sv["total"], c.held_dc]
+			if sv["success"]:
+				release_hold(c, "%s breaks free of %s (%s)." % [c.display_name(), _spell_name(c.held_spell), text])
+			else:
+				_log("%s strains against %s (%s)." % [c.display_name(), _spell_name(c.held_spell), text])
 	for o in combatants:
 		if o.marked_by == c:
 			if o.mark_age >= 1:
@@ -560,6 +582,8 @@ func advantage(attacker: Combatant, target: Combatant, attack: Attack, from_hex:
 		adv.append("target down")
 	elif target.asleep:
 		adv.append("target asleep")
+	elif target.is_held():
+		adv.append("target paralyzed")
 	if target.marked_by != null:
 		adv.append("guiding bolt")
 	if target.prone:
@@ -796,7 +820,34 @@ func abilities_for(c: Combatant) -> Array[Dictionary]:
 		var spell: SpellDef = Data.spells.get(str(st.def.use["cast"]))
 		if spell != null:
 			out.append(_spell_ability(c, spell, spell.level, st.id))
+	for o in combatants:  # a sleeping companion next to you can be shaken awake
+		if o.team == c.team and o != c and o.asleep and o.is_conscious() and distance(o, c) <= 1:
+			out.append({"kind": "wake", "id": "wake", "who": o, "name": "Wake %s" % o.display_name(),
+					"cost": "action", "error": _wake_error(c, o), "needs_target": false,
+					"tooltip": "Use your action to shake %s awake (Sleep). They wake prone." % o.display_name()})
 	return out
+
+
+func _wake_error(c: Combatant, o: Combatant) -> String:
+	var err := _turn_error(c)
+	if not err.is_empty():
+		return err
+	if c.action_used:
+		return "%s has already used their action." % c.display_name()
+	if not o.asleep:
+		return "%s is awake." % o.display_name()
+	if distance(o, c) > 1:
+		return "%s must be next to %s." % [c.display_name(), o.display_name()]
+	return ""
+
+
+## `by` shakes `who` awake: their action.
+func wake_ally(by: Combatant, who: Combatant) -> void:
+	by.action_used = true
+	by.actor.face_towards(who.actor.position)
+	if animate:
+		by.actor.nudge((who.actor.global_position - by.actor.global_position).normalized() * 6.0, 0.08, 0.16)
+	wake(who, "%s shakes %s awake." % [by.display_name(), who.display_name()])
 
 
 func _spell_ability(c: Combatant, spell: SpellDef, slot: int, scroll_item: String) -> Dictionary:
@@ -834,6 +885,8 @@ func ability_error(ab: Dictionary) -> String:
 		return err
 	if str(ab.get("kind")) == "feature":
 		return CombatFeatures.error(self, current, str(ab["id"]))
+	if str(ab.get("kind")) == "wake":
+		return _wake_error(current, ab["who"])
 	var spell: SpellDef = Data.spells.get(str(ab.get("id")))
 	if spell == null:
 		return "Unknown spell."
@@ -853,6 +906,10 @@ func use_ability(ab: Dictionary) -> void:
 		cancel_targeting()
 		CombatFeatures.use(self, current, str(ab["id"]))
 		_check_end()
+		return
+	if str(ab["kind"]) == "wake":
+		cancel_targeting()
+		wake_ally(current, ab["who"])
 		return
 	if bool(ab.get("needs_target", false)):
 		targeting = ab.duplicate()
@@ -1004,8 +1061,8 @@ func attack_with(attacker: Combatant, target: Combatant, attack: Attack, reactio
 	if r["hit"] and not crit and _shield_reaction(target, int(r["total"]), ac):
 		ac = target.armor_class()
 		r["hit"] = false
-	if r["hit"] and (not target.is_conscious() or target.asleep) and dist <= 1:
-		crit = true  # a hit within 5 ft on someone unconscious (or asleep) is a critical hit
+	if r["hit"] and target.is_incapacitated() and dist <= 1:
+		crit = true  # a hit within 5 ft on someone unconscious, asleep or paralyzed is a critical hit
 	attacker.actor.face_towards(target.actor.position)
 	await CombatFx.play_attack(self, attacker, target, attack, r["hit"], crit)
 	if not in_fight(attacker) or not in_fight(target):
@@ -1065,9 +1122,7 @@ func deal_damage(target: Combatant, amount: int, damage_type: String, crit: bool
 	Audio.play_sfx("hit")
 	if dmg > 0:
 		if target.asleep:
-			target.asleep = false
-			if target.is_conscious():
-				_log("%s wakes up." % target.display_name())
+			wake(target, "%s wakes up." % target.display_name() if target.is_conscious() else "")
 		if target.turned_by != null:
 			target.turned_by = null
 		if not target.concentration.is_empty():
@@ -1085,22 +1140,69 @@ func deal_damage(target: Combatant, amount: int, damage_type: String, crit: bool
 	return dmg
 
 
-## A saving throw by `c`, with Bless's 1d4 if blessed.
-func save_throw(c: Combatant, ability: String, dc: int) -> Dictionary:
+## A saving throw by `c`, with Bless's 1d4 if blessed. Someone down, asleep
+## or held fails Strength and Dexterity saves outright; a race trait may give
+## advantage against `condition` (the condition the save is against).
+func save_throw(c: Combatant, ability: String, dc: int, condition: String = "") -> Dictionary:
+	if ability in ["str", "dex"] and c.is_incapacitated():
+		return {"roll": 0, "total": 0, "success": false, "auto": true}
 	var extra := Rules.roll(1, 4, rng) if c.blessed_by != null else 0
-	return CombatRules.saving_throw(c.sheet, ability, dc, rng, extra)
+	var r := CombatRules.saving_throw(c.sheet, ability, dc, rng, extra)
+	if CreatureTypes.save_advantage(c.sheet, condition):
+		var again := CombatRules.saving_throw(c.sheet, ability, dc, rng, extra)
+		if int(again["total"]) > int(r["total"]):
+			r = again
+	return r
 
 
-## Ends `c`'s concentration spell (Bless leaves its targets).
+## Wakes a sleeper (damage, a shake from an ally, or the minute running out).
+## It stays prone until it stands at the start of its turn.
+func wake(c: Combatant, message: String = "") -> void:
+	if not c.asleep:
+		return
+	c.asleep = false
+	c.asleep_rounds = 0
+	if not message.is_empty():
+		_log(message)
+	if c.is_conscious():
+		_float(c, "Awake", Color(1.0, 0.95, 0.75), 15)
+	CombatFx.refresh_status(self, c)
+	state_changed.emit()
+
+
+## Frees a held creature (a save, or the caster's concentration ending), and
+## ends the caster's concentration once no one is left held by it.
+func release_hold(c: Combatant, message: String = "") -> void:
+	var caster := c.held_by
+	if caster == null:
+		return
+	c.held_by = null
+	if not message.is_empty():
+		_log(message)
+	_float(c, "Free", Color(0.85, 0.75, 1.0), 15)
+	CombatFx.freed(self, c)
+	if not caster.concentration.is_empty():
+		var left: Array = caster.concentration.get("targets", [])
+		left.erase(c)
+		if left.is_empty() and str(caster.concentration.get("spell", "")) == c.held_spell:
+			caster.concentration = {}
+			_log("%s's %s ends." % [caster.display_name(), _spell_name(c.held_spell)])
+	state_changed.emit()
+
+
+## Ends `c`'s concentration spell: Bless leaves its targets, Hold Person lets them go.
 func end_concentration(c: Combatant, message: String = "") -> void:
 	if c.concentration.is_empty():
 		return
-	for t in c.concentration.get("targets", []):
-		if t is Combatant and t.blessed_by == c:
-			t.blessed_by = null
+	var targets: Array = c.concentration.get("targets", [])
 	c.concentration = {}
 	if not message.is_empty():
 		_log(message)
+	for t in targets:
+		if t is Combatant and t.blessed_by == c:
+			t.blessed_by = null
+		if t is Combatant and t.held_by == c:
+			release_hold(t, "%s is free." % t.display_name())
 	state_changed.emit()
 
 

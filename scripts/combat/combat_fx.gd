@@ -12,6 +12,9 @@ extends RefCounted
 ##   3. Impact: on a hit a burst and a flash, and the target flinches away;
 ##      on a miss the target sidesteps (or the shot flies past).
 ##
+## Conditions show on the figures too (refresh_status): a sleeper lies down
+## under a drifting Zzz, a held creature glows in bands of light (StatusFx).
+##
 ## The look comes from the weapon, creature attack or spell (style_for); an
 ## "fx" block in the data overrides it:
 ##   items.json      "weapon": {..., "fx": {"swing": "slash"}}
@@ -131,6 +134,76 @@ static func spell_impact(m: CombatManager, target: Combatant, color: Color, from
 		return
 	BurstFx.spawn(m.world.fx, target.actor.anchor("center"), "hit", color, 0.8, 0.25)
 	_flinch(target, _dir(from, target.actor.global_position), false, color)
+
+
+# --- conditions: Sleep and Hold Person ---------------------------------------------------
+
+## Shows `c`'s conditions on its figure (Actor.show_status): asleep lies it
+## down with a drifting Zzz; held (paralyzed) binds it in bands of light. Call
+## it whenever a condition starts or ends.
+static func refresh_status(m: CombatManager, c: Combatant) -> void:
+	if not m.animate or c == null or not is_instance_valid(c.actor):
+		return
+	c.actor.show_status("asleep", c.asleep)
+	c.actor.show_status("held", c.is_held())
+
+
+## Sleep: a glow gathers at the caster's focus, then a glittering mist drifts
+## down over the circle. Returns while the mist still hangs there, which is
+## when the sleepers drop.
+static func cast_sleep(m: CombatManager, caster: Combatant, hexes: Array[Vector2i], color: Color) -> void:
+	if not m.animate or not m.in_fight(caster) or not is_instance_valid(caster.actor):
+		return
+	var a := caster.actor
+	a.nudge(Vector2(0, -3), 0.2, 0.3, Vector2(0.97, 1.04))
+	BurstFx.spawn(m.world.fx, a.anchor("focus"), "charge", color, 1.0, 0.35)
+	await m.pause(0.25)
+	if not m.in_fight(caster):
+		return
+	var centers := PackedVector2Array()
+	for h in hexes:
+		centers.append(m.world.grid.hex_to_world(h))
+	AreaFx.spawn(m.world.fx, centers, GameConfig.hex_radius, color, 1.4)
+	await m.pause(0.55)
+
+
+## Hold Person: a ribbon of light curls from the caster's focus to `target`.
+## If `binds` (the save failed) it flares there and the bands stay
+## (refresh_status); if not, it shatters and the target shrugs.
+static func cast_hold(m: CombatManager, caster: Combatant, target: Combatant, binds: bool, color: Color) -> void:
+	if not _can_play(m, caster, target):
+		return
+	var a := caster.actor
+	var from := a.anchor("focus")
+	var to := target.actor.anchor("center")
+	var dir := _dir(from, to)
+	a.nudge(-dir * 3.0 + Vector2(0, -3), 0.2, 0.0, Vector2(0.97, 1.04))
+	BurstFx.spawn(m.world.fx, from, "charge", color, 1.0, 0.3)
+	await m.pause(0.2)
+	if not _can_play(m, caster, target):
+		return
+	var flight := ProjectileFx.flight_time(from, to, 520.0, 0.25)
+	ProjectileFx.spawn(m.world.fx, "ribbon", from, to, color, null, flight, 0.0, 0.0, 28.0)
+	a.nudge(Vector2.ZERO, 0.2)
+	await m.pause(flight)
+	if not _can_play(m, caster, target):
+		return
+	if binds:
+		BurstFx.spawn(m.world.fx, to, "hit", color, 1.2, 0.35)
+		target.actor.flash(Color(1.6, 1.4, 2.0), 0.35)
+	else:
+		BurstFx.spawn(m.world.fx, to, "shatter", color, 1.0, 0.4)
+		target.actor.nudge(Vector2(-dir.y, dir.x) * 4.0, 0.06, 0.2)
+	await m.pause(0.15)
+
+
+## A held creature breaks free (its save, or the caster losing concentration):
+## the bands burst apart.
+static func freed(m: CombatManager, c: Combatant) -> void:
+	if not m.animate or not is_instance_valid(c.actor):
+		return
+	BurstFx.spawn(m.world.fx, c.actor.anchor("center"), "shatter", StatusFx.HOLD_COLOR, 1.2, 0.4)
+	refresh_status(m, c)
 
 
 # --- the three kinds of attack -------------------------------------------------------------
