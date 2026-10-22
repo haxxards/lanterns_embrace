@@ -22,11 +22,19 @@ OUT = ROOT / "docs" / "images"
 
 def gif(name, out, stop, width=420, step=2, ms=40, hold=700):
     files = sorted(glob.glob(str(FRAMES / f"{name}_*.png")))[:stop:step]
-    frames = []
+    rgb = []
     for f in files:
         im = Image.open(f).convert("RGB")
-        frames.append(im.resize((width, int(im.height * width / im.width)), Image.LANCZOS)
-                      .quantize(colors=128, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE))
+        rgb.append(im.resize((width, int(im.height * width / im.width)), Image.LANCZOS))
+    # One palette for every frame, chosen from a sample of them side by side, so
+    # colours stay true and don't shift from frame to frame (a palette per frame
+    # loses small bright things like the darts, and greys out the robes).
+    sample = rgb[:: max(1, len(rgb) // 8)]
+    board = Image.new("RGB", (width * len(sample), rgb[0].height))
+    for k, im in enumerate(sample):
+        board.paste(im, (k * width, 0))
+    palette = board.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+    frames = [im.quantize(palette=palette, dither=Image.Dither.FLOYDSTEINBERG) for im in rgb]
     durations = [ms] * len(frames)
     durations[-1] = hold
     frames[0].save(out, save_all=True, append_images=frames[1:], duration=durations, loop=0, optimize=True)
