@@ -79,5 +79,6 @@ func attacks() -> Array[Attack]:
 		else:
 			a.reach = maxi(1, int(e.get("reach_ft", 5)) / feet)
 		a.on_hit = e.get("on_hit", {})
+		a.fx = e.get("fx", {})
 		out.append(a)
 	return out

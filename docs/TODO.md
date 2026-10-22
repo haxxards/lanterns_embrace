@@ -185,6 +185,15 @@ under [Not started](#not-started-ideas-and-gaps).
 - A status check of the four-phase plan (this file) - **COMPLETE**
 - The painted style tried on a character sprite (Garrick) - **COMPLETE** (an experiment);
   rolling it out to characters - **NOT STARTED** (see below)
+- Attack animations as samples to build on (option A: 2D effects and body motion) - **COMPLETE**
+  ([COMBAT_FX.md](COMBAT_FX.md)):
+  - Melee attacks swing the equipped weapon (slash, smash, thrust, punch; a wolf's bite) - **COMPLETE**
+  - Ranged attacks shoot something (arrows; thrown daggers spin) - **COMPLETE**
+  - Magic Missile darts, and bolts for Fire Bolt, Guiding Bolt and Scorching Ray - **COMPLETE**
+  - Wind-up, lunge, flinch and sidestep, grounded at the characters' hands (anchors
+    exported from the 3D models) - **COMPLETE**
+  - Strike frames on the character sprites (option A plus frames) - **NOT STARTED**: to
+    decide after seeing option A
 
 ## Added without being asked
 
@@ -237,6 +246,9 @@ None of these were promised; they are the known limits, listed so nothing is for
 - Enemy spellcasters - **NOT STARTED**
 - Hiding and stealth (Cunning Action's Hide) - **NOT STARTED**
 - A game clock (resting doesn't move time on) - **NOT STARTED**
+- Effects for the spells without an attack roll (Burning Hands, Sacred Flame, Sleep,
+  Bless, healing) and for Shield and the class features - **NOT STARTED**
+- Weapons drawn as separate sprites, so swings show the equipped weapon in the hand - **NOT STARTED**
 - Choosing Bless's and Aid's targets by hand (they take the nearest allies) - **NOT STARTED**
 - Concentration spells other than Bless, and more spells beyond 2nd level - **NOT STARTED**
 - Other classes' features and spell lists (only fighter, rogue, wizard and Life cleric

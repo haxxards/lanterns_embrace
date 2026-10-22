@@ -1007,7 +1007,9 @@ func attack_with(attacker: Combatant, target: Combatant, attack: Attack, reactio
 	if r["hit"] and (not target.is_conscious() or target.asleep) and dist <= 1:
 		crit = true  # a hit within 5 ft on someone unconscious (or asleep) is a critical hit
 	attacker.actor.face_towards(target.actor.position)
-	await _lunge(attacker, target, attack)
+	await CombatFx.play_attack(self, attacker, target, attack, r["hit"], crit)
+	if not in_fight(attacker) or not in_fight(target):
+		return false  # a game was loaded while the blow played out
 	if attack.thrown_from != "" and attacker.is_party():
 		_land_thrown(attacker, target, attack)
 	var roll_text := "%d%s%s%s" % [r["d20"], Rules.format_modifier(attack.to_hit),
@@ -1179,21 +1181,6 @@ func _on_slain(target: Combatant) -> void:
 
 
 ## A short step towards the target and back (melee) or a pause (ranged).
-func _lunge(attacker: Combatant, target: Combatant, attack: Attack) -> void:
-	if not animate:
-		return
-	var a := attacker.actor
-	if attack.is_ranged():
-		await _pause(0.25)
-		return
-	var start := a.position
-	var dir := (target.actor.position - start).normalized()
-	var tw := a.create_tween()
-	tw.tween_property(a, "position", start + dir * 12.0, 0.1)
-	tw.tween_property(a, "position", start, 0.14)
-	await tw.finished
-
-
 func _float(c: Combatant, text: String, color: Color, size: int = 18) -> void:
 	if is_instance_valid(c.actor):
 		FloatingText.spawn(world, c.actor.global_position + Vector2(0, -58), text, color, size)

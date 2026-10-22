@@ -27,6 +27,20 @@ Godot explained along the way.
 
 ## Status: Phase 4 complete (combat, spells and abilities)
 
+### Attack animations (samples to build on)
+
+- **Melee attacks swing the weapon, ranged attacks shoot, spells fly.** The attacker leans
+  back and lunges; a swing smear sweeps from their shoulder with the equipped weapon's
+  icon along its edge (slash, overhead smash, thrust, punch, or a wolf's bite); arrows
+  and thrown daggers fly on an arc from the hand; Fire Bolt and Guiding Bolt fly from the
+  staff or hand; and Magic Missile's darts fan out and strike one by one. Hits flash and
+  flinch the target, misses make it sidestep, and the damage appears as the blow lands.
+- Effects start from the characters' hands, exported from the 3D models for every facing.
+  An `"fx"` entry in the item, creature or spell data changes how an attack looks. See
+  [docs/COMBAT_FX.md](docs/COMBAT_FX.md), which also explains how to add an effect.
+
+![A sword swing](docs/images/fx_sword.gif) ![Magic Missile](docs/images/fx_magic_missile.gif)
+
 ### Phase 4, second half: spells and abilities
 
 - **Spellcasting** (5e SRD): Elowen the wizard and Odran the cleric cast 16 spells, from

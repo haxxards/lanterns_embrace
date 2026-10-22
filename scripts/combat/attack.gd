@@ -28,6 +28,8 @@ var weapon: ItemDef = null
 var spell: bool = false
 ## A thrown weapon: the equipment slot it leaves ("main_hand"/"off_hand"), else "".
 var thrown_from: String = ""
+## How it looks (CombatFx.style_for), from the data's "fx" block; {} = the defaults.
+var fx: Dictionary = {}
 
 
 func is_ranged() -> bool:

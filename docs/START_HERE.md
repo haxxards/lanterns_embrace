@@ -266,6 +266,9 @@ Then set its `"aggro"` to `20` and see how early they come for you. Put both bac
 - [ ] On screen: `scripts/ui/spells_screen.gd`, `scripts/ui/rest_dialog.gd`, and the
       ability row in `combat_hud.gd`.
 - [ ] Tests: `tests/unit/test_spells.gd` and `tests/integration/test_spells.gd`.
+- [ ] How it looks: read [COMBAT_FX.md](COMBAT_FX.md), then `scripts/combat/combat_fx.gd`
+      (`style_for`, `_strike`, `_shoot`, `launch_darts`), `scripts/combat/fx/swing_fx.gd` and
+      `Actor.anchor()` / `nudge()` in `scripts/world/actor.gd`.
 
 **Check yourself:** where does a 2nd-level Burning Hands get its extra 1d6? Why can Odran
 cast Cure Wounds from the spells screen but not Bless? What stops a turn that was playing
@@ -371,6 +374,7 @@ failure, then remove it.
 | Add a dialogue condition or effect | `scripts/dialogue/conditions.gd`, `scripts/dialogue/effects.gd` |
 | Change a monster's stats or loot | `data/creatures/creatures.json` ([COMBAT.md](COMBAT.md)) |
 | Change how monsters fight | `scripts/combat/combat_ai.gd` |
+| Change how an attack or spell looks | `"fx"` in the item, creature or spell data; the effects in `scripts/combat/combat_fx.gd` and `scripts/combat/fx/` ([COMBAT_FX.md](COMBAT_FX.md)) |
 | Add or change a spell | `data/spells/spells.json` ([SPELLS.md](SPELLS.md)); new effects in `scripts/combat/combat_spells.gd` and `scripts/rules/spellcasting.gd` |
 | Change what a class gets at each level | `data/classes/classes.json` |
 | Change spell slots, save DCs, rests | `scripts/rules/spellcasting.gd`, `scripts/rules/rest.gd` |
@@ -404,6 +408,7 @@ failure, then remove it.
 | [NPCS_AND_QUESTS.md](NPCS_AND_QUESTS.md) | Townsfolk, quests, shops, the temple |
 | [COMBAT.md](COMBAT.md) | Fights, creatures, the AI |
 | [SPELLS.md](SPELLS.md) | Spells, slots, class features, scrolls, resting, saving mid-fight |
+| [COMBAT_FX.md](COMBAT_FX.md) | How attacks look: swings, arrows, spells, the hand anchors, adding an effect |
 | [ASSETS.md](ASSETS.md) | Where the art comes from and how to replace or re-render it |
 | [TODO.md](TODO.md) | Every planned and requested item, flagged COMPLETE, PENDING or NOT STARTED |
 | [PAINTED_STYLE.md](PAINTED_STYLE.md) | The painted item icons: switching styles, and how the look is made, with the maths |

@@ -41,6 +41,8 @@ var ground_props: Node2D
 var grid_lines: GridLines
 var cursor: CursorOverlay
 var entities: Node2D
+## Combat effects (CombatFx): swings, projectiles, bursts.
+var fx: Node2D
 var selection_box: SelectionBox
 var camera: GameCamera
 var party: PartyController
@@ -93,6 +95,10 @@ func _ready() -> void:
 	entities.name = "Entities"
 	entities.y_sort_enabled = true
 	add_child(entities)
+	fx = Node2D.new()
+	fx.name = "Fx"
+	fx.z_index = 30  # above everyone, under the fog
+	add_child(fx)
 	fog = FogOfWar.new()
 	fog.name = "Fog"
 	fog.z_index = 40
@@ -212,6 +218,8 @@ func party_positions() -> Dictionary:
 
 func _clear() -> void:
 	combat.abort()
+	for f in fx.get_children():
+		f.queue_free()
 	for cr in creatures:
 		cr.queue_free()
 	creatures.clear()

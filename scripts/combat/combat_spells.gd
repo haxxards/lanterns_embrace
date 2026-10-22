@@ -234,6 +234,7 @@ static func spell_attack(c: Combatant, spell: SpellDef, slot: int) -> Attack:
 	a.damage = Spellcasting.damage_expr(spell, c.sheet, slot)
 	a.damage_type = spell.damage_type
 	a.spell = true
+	a.fx = spell.fx
 	if spell.attack == "melee":
 		a.reach = 1
 	else:
@@ -283,13 +284,22 @@ static func cast(m: CombatManager, c: Combatant, spell: SpellDef, slot: int, h: 
 				who.mark_age = 0
 				m.log_line("%s glows: the next attack against it has advantage." % who.display_name())
 	elif spell.darts > 0 and who != null:
+		# Each dart is its own hit (5e): its own damage, and its own
+		# concentration save for a caster it strikes.
 		var darts := int(Spellcasting.scaled(spell, "darts", slot))
-		var total := 0
+		m.log_line("%s casts %s%s: %d darts." % [c.display_name(), spell.display_name, how, darts])
+		var arrivals := CombatFx.launch_darts(m, c, who, darts, spell)
+		var color := Color(str(spell.fx.get("color", CombatFx.DAMAGE_COLORS.get(spell.damage_type, "#ffffff"))))
+		var from := c.actor.global_position
+		var waited := 0.0
 		for i in darts:
-			total += Rules.roll_expr(spell.damage, m.rng)
-		await m.pause(0.2)
-		m.deal_damage(who, total, spell.damage_type, false,
-				"%s casts %s%s: %d darts strike %s" % [c.display_name(), spell.display_name, how, darts, who.display_name()])
+			await m.pause(arrivals[i] - waited)
+			waited = arrivals[i]
+			if who.is_out() or not m.in_fight(c) or not m.in_fight(who):
+				break
+			CombatFx.spell_impact(m, who, color, from)
+			m.deal_damage(who, Rules.roll_expr(spell.damage, m.rng), spell.damage_type, false,
+					"A dart strikes %s" % who.display_name())
 	elif not spell.save.is_empty() and not spell.damage.is_empty():
 		var targets: Array[Combatant] = []
 		if spell.target == "area":

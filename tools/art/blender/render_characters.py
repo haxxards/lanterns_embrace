@@ -6,6 +6,12 @@ for SW, W, NW) x 9 frames (idle + an 8-frame walk cycle), all with the feet at
 the same pixel in every cell. A JSON file next to the sheet describes it, and
 the character sheets that use the class point at it (art.animation). A single
 idle frame is also written as the class's static sprite.
+
+The JSON also lists "anchors": where the weapon hand, the other hand, the
+spell focus (staff crystal, holy symbol) and the middle of the body are in
+each facing, in pixels from the feet. The game starts weapon swings,
+arrows and spells from them. `export_anchors()` writes them without
+re-rendering (see tools/art/blender/export_anchors.py).
 """
 import json
 import math
@@ -744,6 +750,57 @@ def fixed_camera(xmax, ymin, ymax, margin_px=3):
     return res, (half_w, top)
 
 
+# Mesh objects whose position is each anchor, first match wins (meshes only:
+# the sun lamps are called "Sun" too); "center" is the middle of the
+# figure's outline. The weapon hand is hands[1] in body() (the
+# sword, staff and mace side); bows are held in hands[0], so an archer's
+# "off" hand is where arrows leave from.
+ANCHOR_OBJECTS = {
+    "weapon": ["Hand1", "HandBone1", "Nose"],
+    "off": ["Hand-1", "HandBone-1", "Nose"],
+    "focus": ["Crystal", "Sun", "Hand1", "HandBone1", "Nose"],
+    "head": ["Head", "Skull"],
+}
+
+
+def anchors(name):
+    """{"weapon"|"off"|"focus"|"head"|"center": [[x, y] per facing]} in pixels from the
+    feet (x right, y down), for the idle pose."""
+    rot = Euler((math.pi / 2 - lib.ELEVATION, 0, 0)).to_matrix()
+    inv = rot.inverted()
+    s = lib.PX_PER_M
+
+    def px(p):
+        local = inv @ Vector(p)
+        return [round(float(local.x) * s, 1), round(float(-local.y) * s, 1)]
+
+    out = {k: [] for k in list(ANCHOR_OBJECTS) + ["center"]}
+    for _, yaw in DIRECTIONS:
+        build(name, yaw, 0.0, 0.0)
+        for kind, names in ANCHOR_OBJECTS.items():
+            obj = next((bpy.data.objects[n] for n in names
+                        if n in bpy.data.objects and bpy.data.objects[n].type == 'MESH'), None)
+            out[kind].append(px(obj.matrix_world.translation) if obj else [0.0, 0.0])
+        objs = [o for o in bpy.context.scene.objects if o.type == 'MESH']
+        local = np.array([inv @ Vector(p) for p in lib.mesh_points(objs)])
+        mid = (local.min(axis=0) + local.max(axis=0)) / 2
+        out["center"].append([round(float(mid[0]) * s, 1), round(float(-mid[1]) * s, 1)])
+    return out
+
+
+def export_anchors(names=None):
+    """Adds "anchors" to existing *_anim.json files without re-rendering."""
+    for name in names or CHARACTERS:
+        path = lib.ASSETS / "characters" / f"{name}_anim.json"
+        if not path.exists():
+            print("no sheet for", name, "- skipped")
+            continue
+        anim = json.loads(path.read_text())
+        anim["anchors"] = anchors(name)
+        path.write_text(json.dumps(anim, indent="\t") + "\n")
+        print("anchors", name, {k: v[0] for k, v in anim["anchors"].items()})
+
+
 def render_sheet(name):
     """Renders every facing and frame into one sheet plus its JSON description."""
     from PIL import Image
@@ -774,6 +831,7 @@ def render_sheet(name):
         "idle_column": 0,
         "walk_columns": list(range(1, n_cols)),
         "cycle_px": 110,
+        "anchors": anchors(name),
     }
     (lib.ASSETS / "characters" / f"{name}_anim.json").write_text(json.dumps(anim, indent="\t") + "\n")
     print("wrote", sheet_path, sheet.size, "cell", res, "feet", origin)

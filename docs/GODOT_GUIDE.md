@@ -673,6 +673,25 @@ data formats.
   the inventory with no positions or action economy, using the same `Spellcasting`
   arithmetic.
 
+**Attack effects (done): drawing with `_draw()`**
+
+[COMBAT_FX.md](COMBAT_FX.md) has the details. The Godot ideas behind it:
+
+- *Custom drawing.* `SwingFx`, `ProjectileFx` and `BurstFx` are plain `Node2D`s that
+  override `_draw()` and use `draw_polygon` (with a colour per vertex, for the fading
+  smear), `draw_line`, `draw_circle`, `draw_arc` and `draw_texture_rect`. A property with
+  a setter that calls `queue_redraw()` (`progress`, `t`) makes them redraw whenever a
+  `Tween` changes it, so the whole animation is one `tween_property` call.
+- *`draw_set_transform`* rotates and squashes what follows (an icon along the swing, a
+  dust ring flattened by the 45° view); set it back to identity afterwards.
+- *Tweens on the sprite, not the node.* `Actor.nudge()` moves and scales only the child
+  `Sprite2D`, so the actor's hex, position and hover ring stay put while it lunges, and
+  `self_modulate` flashes it without disturbing a `modulate` fade.
+- *Waiting without blocking.* The director (`CombatFx`) `await`s combat pauses between
+  beats. Each effect animates itself, and nothing waits on a node that might be freed
+  (a map change frees the effect layer), so a load mid-swing can't leave a coroutine
+  hanging.
+
 ### Things to keep doing
 
 - Put new tunables in `game_config.json`, not as constants.
@@ -688,6 +707,10 @@ data formats.
   stack), and the parser then rejects calls to yours. The same goes for other built-ins
   such as `print`, `str`, `range`, `len` and `load`. Also avoid reusing the names of the
   base class's own methods (`get_name`, `get_class`...).
+- **"The shortest way round" isn't always the way you want.** `lerp_angle` takes the
+  shorter turn between two angles, so an overhead blow aimed down-left swung over the
+  wrong shoulder. When the direction matters, unwrap the end angle (add or take away
+  2π) and use `lerpf` (see `SwingFx._sweep`).
 - **Typed arrays and ternaries**: `var a: Array[Vector2i] = [x] if c else other` fails,
   because `[x]` is an untyped `Array`. Build the typed array first and `append`.
 - **Multi-line lambdas inside a call's parentheses** are easy to get wrong; prefer a named

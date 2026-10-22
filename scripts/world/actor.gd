@@ -53,6 +53,9 @@ var _aim: Variant = null
 ## Where the sprite sits relative to the feet when standing still (moved for
 ## someone lying on the ground).
 var _sprite_rest := Vector2.ZERO
+## The combat body motion playing (nudge), if any.
+var _nudge_tween: Tween
+var _flash_tween: Tween
 
 
 ## Creates the sprite: an animation sheet if `animation_path` loads, else a
@@ -149,6 +152,61 @@ func move_speed() -> float:
 func face_towards(world_pos: Vector2) -> void:
 	_face(world_pos - position)
 	_update_frame()
+
+
+## A point on the figure as a world position, for the current facing: "weapon"
+## (the weapon hand), "off" (the other hand; archers hold their bow there),
+## "focus" (a staff's crystal; else the weapon hand), "head" or "center".
+## They come from the sheet's "anchors" (tools/art/blender/export_anchors.py),
+## in pixels from the feet per facing row; mirrored facings flip x. Sprites
+## without them get rough guesses from the sprite's size.
+func anchor(kind: String) -> Vector2:
+	var facing: Array = FACINGS[_facing]
+	var rows: Array = _anim.get("directions", [])
+	var row := rows.find(facing[0])
+	var list: Variant = (_anim.get("anchors", {}) as Dictionary).get(kind)
+	var off: Vector2
+	if list is Array and row >= 0 and row < (list as Array).size():
+		off = JsonUtil.to_vec2(list[row])
+		if facing[1]:
+			off.x = -off.x
+	else:
+		var h := _sprite.get_rect().size.y if _sprite != null and _sprite.texture != null else 56.0
+		var side := -1.0 if _sprite != null and _sprite.flip_h else 1.0
+		off = {"weapon": Vector2(0.22 * h * side, -0.45 * h), "off": Vector2(-0.22 * h * side, -0.45 * h),
+				"focus": Vector2(0.22 * h * side, -0.5 * h), "head": Vector2(0, -0.9 * h)}.get(kind, Vector2(0, -0.5 * h))
+	return global_position + (_sprite.position if _sprite != null else Vector2.ZERO) + off
+
+
+## Combat body language (CombatFx): moves the sprite `offset` from where it
+## rests, scaled by `squash` (about the feet), over `out_s` seconds; then,
+## when `back_s` > 0, back to rest over `back_s`. The actor's hex and position
+## don't change. nudge(Vector2.ZERO, t) settles it back.
+func nudge(offset: Vector2, out_s: float, back_s: float = 0.0, squash: Vector2 = Vector2.ONE) -> void:
+	if _sprite == null:
+		return
+	if _nudge_tween != null:
+		_nudge_tween.kill()
+	_nudge_tween = create_tween()
+	_nudge_tween.set_parallel(true)
+	_nudge_tween.tween_property(_sprite, "position", _sprite_rest + offset, maxf(0.01, out_s)) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_nudge_tween.tween_property(_sprite, "scale", squash, maxf(0.01, out_s))
+	if back_s > 0.0:
+		_nudge_tween.chain().tween_property(_sprite, "position", _sprite_rest, back_s) \
+				.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		_nudge_tween.tween_property(_sprite, "scale", Vector2.ONE, back_s)
+
+
+## Tints the sprite `color` (above 1 brightens) and fades back over `seconds`.
+func flash(color: Color, seconds: float) -> void:
+	if _sprite == null:
+		return
+	if _flash_tween != null:
+		_flash_tween.kill()
+	_sprite.self_modulate = color
+	_flash_tween = create_tween()
+	_flash_tween.tween_property(_sprite, "self_modulate", Color.WHITE, maxf(0.01, seconds))
 
 
 ## World rectangle used for mouse picking (sprite plus the hex below it).

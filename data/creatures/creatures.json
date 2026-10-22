@@ -9,7 +9,7 @@
 			"xp": 50, "cr": "1/4",
 			"traits": ["pack_tactics"],
 			"attacks": [
-				{"name": "Bite", "to_hit": 4, "damage": "2d4+2", "damage_type": "piercing", "reach_ft": 5,
+				{"name": "Bite", "to_hit": 4, "damage": "2d4+2", "damage_type": "piercing", "reach_ft": 5, "fx": {"swing": "bite"},
 				 "on_hit": {"save": "str", "dc": 11, "condition": "prone"}}
 			],
 			"ai": "melee", "aggro": 7,

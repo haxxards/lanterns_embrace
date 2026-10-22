@@ -50,6 +50,8 @@ var combat_only: bool = false
 var utility: bool = false
 ## What each slot level above the spell's own adds: {"damage": "1d6", "darts": 1...}.
 var higher: Dictionary = {}
+## How it looks in a fight (CombatFx): {"kind": "bolt"/"darts", "color": "#rrggbb"}.
+var fx: Dictionary = {}
 var description: String = ""
 
 
@@ -88,6 +90,7 @@ static func from_dict(spell_id: String, d: Dictionary) -> SpellDef:
 	s.combat_only = bool(d.get("combat_only", false))
 	s.utility = bool(d.get("utility", false))
 	s.higher = d.get("higher", {})
+	s.fx = d.get("fx", {})
 	s.description = str(d.get("description", ""))
 	return s
 

@@ -479,3 +479,69 @@ func test_reading_a_scroll_from_the_inventory() -> void:
 			slot = i
 	msg = InventoryOps.use(InventoryOps.backpack(garrick, slot), garrick)
 	check(msg.contains("fighter spell"), "Garrick can't: %s" % msg)
+
+
+# --- how it looks (CombatFx) -------------------------------------------------------------
+
+func test_effects_play_and_clean_up() -> void:
+	var foe: Combatant = await _fight("bandit")
+	foe.sheet.hp_max = 200
+	foe.sheet.hp_current = 200
+	var me := await _turn_of("elowen")
+	combat.animate = true
+	var garrick := _member("garrick")
+	foe.actor.place_at(_hex_at(garrick.hex(), 1))
+	var hp := foe.sheet.hp_current
+	foe.sheet.armor_class = 0
+	var done := [false]
+	var swing := func() -> void:
+		await combat.attack_with(garrick, foe, garrick.attacks()[0], false, false)
+		done[0] = true
+	swing.call()
+	check(foe.sheet.hp_current == hp, "the damage waits for the blow to land")
+	var seen := false
+	for i in 240:
+		seen = seen or world.fx.get_child_count() > 0
+		if done[0]:
+			break
+		await _frames(1)
+	check(seen, "the swing was on screen (after the wind-up)")
+	check(done[0], "the attack finished")
+	check(foe.sheet.hp_current < hp or not combat.last_hit, "and then hit")
+	foe.actor.place_at(_hex_at(me.hex(), 5))
+	hp = foe.sheet.hp_current
+	await CombatSpells.cast(combat, me, Data.spells["magic_missile"], 1, foe.hex(), foe)
+	check(hp - foe.sheet.hp_current >= 6, "every dart landed (%d damage)" % (hp - foe.sheet.hp_current))
+	await runner.get_tree().create_timer(1.0).timeout
+	check_eq(world.fx.get_child_count(), 0, "the effects free themselves")
+
+
+func test_loading_mid_swing_stops_the_old_blow() -> void:
+	var foe: Combatant = await _fight("bandit")
+	check(await _until_player_turn(), "a party turn")
+	combat.animate = true
+	var garrick := _member("garrick")
+	foe.actor.place_at(_hex_at(garrick.hex(), 1))
+	var hp := foe.sheet.hp_current
+	var result := [null]
+	var swing := func() -> void:
+		result[0] = await combat.attack_with(garrick, foe, garrick.attacks()[0], false, false)
+	swing.call()
+	combat.abort()  # as loading a game does
+	await runner.get_tree().create_timer(0.8).timeout
+	check_eq(result[0], false, "the interrupted attack gives up")
+	check_eq(foe.sheet.hp_current, hp, "and does no damage")
+
+
+func test_anchors_follow_the_facing() -> void:
+	var m: PartyMember = world.party.members[0]
+	var anim: Dictionary = JsonUtil.load_json(m.sheet.raw["art"]["animation"])
+	var rows: Array = anim["directions"]
+	m.face_towards(m.position + Vector2(100, 0))
+	var east: Array = anim["anchors"]["weapon"][rows.find("e")]
+	var off := m.anchor("weapon") - m.global_position
+	check(off.is_equal_approx(Vector2(float(east[0]), float(east[1]))), "facing east: the sheet's east row %s" % off)
+	m.face_towards(m.position + Vector2(-100, 0))
+	off = m.anchor("weapon") - m.global_position
+	check(off.is_equal_approx(Vector2(-float(east[0]), float(east[1]))), "facing west: mirrored %s" % off)
+

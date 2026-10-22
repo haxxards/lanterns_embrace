@@ -18,7 +18,7 @@
 			"weapon": {"category": "simple", "damage": "1d6", "damage_type": "bludgeoning"},
 			"description": "A flanged iron head on a stout haft."},
 		"quarterstaff": {"name": "Quarterstaff", "kind": "weapon", "slot": "main_hand", "icon": "res://assets/items/quarterstaff.png", "weight": 4, "value": 0.2,
-			"weapon": {"category": "simple", "damage": "1d6", "damage_type": "bludgeoning", "versatile": "1d8"},
+			"weapon": {"category": "simple", "damage": "1d6", "damage_type": "bludgeoning", "versatile": "1d8", "fx": {"swing": "slash"}},
 			"description": "A shod staff of seasoned ash. Versatile: 1d8 when held in both hands."},
 		"rapier": {"name": "Rapier", "kind": "weapon", "slot": "main_hand", "icon": "res://assets/items/rapier.png", "weight": 2, "value": 25,
 			"weapon": {"category": "martial", "damage": "1d8", "damage_type": "piercing", "properties": ["finesse"]},

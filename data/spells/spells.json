@@ -5,6 +5,7 @@
 			"name": "Fire Bolt", "level": 0, "school": "evocation", "classes": ["wizard"],
 			"cast": "action", "range_ft": 120, "target": "enemy",
 			"attack": "ranged", "damage": "1d10", "damage_type": "fire", "cantrip_dice": true,
+			"fx": {"kind": "bolt", "color": "#ff7a2a"},
 			"description": "Hurl a mote of fire: a ranged spell attack for 1d10 fire damage."
 		},
 		"light": {
@@ -37,6 +38,7 @@
 			"name": "Magic Missile", "level": 1, "school": "evocation", "classes": ["wizard"],
 			"cast": "action", "range_ft": 120, "target": "enemy",
 			"darts": 3, "damage": "1d4+1", "damage_type": "force", "higher": {"darts": 1},
+			"fx": {"kind": "darts", "color": "#b49aff"},
 			"description": "Three glowing darts that never miss, each 1d4+1 force damage. One more dart per slot level above 1st."
 		},
 		"burning_hands": {
@@ -81,12 +83,14 @@
 			"name": "Guiding Bolt", "level": 1, "school": "evocation", "classes": ["cleric"],
 			"cast": "action", "range_ft": 120, "target": "enemy", "effect": "mark",
 			"attack": "ranged", "damage": "4d6", "damage_type": "radiant", "higher": {"damage": "1d6"},
+			"fx": {"kind": "bolt", "color": "#ffe9a0"},
 			"description": "A ranged spell attack for 4d6 radiant damage. The next attack against the target, before the end of your next turn, has advantage."
 		},
 		"scorching_ray": {
 			"name": "Scorching Ray", "level": 2, "school": "evocation", "classes": ["wizard"],
 			"cast": "action", "range_ft": 120, "target": "enemy",
 			"attack": "ranged", "rays": 3, "damage": "2d6", "damage_type": "fire", "higher": {"rays": 1},
+			"fx": {"kind": "bolt", "color": "#ff5a1a"},
 			"description": "Three rays of fire, each a ranged spell attack for 2d6 fire damage."
 		},
 		"misty_step": {

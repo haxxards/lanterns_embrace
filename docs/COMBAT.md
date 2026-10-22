@@ -8,6 +8,7 @@ code lives in `scripts/combat/`:
 | `combat_manager.gd` | **CombatManager** | The fight: initiative, the turn loop, movement, attacks, opportunity attacks, death saves, spells and features (targeting, conditions, concentration), victory, defeat and getting away, and saving and restoring a fight. A node under `World`. |
 | `combat_spells.gd` | **CombatSpells** | Casting in a fight: what can be cast now, areas on the grid, the cursor preview, the effects (see [SPELLS.md](SPELLS.md)). |
 | `combat_features.gd` | **CombatFeatures** | Second Wind, Action Surge, Cunning Action, Turn Undead, Preserve Life in a fight. |
+| `combat_fx.gd`, `fx/` | **CombatFx**, **SwingFx**, **ProjectileFx**, **BurstFx** | How attacks look: wind-ups, swing smears, arrows, bolts, darts, impacts (see [COMBAT_FX.md](COMBAT_FX.md)). |
 | `combat_ai.gd` | **CombatAI** | How creatures take their turns. |
 | `combat_rules.gd` | **CombatRules** | The arithmetic, with no positions or nodes: weapon attacks from a sheet, hit chances, attack and damage rolls, damage types, sneak attack, saves, initiative. |
 | `combatant.gd` | **Combatant** | One participant's per-turn bookkeeping: movement left, action, bonus action, reaction, dodging, prone, and conditions from spells (asleep, turned, blessed, marked, Shield, concentration). |
@@ -67,6 +68,10 @@ by hex, not with the free-walking smoothing used when exploring.
   Strength save. Standing up costs half the movement at the start of the next turn.
 - Hovering an enemy shows the attack and the chance to hit, with the reasons for any
   advantage or disadvantage, in the combat bar.
+- **How it looks:** the attacker winds up and lunges, the weapon swings as a smear from the
+  shoulder (or an arrow, a thrown dagger or a spell flies from the hand), and the target
+  flinches on a hit or sidesteps a miss. The damage appears when the blow lands. See
+  [COMBAT_FX.md](COMBAT_FX.md).
 
 ## Down, dying and dead
 
