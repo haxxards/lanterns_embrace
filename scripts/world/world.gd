@@ -120,6 +120,7 @@ func _ready() -> void:
 	add_child(combat)
 	combat.setup(self)
 	combat.state_changed.connect(_on_combat_changed)
+	combat.started.connect(_cancel_drag)  # a box half-drawn when the fight began
 	Events.selection_changed.connect(func(_s: Array) -> void: _refresh_hover(true))
 
 
@@ -217,6 +218,7 @@ func party_positions() -> Dictionary:
 
 
 func _clear() -> void:
+	_cancel_drag()
 	combat.abort()
 	for f in fx.get_children():
 		f.queue_free()
@@ -546,6 +548,7 @@ func _on_mouse_button(mb: InputEventMouseButton) -> void:
 	_mouse_screen = mb.position
 	var world_pos := screen_to_world(mb.position)
 	if combat.active:
+		_cancel_drag()  # no box selection in a fight: the turn order picks who acts
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 			_on_combat_click(world_pos)
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
@@ -571,12 +574,23 @@ func _on_mouse_button(mb: InputEventMouseButton) -> void:
 
 func _on_mouse_motion(mm: InputEventMouseMotion) -> void:
 	_mouse_screen = mm.position
+	if _left_down and (combat.active or (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) == 0):
+		# A fight began mid-drag, or the button came up somewhere we didn't see
+		# (over a window that opened, outside the game): drop the box.
+		_cancel_drag()
 	if _left_down and not _dragging and mm.position.distance_to(_press_screen) > DRAG_THRESHOLD:
 		_dragging = true
 		selection_box.active = true
 	if _dragging:
 		selection_box.set_rect(Rect2(_press_world, screen_to_world(mm.position) - _press_world))
 	_refresh_hover()
+
+
+## Forgets a press or box selection in progress, and hides the box.
+func _cancel_drag() -> void:
+	_left_down = false
+	_dragging = false
+	selection_box.active = false
 
 
 func _on_click(world_pos: Vector2, shift: bool) -> void:

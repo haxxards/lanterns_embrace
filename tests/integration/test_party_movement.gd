@@ -194,6 +194,32 @@ func test_box_select_and_clear() -> void:
 	check_eq(party.selected.size(), party.members.size(), "box around everyone selects all")
 
 
+func test_a_lost_mouse_release_drops_the_drag_box() -> void:
+	var start := runner.get_viewport().get_canvas_transform() * world.party.members[0].global_position \
+			+ Vector2(40, 40)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.position = start
+	press.global_position = start
+	runner.get_viewport().push_input(press, true)
+	var drag := InputEventMouseMotion.new()
+	drag.button_mask = MOUSE_BUTTON_MASK_LEFT
+	drag.position = start + Vector2(90, 50)
+	drag.global_position = drag.position
+	runner.get_viewport().push_input(drag, true)
+	check(world.selection_box.active, "a box is being dragged")
+	# The release happened somewhere the map didn't see (over a window, outside the game):
+	# the next movement arrives with no button held.
+	var after := InputEventMouseMotion.new()
+	after.button_mask = 0
+	after.position = start + Vector2(100, 60)
+	after.global_position = after.position
+	runner.get_viewport().push_input(after, true)
+	check(not world.selection_box.active, "the box goes away")
+
+
 func test_mouse_clicks_route_correctly() -> void:
 	await runner.get_tree().process_frame
 	var vp_size := runner.get_viewport().get_visible_rect().size

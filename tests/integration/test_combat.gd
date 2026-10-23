@@ -72,6 +72,26 @@ func _free_next_to(h: Vector2i) -> Vector2i:
 	return h
 
 
+## A left-button press or release at a screen position, sent through the viewport.
+func _mouse_button(pos: Vector2, pressed: bool) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = pressed
+	ev.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+	ev.position = pos
+	ev.global_position = pos
+	runner.get_viewport().push_input(ev, true)
+
+
+## The mouse moving to a screen position with the buttons in `mask` held.
+func _mouse_motion(pos: Vector2, mask: int) -> void:
+	var ev := InputEventMouseMotion.new()
+	ev.button_mask = mask
+	ev.position = pos
+	ev.global_position = pos
+	runner.get_viewport().push_input(ev, true)
+
+
 func _leader_cell() -> Vector2i:
 	return Hex.axial_to_offset(world.party.members[0].hex)
 
@@ -303,6 +323,24 @@ func test_defeat_ends_the_fight_with_game_over() -> void:
 	await _frames()
 	check(not combat.active, "the fight ends")
 	check(hud._game_over.visible, "game over")
+
+
+func test_a_drag_box_ends_when_a_fight_starts() -> void:
+	# Box-selecting while walking up to enemies: the button is still down when they notice.
+	var start := runner.get_viewport().get_canvas_transform() * world.party.members[0].global_position \
+			+ Vector2(40, 40)
+	_mouse_button(start, true)
+	_mouse_motion(start + Vector2(90, 50), MOUSE_BUTTON_MASK_LEFT)
+	check(world.selection_box.active, "a box is being dragged")
+	_spawn("wolf", _leader_cell() + Vector2i(4, 0))
+	await _frames()
+	check(combat.active, "the wolf starts a fight")
+	check(not world.selection_box.active, "the box is gone when the fight starts")
+	_mouse_motion(start + Vector2(130, 70), MOUSE_BUTTON_MASK_LEFT)
+	check(not world.selection_box.active, "and doesn't come back while the button is still held")
+	_mouse_button(start + Vector2(130, 70), false)
+	check(not world.selection_box.active, "nor on release")
+	check(await _until_player_turn(), "and the turns go on")
 
 
 func test_defeat_with_everyone_down_but_alive() -> void:

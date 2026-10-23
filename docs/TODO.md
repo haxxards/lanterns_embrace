@@ -194,6 +194,8 @@ under [Not started](#not-started-ideas-and-gaps).
     exported from the 3D models) - **COMPLETE**
   - Strike frames on the character sprites (option A plus frames) - **NOT STARTED**: to
     decide after seeing option A
+- Bug: the drag-select box stayed on screen when a fight started mid-drag (or when the
+  mouse button came up over a window) - **COMPLETE** (fixed, with tests)
 - Two spells shown end to end on the figures, to see the mechanics against the art - **COMPLETE**
   ([SPELLS.md](SPELLS.md#sleep-and-hold-person)):
   - Sleep: mist over the area, sleepers lie down with a drifting Zzz, fall prone, wake
