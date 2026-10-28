@@ -789,10 +789,11 @@ func item_used(_sheet: CharacterSheet) -> void:
 
 # --- spells, features and scrolls ------------------------------------------------------------
 
-## The spells, features and scrolls `c` could use, for the combat bar. Each is
-## {"kind": "spell"/"feature"/"scroll", "id", "slot" (spells: the slot level),
-## "item" (scrolls), "name", "cost", "error" ("" if usable now), "tooltip",
-## "needs_target"}. Reaction and no-effect spells are left out.
+## The spells, features, scrolls and throwable flasks `c` could use, for the
+## combat bar. Each is {"kind": "spell"/"feature"/"scroll"/"throw"/"wake",
+## "id", "slot" (spells: the slot level), "item" (scrolls and flasks),
+## "name", "cost", "error" ("" if usable now), "tooltip", "needs_target"}.
+## Reaction and no-effect spells are left out.
 func abilities_for(c: Combatant) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if c == null or not c.is_party():
@@ -820,6 +821,14 @@ func abilities_for(c: Combatant) -> Array[Dictionary]:
 		var spell: SpellDef = Data.spells.get(str(st.def.use["cast"]))
 		if spell != null:
 			out.append(_spell_ability(c, spell, spell.level, st.id))
+	for st in c.sheet.inventory.slots:  # Holy Water and the like
+		if st == null or st.def == null or not st.def.is_throwable() or seen.has(st.id):
+			continue
+		seen[st.id] = true
+		out.append({"kind": "throw", "id": st.id, "item": st.id, "name": "Throw %s" % st.def.display_name,
+				"cost": "action", "error": _throw_error(c, st.id), "needs_target": true,
+				"tooltip": "%s\n%d left. Uses your action; the flask breaks either way." % [
+					"\n".join(st.def.describe().split("\n").slice(1, -1)), c.sheet.inventory.count(st.id)]})
 	for o in combatants:  # a sleeping companion next to you can be shaken awake
 		if o.team == c.team and o != c and o.asleep and o.is_conscious() and distance(o, c) <= 1:
 			out.append({"kind": "wake", "id": "wake", "who": o, "name": "Wake %s" % o.display_name(),
@@ -870,6 +879,17 @@ func _spell_ability(c: Combatant, spell: SpellDef, slot: int, scroll_item: Strin
 			"needs_target": spell.needs_target()}
 
 
+func _throw_error(c: Combatant, item: String) -> String:
+	var err := _turn_error(c)
+	if not err.is_empty():
+		return err
+	if c.action_used:
+		return "%s has already used their action." % c.display_name()
+	if not c.sheet.has_item(item):
+		return "%s has none left." % c.display_name()
+	return ""
+
+
 func _turn_error(c: Combatant) -> String:
 	if not is_player_turn() or c != current:
 		return "Wait for %s's turn." % c.display_name()
@@ -887,6 +907,8 @@ func ability_error(ab: Dictionary) -> String:
 		return CombatFeatures.error(self, current, str(ab["id"]))
 	if str(ab.get("kind")) == "wake":
 		return _wake_error(current, ab["who"])
+	if str(ab.get("kind")) == "throw":
+		return _throw_error(current, str(ab["item"]))
 	var spell: SpellDef = Data.spells.get(str(ab.get("id")))
 	if spell == null:
 		return "Unknown spell."
@@ -932,6 +954,8 @@ func preview_target(h: Vector2i, who: Combatant) -> Dictionary:
 	if targeting.is_empty() or current == null:
 		var none: Array[Vector2i] = []
 		return {"ok": false, "text": "", "hexes": none}
+	if str(targeting.get("kind")) == "throw":
+		return _throw_preview(str(targeting["item"]), h, who)
 	var spell: SpellDef = Data.spells.get(str(targeting["id"]))
 	var slot := CombatSpells.slot_level(current, spell, str(targeting.get("item", "")), int(targeting.get("slot", 0)))
 	return CombatSpells.preview(self, current, spell, slot, h, who)
@@ -956,6 +980,9 @@ func _cast_now(ab: Dictionary, h: Vector2i, who: Combatant) -> void:
 	if not err.is_empty():
 		Events.toast_requested.emit(err)
 		return
+	if str(ab["kind"]) == "throw":
+		await _throw_now(current, str(ab["item"]), who)
+		return
 	var spell: SpellDef = Data.spells[str(ab["id"])]
 	var item := str(ab.get("item", ""))
 	var slot := CombatSpells.slot_level(current, spell, item, int(ab.get("slot", 0)))
@@ -963,6 +990,66 @@ func _cast_now(ab: Dictionary, h: Vector2i, who: Combatant) -> void:
 	busy = true
 	await CombatSpells.cast(self, me, spell, slot, h, who, item)
 	if not in_fight(me):
+		return
+	busy = false
+	state_changed.emit()
+	_check_end()
+
+
+# --- throwing a flask (Holy Water) ----------------------------------------------------------
+
+## The ranged attack of throwing `item` (its `use.throw` block): an improvised
+## weapon, so Dex with no proficiency; range_ft is both normal and long range.
+@warning_ignore("integer_division")
+func throw_attack(c: Combatant, item: String) -> Attack:
+	var def: ItemDef = Data.items[item]
+	var t: Dictionary = def.use["throw"]
+	var a := Attack.new()
+	a.name = def.display_name
+	a.weapon = def
+	a.to_hit = c.sheet.ability_mod("dex")
+	a.damage = str(t.get("damage", "1"))
+	a.damage_type = str(t.get("damage_type", ""))
+	a.range_normal = maxi(1, int(t.get("range_ft", 20)) / maxi(1, GameConfig.feet_per_hex))
+	a.range_long = a.range_normal
+	a.reach = 0
+	a.fx = {"kind": "thrown"}
+	if t.get("fx") is Dictionary:
+		a.fx.merge(t["fx"], true)
+	return a
+
+
+func _throw_preview(item: String, h: Vector2i, who: Combatant) -> Dictionary:
+	var hexes: Array[Vector2i] = [h]
+	var def: ItemDef = Data.items[item]
+	if who == null:
+		return {"ok": false, "hexes": hexes, "text": "Choose a creature to throw the %s at." % def.display_name}
+	if not who.is_hostile_to(current):
+		return {"ok": false, "hexes": hexes, "text": "Throw the %s at a foe." % def.display_name}
+	var a := throw_attack(current, item)
+	var dist := distance(current, who)
+	if dist > a.range_long:
+		return {"ok": false, "hexes": hexes, "text": "%s is out of range (%d ft)." % [who.display_name(),
+				a.range_long * GameConfig.feet_per_hex]}
+	if dist > 1 and not world.line_of_sight(current.hex(), h):
+		return {"ok": false, "hexes": hexes, "text": "No clear line to %s." % who.display_name()}
+	var refusal := CreatureTypes.type_refusal(def.display_name, def.use["throw"].get("affects", {}), who.sheet)
+	if not refusal.is_empty():
+		return {"ok": false, "hexes": hexes, "text": refusal}
+	var adv := advantage(current, who, a)
+	var chance := CombatRules.hit_chance(a.to_hit, who.armor_class(), adv["adv"])
+	var why := "" if (adv["why"] as PackedStringArray).is_empty() else "  (%s)" % ", ".join(adv["why"])
+	return {"ok": true, "hexes": hexes, "text": "Throw the %s at %s: %d%% to hit, %s %s%s" % [def.display_name,
+			who.display_name(), roundi(chance * 100.0), a.damage, a.damage_type, why]}
+
+
+## Throws one `item` at `target`: the flask is used up, hit or miss.
+func _throw_now(c: Combatant, item: String, target: Combatant) -> void:
+	var a := throw_attack(c, item)
+	c.sheet.inventory.remove_item(item, 1)
+	busy = true
+	await attack_with(c, target, a)
+	if not in_fight(c):
 		return
 	busy = false
 	state_changed.emit()
@@ -1245,6 +1332,8 @@ func _land_thrown(attacker: Combatant, target: Combatant, attack: Attack) -> voi
 func _sneak_attack_applies(attacker: Combatant, target: Combatant, attack: Attack, adv: int) -> bool:
 	if attack.spell or attacker.sneak_attack_used or not CombatRules.has_feature(attacker.sheet, "sneak_attack"):
 		return false
+	if attack.weapon != null and not attack.weapon.is_weapon():
+		return false  # a flask of holy water is no finesse or ranged weapon
 	if not (attack.finesse or attack.is_ranged()) or adv < 0:
 		return false
 	return adv > 0 or _ally_next_to(target, attacker)

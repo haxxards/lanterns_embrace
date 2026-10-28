@@ -20,7 +20,7 @@ containers and saves only ever store **stacks**: an item id and a quantity,
 | `weapon` | object | `category` (`simple`/`martial`), `damage` (dice, e.g. `"1d8"`), `damage_type`, optional `versatile` dice, `properties` (`finesse`, `light`, `thrown`, `two_handed`, `ammunition`), `range` `[normal, long]` in feet, `ammo` item id, and `bonus` for a magic weapon (`1` on a +1 Longsword: +1 to attack and damage rolls, off-hand and thrown attacks included). |
 | `armor` | object | Body armour: `type` (`light`/`medium`/`heavy`), `base_ac`, `dex_cap` (medium), `strength` (heavy: below it, speed −10 ft), `stealth_disadvantage`. Shields: `type: "shield"`, `ac_bonus`. |
 | `bonuses` | object | Passive bonuses while worn (in any equipment slot); see [Passive bonuses](#passive-bonuses-magic-items). |
-| `use` | object | What using it does: `{"heal": "2d4+2"}` (potions, food), or `{"cast": "<spell id>"}` for a spell scroll (kind `scroll`): read by anyone whose class has the spell, cast at the spell's level with no slot, used up. See [SPELLS.md](SPELLS.md#spell-scrolls). |
+| `use` | object | What using it does: `{"heal": "2d4+2"}` (potions, food); `{"buff": {"abilities": {"str": 21}}}`, a score raised until the next long rest (Potion of Hill Giant Strength); `{"throw": {...}}`, a flask thrown in a fight (Holy Water, [below](#flasks-thrown-in-a-fight)); or `{"cast": "<spell id>"}` for a spell scroll (kind `scroll`): read by anyone whose class has the spell, cast at the spell's level with no slot, used up. See [SPELLS.md](SPELLS.md#spell-scrolls). |
 | `tool` | string | `lockpick` lets the holder try locks. |
 
 The special item `gold` (kind `currency`) represents coins in containers. Picking it up
@@ -81,6 +81,36 @@ The magic items so far:
 | Gauntlets of Ogre Power | Str 19 | Bandits' strongbox (old temple road) |
 | +1 Longsword | +1 to hit and damage | Mouldering chest in the ruin |
 | Amulet of Health | Con 19 | Mouldering chest in the ruin |
+
+## Potions with a lasting effect
+
+`use.buff` keeps its effect in the sheet's `effects` (as `"abilities": {"str": 21}`) until
+the next long rest, which clears `effects` (Spellcasting.end_long_rest_effects). Like a
+worn item, it makes a score *at least* the number, so a potion that wouldn't raise
+anything is refused rather than wasted. In a fight, drinking one is an action, like any
+potion.
+
+## Flasks thrown in a fight
+
+An item with `use.throw` gets a **Throw** button on the combat bar (beside spells and
+scrolls) for whoever carries it, then a target click, like a spell:
+
+```json
+"use": {"throw": {"range_ft": 20, "damage": "2d6", "damage_type": "radiant",
+                  "affects": {"types": ["undead", "fiend"]}, "fx": {"color": "#fff2c0"}}}
+```
+
+- It is a ranged attack with an improvised weapon: d20 + Dex, no proficiency, out to
+  `range_ft` (no long range). Advantage and disadvantage work as for any ranged attack.
+- `affects` uses the same creature types as spells ([SPELLS.md](SPELLS.md)); the target
+  preview refuses anything else ("Holy Water only works on undead and fiends; Wolf is a
+  beast"), so no flask is wasted on it.
+- The throw costs the action and the flask, hit or miss. It is not a weapon, so there is
+  no Sneak Attack. It flies as a tumbling icon and bursts in `fx.color`.
+- Outside a fight, using it from the inventory just says to throw it from the combat bar.
+
+Holy Water is sold by Wenna and kept in the temple's vestry cupboard; Potions of Hill
+Giant Strength are in Wenna's shop and the bandits' strongbox.
 
 ## The inventory screen
 

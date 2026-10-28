@@ -184,8 +184,9 @@ gaps, done now.
 
 ### Items with uses beyond healing
 - Potions with a lasting effect (Potion of Hill Giant Strength: Strength 21 until a long
-  rest) - **PENDING**
-- Flasks thrown in a fight (Holy Water: 2d6 radiant, only hurts undead and fiends) - **PENDING**
+  rest) - **COMPLETE**
+- Flasks thrown in a fight (Holy Water: 2d6 radiant, only hurts undead and fiends; a Throw
+  button on the combat bar) - **COMPLETE**
 
 ### Splitting stacks
 - Shift-drop a stack to choose how many to move, give, drop, buy or sell - **PENDING**

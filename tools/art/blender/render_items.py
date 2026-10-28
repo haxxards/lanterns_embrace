@@ -608,6 +608,27 @@ def potion_of_greater_healing():
     potion("potion_of_greater_healing", "#7a1a6a")
 
 
+def potion_of_hill_giant_strength():
+    potion("potion_of_hill_giant_strength", "#c0681c")
+
+
+def holy_water():
+    """A slim flask of pale, faintly shining water with a gilt sun on the front."""
+    root = setup()
+    prof = [(0.001, 0.0), (0.05, 0.004), (0.068, 0.04), (0.07, 0.15), (0.05, 0.2), (0.024, 0.23), (0.022, 0.29),
+            (0.028, 0.3)]
+    lathe("Flask", prof, glass(), root)
+    inner = [(0.001, 0.008), (0.045, 0.012), (0.06, 0.04), (0.062, 0.17), (0.001, 0.17)]
+    lathe("Water", inner, liquid("Water", "#cfe4ff", glow=0.6), root)
+    cyl("Stopper", (0, 0, 0.31), 0.024, 0.04, steel("Pewter", "#b8bcc2", 0.35), root, verts=16)
+    cyl("Sun", (0, -0.072, 0.1), 0.03, 0.008, gold_mat(), root, rot=(math.radians(90), 0, 0), verts=24)
+    for i in range(8):
+        a = math.tau * i / 8
+        lib.box(f"Ray{i}", (0.008, 0.006, 0.02), (math.cos(a) * 0.04, -0.072, 0.1 + math.sin(a) * 0.04),
+                mat=gold_mat(), parent=root, rotation=(0, -a + math.pi / 2, 0))
+    finish("holy_water", elevation=20)
+
+
 def remedy():
     potion("remedy", "#4a9a3a")
 
@@ -802,6 +823,7 @@ ALL = {
     "amulet_of_health": amulet_of_health, "boots_of_striding_and_springing": boots_of_striding_and_springing,
     "gauntlets_of_ogre_power": gauntlets_of_ogre_power,
     "potion_of_healing": potion_of_healing, "potion_of_greater_healing": potion_of_greater_healing,
+    "potion_of_hill_giant_strength": potion_of_hill_giant_strength, "holy_water": holy_water,
     "remedy": remedy,
     "rations": rations, "apple": apple, "torch": torch, "lantern": lantern, "holy_symbol": holy_symbol,
     "thieves_tools": thieves_tools, "spellbook": spellbook, "garnet": garnet, "key": key, "gold": gold,

@@ -39,6 +39,7 @@
 			"vendor": {"markup": 1.1, "buy_rate": 0.5, "stock": [
 				{"item": "potion_of_healing", "qty": 5}, {"item": "potion_of_greater_healing", "qty": 1},
 				{"item": "scroll_of_cure_wounds", "qty": 2}, {"item": "scroll_of_hold_person", "qty": 1}, {"item": "ring_of_fire_resistance", "qty": 1},
+				{"item": "potion_of_hill_giant_strength", "qty": 1}, {"item": "holy_water", "qty": 3},
 				{"item": "apple", "qty": 10}, {"item": "rations", "qty": 4}]}
 		},
 		"hob": {

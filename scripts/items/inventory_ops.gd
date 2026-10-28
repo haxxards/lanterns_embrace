@@ -244,6 +244,10 @@ static func use(ref: Dictionary, sheet: CharacterSheet) -> String:
 		return "%s is beyond a potion's help." % sheet.display_name
 	if st.def.use.has("cast"):
 		return _read_scroll(ref, st, sheet)
+	if st.def.is_throwable():
+		return "%s is thrown in a fight: use it from the combat bar." % st.def.display_name
+	if st.def.use.has("buff") and not _buff_would_help(st.def, sheet):
+		return "%s is already as strong as the %s would make them." % [sheet.display_name, st.def.display_name]
 	if GameState.in_combat():
 		var err: String = GameState.combat.item_use_error(sheet)
 		if not err.is_empty():
@@ -255,11 +259,25 @@ static func use(ref: Dictionary, sheet: CharacterSheet) -> String:
 		var healed := sheet.heal(Rules.roll_expr(str(st.def.use["heal"])))
 		msg = "%s uses the %s and recovers %d hit points." % [sheet.display_name, st.def.display_name, healed]
 		Audio.play_sfx("potion")
+	elif st.def.use.has("buff"):
+		var gained := sheet.add_buff(st.def.use["buff"])
+		msg = "%s drinks the %s: %s until a long rest." % [sheet.display_name, st.def.display_name, gained]
+		Audio.play_sfx("potion")
 	st.qty -= 1
 	_put(ref, st if st.qty > 0 else null)
 	if GameState.in_combat():
 		GameState.combat.item_used(sheet)  # drinking or giving a potion is an action
 	return msg
+
+
+## True if drinking `def` (a `use.buff` potion) would raise one of the
+## sheet's scores.
+static func _buff_would_help(def: ItemDef, sheet: CharacterSheet) -> bool:
+	var scores: Dictionary = (def.use.get("buff", {}) as Dictionary).get("abilities", {})
+	for ab in scores:
+		if int(scores[ab]) > sheet.ability_score(str(ab)):
+			return true
+	return false
 
 
 ## Reading a spell scroll from the inventory, outside a fight: spells that

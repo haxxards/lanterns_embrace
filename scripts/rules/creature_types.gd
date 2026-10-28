@@ -84,19 +84,29 @@ static func describe(sheet: CharacterSheet) -> String:
 ## type, a type it never works on, or an immunity to the condition it imposes
 ## (or to one that rules it out, as Sleep is ruled out by charm immunity).
 static func spell_refusal(spell: SpellDef, sheet: CharacterSheet) -> String:
-	var t := type_of(sheet)
 	var who := sheet.display_name
-	var only := PackedStringArray(spell.affects.get("types", []))
-	if not only.is_empty() and not only.has(t):
-		return "%s only works on %s; %s is %s." % [spell.display_name, _plural(only), who, _a(t)]
-	if PackedStringArray(spell.affects.get("not_types", [])).has(t):
-		return "%s doesn't work on %s; %s is %s." % [spell.display_name, _plural([t]), who, _a(t)]
+	var by_type := type_refusal(spell.display_name, spell.affects, sheet)
+	if not by_type.is_empty():
+		return by_type
 	if not spell.condition.is_empty() and immune_to(sheet, spell.condition):
 		var source := immunity_source(sheet, spell.condition)
 		return "%s can't be %s%s." % [who, spell.condition, " (%s)" % source if not source.is_empty() else ""]
 	for c in spell.affects.get("not_immune_to", []):
 		if immune_to(sheet, str(c)):
 			return "%s can't be %s, so %s has no hold on it." % [who, c, spell.display_name]
+	return ""
+
+
+## Why `what` (a spell, Holy Water) does nothing to `sheet` by its creature
+## type ("" if it works): `affects` lists "types" it works on only, and
+## "not_types" it never works on.
+static func type_refusal(what: String, affects: Dictionary, sheet: CharacterSheet) -> String:
+	var t := type_of(sheet)
+	var only := PackedStringArray(affects.get("types", []))
+	if not only.is_empty() and not only.has(t):
+		return "%s only works on %s; %s is %s." % [what, _plural(only), sheet.display_name, _a(t)]
+	if PackedStringArray(affects.get("not_types", [])).has(t):
+		return "%s doesn't work on %s; %s is %s." % [what, _plural([t]), sheet.display_name, _a(t)]
 	return ""
 
 

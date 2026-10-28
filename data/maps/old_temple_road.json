@@ -109,7 +109,7 @@
 		{"type": "log", "at": [21, 19]},
 		{"type": "crates", "at": [25, 19]},
 		{"type": "barrels", "at": [13, 21]},
-		{"type": "chest", "at": [18, 18], "id": "bandit_chest", "name": "Bandits' Strongbox", "locked": true, "lock_dc": 13, "items": [{"item": "potion_of_healing", "qty": 2}, {"item": "garnet", "qty": 1}, {"item": "arrows", "qty": 20}, {"item": "scroll_of_burning_hands", "qty": 1}, {"item": "gauntlets_of_ogre_power", "qty": 1}], "gold": 45},
+		{"type": "chest", "at": [18, 18], "id": "bandit_chest", "name": "Bandits' Strongbox", "locked": true, "lock_dc": 13, "items": [{"item": "potion_of_healing", "qty": 2}, {"item": "garnet", "qty": 1}, {"item": "arrows", "qty": 20}, {"item": "scroll_of_burning_hands", "qty": 1}, {"item": "gauntlets_of_ogre_power", "qty": 1}, {"item": "potion_of_hill_giant_strength", "qty": 1}], "gold": 45},
 		{"type": "ruined_wall", "at": [36, 3], "variant": 0},
 		{"type": "ruined_wall", "at": [39, 3], "variant": 1},
 		{"type": "ruined_wall", "at": [43, 3], "variant": 0},

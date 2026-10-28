@@ -83,6 +83,11 @@ func is_usable() -> bool:
 	return not use.is_empty()
 
 
+## Thrown at a creature in a fight from the combat bar (Holy Water).
+func is_throwable() -> bool:
+	return use.get("throw") is Dictionary
+
+
 ## A magic weapon's bonus to attack and damage rolls (`weapon.bonus`, +1).
 func weapon_bonus() -> int:
 	return int(weapon.get("bonus", 0)) if is_weapon() else 0
@@ -154,6 +159,20 @@ func describe() -> String:
 	lines.append_array(bonus_lines())
 	if use.has("heal"):
 		lines.append("Use: heals %s" % use["heal"])
+	var buff: Dictionary = use.get("buff", {})
+	var scores: Dictionary = buff.get("abilities", {})
+	for ab in Rules.ABILITIES:
+		if scores.has(ab):
+			lines.append("Use: %s %d until a long rest (if lower)" % [Rules.ABILITY_NAMES[ab], int(scores[ab])])
+	if is_throwable():
+		var t: Dictionary = use["throw"]
+		var whom := ""
+		var only: Array = (t.get("affects", {}) as Dictionary).get("types", [])
+		if not only.is_empty():
+			whom = " to %s only" % " and ".join(PackedStringArray(only.map(
+					func(x: Variant) -> String: return str(x) if str(x) == "undead" else str(x) + "s")))
+		lines.append("Use: thrown in a fight (%d ft): %s %s damage%s" % [int(t.get("range_ft", 20)),
+				t.get("damage", "1"), t.get("damage_type", ""), whom])
 	if use.has("cast"):
 		var spell: SpellDef = Data.spells.get(str(use["cast"]))
 		if spell != null:

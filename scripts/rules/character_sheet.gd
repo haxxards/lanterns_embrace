@@ -248,6 +248,25 @@ func equipped_def(slot: String) -> ItemDef:
 	return st.def if st != null else null
 
 
+## Applies a potion's lasting effect (an item's `use.buff`) until the next
+## long rest. Returns what changed ("Strength 21"), or "" if it would change
+## nothing (the score is already that high).
+func add_buff(buff: Dictionary) -> String:
+	var changes := PackedStringArray()
+	var scores: Dictionary = buff.get("abilities", {})
+	var boosted: Dictionary = effects.get("abilities", {}) if effects.get("abilities") is Dictionary else {}
+	for ab in Rules.ABILITIES:
+		if scores.has(ab) and int(scores[ab]) > ability_score(ab):
+			boosted[ab] = int(scores[ab])
+			changes.append("%s %d" % [Rules.ABILITY_NAMES[ab], int(scores[ab])])
+	if changes.is_empty():
+		return ""
+	effects["abilities"] = boosted
+	recalculate()
+	changed.emit()
+	return ", ".join(changes)
+
+
 ## The ItemDefs in the equipment slots (worn or held), in slot order.
 func worn_defs() -> Array[ItemDef]:
 	var out: Array[ItemDef] = []

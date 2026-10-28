@@ -342,6 +342,44 @@ func test_a_thrown_dagger_lands_by_the_target() -> void:
 	check(pile != null and pile.inventory.has("dagger"), "and lies at the bandit's feet")
 
 
+func test_holy_water_burns_the_undead() -> void:
+	GameState.member("odran").inventory.add_item("holy_water", 2)
+	var foe: Combatant = await _fight("skeleton")  # asleep: thrown at with advantage
+	var me := await _turn_of("odran")
+	var spot: Variant = _hex_at(me.hex(), 3)
+	foe.actor.place_at(spot)
+	foe.sheet.armor_class = -10  # only a natural 1 on both dice misses
+	var ab := _ability(me, "holy_water", "throw")
+	check(not ab.is_empty() and str(ab["error"]).is_empty(), "Throw Holy Water is on Odran's bar: %s" % ab)
+	await combat.use_ability(ab)
+	check(not combat.targeting.is_empty(), "waiting for a target")
+	var p := combat.preview_target(foe.hex(), foe)
+	check(p["ok"] and str(p["text"]).contains("% to hit"), "the preview gives the odds: %s" % p["text"])
+	var hp := foe.sheet.hp_current
+	await combat.confirm_target(foe.hex(), foe)
+	check(foe.sheet.hp_current < hp or foe.sheet.dead, "the skeleton is burned")
+	check(_log_has("radiant"), "radiant damage in the log")
+	check_eq(me.sheet.inventory.count("holy_water"), 1, "one flask used")
+	check(me.action_used, "it took Odran's action")
+	check(not str(_ability(me, "holy_water", "throw")["error"]).is_empty(), "no second throw this turn")
+
+
+func test_holy_water_only_works_on_undead_and_fiends() -> void:
+	GameState.member("odran").inventory.add_item("holy_water", 1)
+	var foe: Combatant = await _fight("wolf")
+	var me := await _turn_of("odran")
+	foe.actor.place_at(_hex_at(me.hex(), 2))
+	await combat.use_ability(_ability(me, "holy_water", "throw"))
+	var p := combat.preview_target(foe.hex(), foe)
+	check(not p["ok"] and str(p["text"]).contains("only works on undead and fiends"), "refused: %s" % p["text"])
+	await combat.confirm_target(foe.hex(), foe)
+	check_eq(me.sheet.inventory.count("holy_water"), 1, "the flask is kept")
+	check(not me.action_used, "and the action")
+	foe.actor.place_at(_hex_at(me.hex(), 6))
+	var q := combat.preview_target(foe.hex(), foe)
+	check(not q["ok"] and str(q["text"]).contains("out of range (20 ft)"), "20 ft at most: %s" % q["text"])
+
+
 func test_getting_away_ends_the_fight() -> void:
 	var foe: Combatant = await _fight("wolf")
 	check(await _until_player_turn(), "the fight is on")

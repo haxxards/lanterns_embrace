@@ -24,7 +24,7 @@
 	],
 	"props": [
 		{"type": "altar", "at": [3, 1]},
-		{"type": "cupboard", "at": [7, 0], "id": "vestry", "name": "Vestry Cupboard", "items": [{"item": "torch", "qty": 2}, {"item": "potion_of_healing", "qty": 1}]},
+		{"type": "cupboard", "at": [7, 0], "id": "vestry", "name": "Vestry Cupboard", "items": [{"item": "torch", "qty": 2}, {"item": "potion_of_healing", "qty": 1}, {"item": "holy_water", "qty": 2}]},
 		{"type": "pew", "at": [0, 3]},
 		{"type": "pew", "at": [5, 3]},
 		{"type": "pew", "at": [0, 5]},

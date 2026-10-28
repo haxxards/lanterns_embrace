@@ -1,6 +1,6 @@
 """Inventory icons in the "painted" style.
 
-The same 43 items as render_items.py, re-modelled with more detail (fullered
+The same 45 items as render_items.py, re-modelled with more detail (fullered
 blades, wrapped grips, riveted rims, mail rings, buckles...) and rendered with
 the painted materials, lighting and finishing pass from painted.py. Which set
 the game shows is chosen by "art_style" in data/config/game_config.json.
@@ -908,6 +908,47 @@ def potion_of_greater_healing(root):
     bevel(cap, 0.005, 2)
     ball("CapGem", (0, -0.044, 0.31), 0.012, painted.glow("CapGem", "#b0141a", 0.6, "#ff9a7a"), root,
          scale=(1, 0.6, 1))
+
+
+@item("potion_of_hill_giant_strength", 22)
+def potion_of_hill_giant_strength(root):
+    """A squat, heavy flask bound with iron, glowing amber."""
+    prof = [(0.001, 0.0), (0.09, 0.004), (0.12, 0.03), (0.13, 0.09), (0.12, 0.15), (0.07, 0.19), (0.036, 0.21),
+            (0.034, 0.27), (0.044, 0.28)]
+    lathe("Flask", prof, painted.glass("Glass"), root, sides=40)
+    inner = [(0.001, 0.008), (0.1, 0.012), (0.12, 0.05), (0.122, 0.12), (0.001, 0.12)]
+    lathe("Liquid", inner, painted.glow("Liquid", "#a04c12", 1.1, "#ffc070"), root, sides=40)
+    iron = painted.iron("Bands")
+    for z, r in ((0.03, 0.124), (0.09, 0.134), (0.15, 0.124)):
+        band = ri.torus(f"Band{z}", (0, 0, z), r, 0.011, iron, root)
+        band.scale = (1, 1, 1.3)
+    for k in range(4):
+        a = 2 * math.pi * k / 4 + math.pi / 4
+        ball(f"Rivet{k}", (math.cos(a) * 0.145, math.sin(a) * 0.145, 0.09), 0.012, iron, root)
+    ri.torus("Collar", (0, 0, 0.205), 0.04, 0.01, iron, root)
+    cork_and_seal(root, 0.27, 0.034, "#5a3214")
+
+
+@item("holy_water", 22)
+def holy_water(root):
+    """A slim glass flask of pale, shining water with a gilt sun hung at its neck."""
+    prof = [(0.001, 0.0), (0.05, 0.004), (0.07, 0.04), (0.072, 0.15), (0.05, 0.2), (0.025, 0.23), (0.023, 0.29),
+            (0.03, 0.3)]
+    lathe("Flask", prof, painted.glass("Glass"), root, sides=40)
+    inner = [(0.001, 0.008), (0.046, 0.012), (0.062, 0.04), (0.064, 0.17), (0.001, 0.17)]
+    lathe("Water", inner, painted.glow("Water", "#7aa8e0", 1.0, "#ffffff"), root, sides=40)
+    gold = painted.gold("Sun")
+    ri.torus("NeckBand", (0, 0, 0.215), 0.032, 0.007, gold, root)
+    tube("Chain", [(0.0, -0.034, 0.215), (0.0, -0.06, 0.17), (0.0, -0.076, 0.13)], 0.004, gold, root, sides=6)
+    d = ri.cyl("SunDisc", (0, -0.08, 0.1), 0.028, 0.008, gold, root, rot=(math.radians(90), 0, 0), verts=24)
+    bevel(d, 0.003, 2)
+    for i in range(8):
+        a = math.tau * i / 8
+        plate(f"Ray{i}", [(math.cos(a - 0.2) * 0.028, 0.1 + math.sin(a - 0.2) * 0.028),
+                          (math.cos(a) * 0.046, 0.1 + math.sin(a) * 0.046),
+                          (math.cos(a + 0.2) * 0.028, 0.1 + math.sin(a + 0.2) * 0.028)], 0.006, gold, root,
+              plane="XZ", bevel_w=0.0015).location = (0, -0.08, 0)
+    cork_and_seal(root, 0.29, 0.027, "#e6dccb")
 
 
 @item("remedy", 22)

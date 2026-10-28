@@ -286,3 +286,45 @@ func test_item_cards_list_the_bonuses() -> void:
 	check((Data.items["amulet_of_health"] as ItemDef).describe().contains("Constitution 19"), "Con line")
 	check((Data.items["boots_of_striding_and_springing"] as ItemDef).describe().contains("at least 30 ft"), "speed")
 	check((Data.items["ring_of_fire_resistance"] as ItemDef).describe().contains("Resistance to fire damage"), "resist")
+
+
+# --- usable items ------------------------------------------------------------------
+
+func _use(sheet: CharacterSheet, id: String) -> String:
+	for i in sheet.inventory.capacity():
+		var st := sheet.inventory.get_at(i)
+		if st != null and st.id == id:
+			return InventoryOps.use(InventoryOps.backpack(sheet, i), sheet)
+	return "(no %s)" % id
+
+
+func test_hill_giant_strength_lasts_until_a_long_rest() -> void:
+	var w := _sheet("wren")  # Str 8
+	w.inventory.add_item("potion_of_hill_giant_strength", 2)
+	var msg := _use(w, "potion_of_hill_giant_strength")
+	check(msg.contains("Strength 21 until a long rest"), "drunk: %s" % msg)
+	check_eq(w.ability_score("str"), 21, "Strength 21")
+	check_eq(w.inventory.count("potion_of_hill_giant_strength"), 1, "one used")
+	msg = _use(w, "potion_of_hill_giant_strength")
+	check(msg.contains("already as strong"), "a second does nothing: %s" % msg)
+	check_eq(w.inventory.count("potion_of_hill_giant_strength"), 1, "and isn't wasted")
+	var loaded := CharacterSheet.from_dict(w.to_dict())
+	check_eq(loaded.ability_score("str"), 21, "kept in a save")
+	Rest.long_rest([w] as Array[CharacterSheet])
+	check_eq(w.ability_score("str"), 8, "gone after a long rest")
+	_wear(w, "gloves", "gauntlets_of_ogre_power")
+	w.inventory.add_item("potion_of_hill_giant_strength")
+	_use(w, "potion_of_hill_giant_strength")
+	check_eq(w.ability_score("str"), 21, "the potion beats the gauntlets")
+	check(Data.items["potion_of_hill_giant_strength"].describe().contains("Strength 21 until a long rest"), "card")
+
+
+func test_holy_water_waits_for_a_fight() -> void:
+	var o := _sheet("odran")
+	o.inventory.add_item("holy_water", 1)
+	var msg := _use(o, "holy_water")
+	check(msg.contains("combat bar"), "thrown from the combat bar: %s" % msg)
+	check_eq(o.inventory.count("holy_water"), 1, "not used up")
+	var card := (Data.items["holy_water"] as ItemDef).describe()
+	check(card.contains("thrown in a fight (20 ft): 2d6 radiant damage to undead and fiends only"), card)
+
