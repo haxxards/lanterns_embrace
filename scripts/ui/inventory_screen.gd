@@ -22,6 +22,9 @@ const MAGIC_TEXT := Color(0.56, 0.72, 1.0)
 const HINT := "Drag to move, equip or drop on the ground  ·  Shift-drag to split a stack  ·  right-click to use, equip or take  ·  drop on a portrait to give"
 const HINT_SHOP := "Drag from the stock to buy the stack, into it to sell  ·  right-click buys one or sells  ·  prices in gold pieces"
 const CONTAINER_COLUMNS := 8
+## Rows of the chest or shop shown at once; a bigger one (a smith's stock)
+## scrolls, so the window always fits on the screen.
+const CONTAINER_ROWS_SHOWN := 3
 
 var sheet: CharacterSheet
 var container: ContainerState
@@ -43,6 +46,7 @@ var _gold_label: Label
 var _container_box: VBoxContainer
 var _container_title: Label
 var _container_grid: GridContainer
+var _container_scroll: ScrollContainer
 var _container_slots: Array[ItemSlot] = []
 var _take_all: Button
 var _hint: Label
@@ -51,9 +55,13 @@ var _hint: Label
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	add_theme_stylebox_override("panel", UiTheme.panel_box(UiTheme.BG, UiTheme.BORDER_LIGHT, 2, 6, 14))
+	add_theme_stylebox_override("panel", UiTheme.ornate_frame())
 	_build()
 	GameState.gold_changed.connect(func(_g: int) -> void: _refresh())
+
+
+func _draw() -> void:
+	UiTheme.draw_frame_crests(self, Rect2(Vector2.ZERO, size))
 
 
 ## Shows `s`'s inventory, with `c` open beside it if given (otherwise the ground).
@@ -129,6 +137,9 @@ func set_container(c: ContainerState, title: String = "") -> void:
 	c.inventory.changed.connect(_refresh)
 	_container_title.text = title
 	_resize_slots(_container_grid, _container_slots, c.inventory.capacity())
+	var rows := ceili(c.inventory.capacity() / float(CONTAINER_COLUMNS))
+	_container_scroll.custom_minimum_size.y = mini(rows, CONTAINER_ROWS_SHOWN) * (ItemSlot.SIZE.y + 6) - 6
+	_container_scroll.scroll_vertical = 0
 	for i in _container_slots.size():
 		_container_slots[i].ref = InventoryOps.shop_slot(c, i, trade) if not trade.is_empty() \
 				else InventoryOps.container_slot(c, i)
@@ -328,7 +339,10 @@ func _build() -> void:
 	_container_grid.columns = CONTAINER_COLUMNS
 	_container_grid.add_theme_constant_override("h_separation", 6)
 	_container_grid.add_theme_constant_override("v_separation", 6)
-	_container_box.add_child(_container_grid)
+	_container_scroll = ScrollContainer.new()
+	_container_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_container_box.add_child(_container_scroll)
+	_container_scroll.add_child(_container_grid)
 
 	_hint = _label(HINT, 12, UiTheme.TEXT_DIM)
 	root.add_child(_hint)

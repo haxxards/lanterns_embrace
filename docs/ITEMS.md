@@ -136,7 +136,8 @@ Giant Strength are in Wenna's shop and the bandits' strongbox.
 ## The inventory screen
 
 Open it with **I**, the sidebar's **Inventory** button, or by opening a container. The
-game pauses while it is open.
+game pauses while it is open. It sits in a gilded frame ([ASSETS.md](ASSETS.md#window-frames));
+a chest or shop shows three rows at a time and scrolls when there are more.
 
 - Drag items between backpack slots, equipment slots and the open container. Dropping on
   an occupied slot swaps, or tops up a stack of the same item.

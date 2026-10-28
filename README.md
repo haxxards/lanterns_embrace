@@ -46,6 +46,10 @@ Godot explained along the way.
   (thieves' tools, or Arcana for the glyph), open it anyway, or leave it. Unnoticed, it
   goes off on whoever opens it.
 - Seven new item icons, in both art styles. See [docs/ITEMS.md](docs/ITEMS.md).
+- **A gilded frame for the inventory:** a beaded moulding with rosettes and amber stones
+  at the corners, scrollwork and leaf finials, and a crest at the middle of each side,
+  rendered in Blender like the rest of the art and drawn as a 9-slice so it fits any size
+  ([docs/ASSETS.md](docs/ASSETS.md#window-frames)).
 
 ![Magic items worn: Strength 19 in blue, a save bonus, fire resistance and the +1 sword; an unidentified amulet in the pack](docs/images/phase2b_magic_items.jpg)
 ![Shift-dropping a stack of arrows on a portrait: how many to give](docs/images/phase2b_split.jpg)

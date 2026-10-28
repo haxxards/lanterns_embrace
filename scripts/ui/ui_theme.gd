@@ -13,6 +13,24 @@ const SELECTED := Color("59e86e")
 const HP_FILL := Color("b8322f")
 const HP_BG := Color("3a1514")
 
+## The gilded frame (rendered by tools/art/blender/render_ui.py; the numbers
+## must match it): a 9-slice whose FRAME_CORNER-pixel corners keep their
+## ornaments, drawn FRAME_OUTSET pixels outside the panel so the moulding's
+## outer edge is the panel's edge. The moulding is FRAME_BAND pixels wide.
+const FRAME_TEXTURE := "res://assets/ui/frame_gold.png"
+const FRAME_CORNER := 150
+const FRAME_OUTSET := 30
+const FRAME_BAND := 26
+## The crest at the middle of each side, and where the moulding's centre line
+## runs through it: {side: Vector2(along, across)} in its picture.
+const FRAME_CRESTS := {
+	"top": Vector2(100, 46), "bottom": Vector2(100, 38),
+	"left": Vector2(46, 100), "right": Vector2(38, 100),
+}
+
+## The crest pictures, loaded once: {side: Texture2D}.
+static var _crests: Dictionary = {}
+
 
 static func panel_box(bg: Color = BG, border: Color = BORDER, border_w: int = 2,
 		radius: int = 4, margin: int = 8) -> StyleBoxFlat:
@@ -23,6 +41,38 @@ static func panel_box(bg: Color = BG, border: Color = BORDER, border_w: int = 2,
 	sb.set_corner_radius_all(radius)
 	sb.set_content_margin_all(margin)
 	return sb
+
+
+## The ornate gilded frame for a window (the inventory screen). Content sits
+## `content_margin` pixels inside the panel's edge, clear of the corner
+## rosettes. Falls back to a plain panel if the picture is missing.
+static func ornate_frame(content_margin: int = 46) -> StyleBox:
+	if not ResourceLoader.exists(FRAME_TEXTURE):
+		return panel_box(BG, BORDER_LIGHT, 2, 6, 14)
+	var sb := StyleBoxTexture.new()
+	sb.texture = load(FRAME_TEXTURE)
+	sb.set_texture_margin_all(FRAME_CORNER)
+	sb.set_expand_margin_all(FRAME_OUTSET)
+	sb.set_content_margin_all(content_margin)
+	return sb
+
+
+## Draws the crests at the middle of each side of `rect` (in `ci`'s own
+## coordinates), over the moulding of an ornate_frame. Call from _draw().
+static func draw_frame_crests(ci: CanvasItem, rect: Rect2) -> void:
+	var line := FRAME_BAND / 2.0  # the moulding's centre line, inside the edge
+	var mid := rect.get_center()
+	var anchors := {
+		"top": Vector2(mid.x, rect.position.y + line), "bottom": Vector2(mid.x, rect.end.y - line),
+		"left": Vector2(rect.position.x + line, mid.y), "right": Vector2(rect.end.x - line, mid.y),
+	}
+	if _crests.is_empty():
+		for side in FRAME_CRESTS:
+			var path := "res://assets/ui/frame_gold_crest_%s.png" % side
+			if ResourceLoader.exists(path):
+				_crests[side] = load(path)
+	for side in _crests:
+		ci.draw_texture(_crests[side], anchors[side] - FRAME_CRESTS[side])
 
 
 static func build() -> Theme:

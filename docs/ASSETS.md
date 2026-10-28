@@ -16,6 +16,7 @@ standing stone; set dressing such as reeds, ferns, wildflowers, logs, stumps, ba
 | Character sprites | `tools/art/blender/render_characters.py` | Posable 3D figures with class gear, plus townsfolk outfits (innkeeper's apron, smith's leather apron, priest's robes, the reeve's coat, villagers) and foes: hooded bandits (a scimitar, or a bow and quiver), skeletons built bone by bone (with rusted scraps, or a bow), and a four-legged wolf with a trotting gait. Each is rendered as a sprite sheet: 5 facings × (idle + 8-frame walk), mirrored in game for the other 3 facings. |
 | Item icons | `tools/art/blender/render_items.py` (classic), `render_items_painted.py` (painted) | 64×64 icons of small procedural models (blades, armour, potions, coins...) under a studio light rig, with a soft drop shadow. The painted set has more detailed models, worn and grimy materials, and a brush-stroke finish with an outline: see [PAINTED_STYLE.md](PAINTED_STYLE.md). |
 | Interiors | `tools/art/blender/render_interiors.py` | Room backdrops (floorboards or flagstones, back wall with hearth or forge and lit windows, side walls leaning out as a cutaway; the temple nave has stained glass, a dais, candles and a runner) and furniture props: chests, drawers, cupboards, tables, beds, the bar and its shelves, an anvil, a rug, pews, an altar, a pile of items on the ground, the exit mat. |
+| Window frames | `tools/art/blender/render_ui.py` | The inventory screen's gilded frame and its four mid-side crests, see [Window frames](#window-frames). |
 | Sounds and music | `tools/audio/generate_placeholder_audio.py` | Synthesised placeholders, see [AUDIO.md](AUDIO.md). |
 | Portraits | `tools/art/portraits/make_portraits.py` | Crops of CC0 public-domain paintings from the Met (see below). |
 
@@ -63,6 +64,33 @@ icons are in `assets/items/painted/`, under the same file names, and are made by
 `render_items_painted.py` with the materials and finishing pass in `painted.py` and
 `paint_filter.py`. [PAINTED_STYLE.md](PAINTED_STYLE.md) explains how the look is made,
 step by step, and how to switch.
+
+### Window frames
+
+The inventory screen sits in a gilded frame, `assets/ui/frame_gold.png`, rendered like
+the rest of the art: a moulding (outer bead, cove, rounded top, inner bead) swept round
+a square with mitred corners, and at each corner a rosette with an amber stone on a
+four-lobed plate, scrolls with leaves curling along both edges and a leaf finial. It is
+lit by suns (so the light is the same all along the frame) and composited in PIL over the
+panel's dark background, with an inner shadow, a fine gilt rule and a drop shadow.
+
+Godot draws it as a 9-slice (`UiTheme.ornate_frame()`, a `StyleBoxTexture`): the 150-px
+corners keep their ornaments and the straight moulding between them stretches, so the
+frame fits a window of any size. It is drawn 30 px outside the panel, so the moulding's
+outer edge is the panel's edge. The crests at the middle of each side,
+`frame_gold_crest_<side>.png`, can't be part of a 9-slice (the middle stretches), so
+`UiTheme.draw_frame_crests()` draws them from the panel's `_draw()`. There is one
+picture per side, rendered turned, so the light falls the same way on all four.
+
+```sh
+.venv-art/bin/python tools/art/blender/render_all.py ui                     # frame and crests (~2.5 min)
+.venv-art/bin/python tools/art/blender/render_all.py ui:frame_gold_crest    # just the crests
+```
+
+If you change `SIZE`, `OUT`, `BAND`, `CORNER` or the crest sizes in `render_ui.py`, change
+the matching `FRAME_*` constants in `scripts/ui/ui_theme.gd` (a test checks they agree).
+To frame another window, give its panel `UiTheme.ornate_frame()` and call
+`UiTheme.draw_frame_crests(self, Rect2(Vector2.ZERO, size))` from its `_draw()`.
 
 ## Portraits
 

@@ -60,3 +60,17 @@ func test_unknown_style_is_refused() -> void:
 	Data.set_art_style("items", "classic")
 	check(not Data.set_art_style("items", "watercolour"), "unknown style refused")
 	check_eq(GameConfig.art_style_of("items"), "classic", "style unchanged")
+
+
+func test_the_gilded_frame_matches_its_numbers() -> void:
+	var sb := UiTheme.ornate_frame()
+	check(sb is StyleBoxTexture, "the inventory uses the rendered frame")
+	var tex: Texture2D = (sb as StyleBoxTexture).texture
+	check(tex != null and tex.get_width() > 2 * UiTheme.FRAME_CORNER, "the corners fit in the picture")
+	check_eq(sb.get_margin(SIDE_TOP), 46.0, "content clears the corner rosettes")
+	for side in UiTheme.FRAME_CRESTS:
+		var crest: Texture2D = load("res://assets/ui/frame_gold_crest_%s.png" % side)
+		var anchor: Vector2 = UiTheme.FRAME_CRESTS[side]
+		check(crest != null and Rect2(Vector2.ZERO, crest.get_size()).has_point(anchor),
+				"the %s crest's anchor is inside it" % side)
+

@@ -2,7 +2,7 @@
 """Renders the game's art with Blender (as a Python module).
 
 Setup (once):  python3.13 -m venv .venv-art && .venv-art/bin/pip install bpy==5.2.2 numpy pillow
-Usage:         .venv-art/bin/python tools/art/blender/render_all.py [terrain] [props] [characters] [items] [interiors]
+Usage:         .venv-art/bin/python tools/art/blender/render_all.py [terrain] [props] [characters] [items] [interiors] [ui]
                .venv-art/bin/python tools/art/blender/render_all.py terrain:grass props:tree_oak
                .venv-art/bin/python tools/art/blender/render_all.py --style painted items:longsword
 
@@ -25,12 +25,13 @@ import render_items  # noqa: E402
 import render_items_painted  # noqa: E402
 import render_props  # noqa: E402
 import render_terrain  # noqa: E402
+import render_ui  # noqa: E402
 
 # group -> {style: module}
 GROUPS = {"terrain": {"classic": render_terrain}, "props": {"classic": render_props},
           "characters": {"classic": render_characters},
           "items": {"classic": render_items, "painted": render_items_painted},
-          "interiors": {"classic": render_interiors}}
+          "interiors": {"classic": render_interiors}, "ui": {"classic": render_ui}}
 STYLES = ("classic", "painted")
 
 

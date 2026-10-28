@@ -425,3 +425,15 @@ func test_open_it_anyway() -> void:
 	check_eq(opened.size(), 1, "the chest opens")
 	hud._inventory.close()
 
+
+func test_the_framed_inventory_fits_on_screen() -> void:
+	var smith: NpcDef = Data.npcs["bram"]  # the biggest stock
+	hud._inventory.open_shop(world.party.members[0].sheet, GameState.vendor_stock(smith), "Wares",
+			smith.trade_terms())
+	await runner.get_tree().process_frame
+	await runner.get_tree().process_frame
+	var framed := hud._inventory.get_global_rect().grow(UiTheme.FRAME_OUTSET)
+	var screen := Rect2(Vector2.ZERO, hud._inventory.get_viewport_rect().size)
+	check(screen.encloses(framed), "frame %s within the screen %s" % [framed, screen])
+	hud._inventory.close()
+

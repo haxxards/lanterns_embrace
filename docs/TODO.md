@@ -256,6 +256,11 @@ gaps, done now.
     advantage on saves against a condition - **COMPLETE**
   - Conditions shown in the interface: badges on the turn order, type and conditions on
     hover, "can't act" on the portrait cards - **COMPLETE**
+- A more ornate gold border for the inventory screen - **COMPLETE**: a gilded frame
+  rendered in Blender (a beaded moulding, rosettes with amber stones at the corners,
+  scrollwork, leaf finials, a crest at the middle of each side), drawn as a 9-slice so
+  it fits any size; a big shop's stock now scrolls so the framed window always fits on
+  the screen ([ASSETS.md](ASSETS.md#window-frames))
 
 ## Added without being asked
 
