@@ -11,11 +11,13 @@ var locked: bool = false
 var lock_dc: int = 0
 ## Item id that opens the lock, or "".
 var key_id: String = ""
+## A trap on it (see Traps), with its "state"; {} for none.
+var trap: Dictionary = {}
 
 
 ## Initial state from a map placement: {"items": [...], "gold": n, "locked": true,
-## "lock_dc": 15, "key": "reeve_key"}. Magic found this way starts
-## unidentified, unless its entry says "identified": true.
+## "lock_dc": 15, "key": "reeve_key", "trap": {...}}. Magic found this way
+## starts unidentified, unless its entry says "identified": true.
 static func from_placement(extra: Dictionary) -> ContainerState:
 	var c := ContainerState.new()
 	var list: Array = (extra.get("items", []) as Array).duplicate()
@@ -29,7 +31,17 @@ static func from_placement(extra: Dictionary) -> ContainerState:
 	c.locked = bool(extra.get("locked", false))
 	c.lock_dc = int(extra.get("lock_dc", 0))
 	c.key_id = str(extra.get("key", ""))
+	c.trap = _trap_from(extra.get("trap"))
 	return c
+
+
+static func _trap_from(v: Variant) -> Dictionary:
+	if not v is Dictionary or (v as Dictionary).is_empty():
+		return {}
+	var t: Dictionary = (v as Dictionary).duplicate(true)
+	if not t.has("state"):
+		t["state"] = Traps.ARMED
+	return t
 
 
 static func from_dict(d: Dictionary) -> ContainerState:
@@ -39,8 +51,12 @@ static func from_dict(d: Dictionary) -> ContainerState:
 	c.locked = bool(d.get("locked", false))
 	c.lock_dc = int(d.get("lock_dc", 0))
 	c.key_id = str(d.get("key", ""))
+	c.trap = _trap_from(d.get("trap"))
 	return c
 
 
 func to_dict() -> Dictionary:
-	return {"items": inventory.to_array(), "locked": locked, "lock_dc": lock_dc, "key": key_id}
+	var d := {"items": inventory.to_array(), "locked": locked, "lock_dc": lock_dc, "key": key_id}
+	if not trap.is_empty():
+		d["trap"] = trap.duplicate(true)
+	return d

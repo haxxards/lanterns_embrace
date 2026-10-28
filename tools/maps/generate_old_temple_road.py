@@ -128,7 +128,9 @@ one("barrels", (13, 21))
 one("chest", (18, 18), id="bandit_chest", name="Bandits' Strongbox", locked=True, lock_dc=13,
     items=[{"item": "potion_of_healing", "qty": 2}, {"item": "garnet", "qty": 1}, {"item": "arrows", "qty": 20},
            {"item": "scroll_of_burning_hands", "qty": 1}, {"item": "gauntlets_of_ogre_power", "qty": 1},
-           {"item": "potion_of_hill_giant_strength", "qty": 1}], gold=45)
+           {"item": "potion_of_hill_giant_strength", "qty": 1}], gold=45,
+    trap={"name": "poison needle", "find_dc": 13, "disarm": {"dc": 13, "ability": "dex", "tool": "thieves_tools"},
+          "save": "con", "save_dc": 12, "damage": "2d6", "damage_type": "poison", "half_on_save": True})
 
 # Ruin: broken walls along the back, columns down the sides, an open front.
 place("ruined_wall", rect_cells((36, 3), 3, 1), (36, 3), variant=0)
@@ -145,7 +147,9 @@ one("standing_stone", (44, 6), title="Carved Stone",
 one("chest", (37, 5), id="ruin_chest", name="Mouldering Chest", variant=1,
     items=[{"item": "potion_of_greater_healing", "qty": 1}, {"item": "silver_amulet", "qty": 1},
            {"item": "garnet", "qty": 2}, {"item": "scroll_of_magic_missile", "qty": 1},
-           {"item": "longsword_plus_one", "qty": 1}, {"item": "amulet_of_health", "qty": 1}], gold=60)
+           {"item": "longsword_plus_one", "qty": 1}, {"item": "amulet_of_health", "qty": 1}], gold=60,
+    trap={"name": "fire glyph", "find_dc": 15, "disarm": {"dc": 14, "ability": "int", "skill": "arcana"},
+          "save": "dex", "save_dc": 13, "damage": "3d6", "damage_type": "fire", "half_on_save": True})
 for cell in ((38, 8), (43, 10), (45, 8), (39, 11)):
     one("rubble", cell)
 

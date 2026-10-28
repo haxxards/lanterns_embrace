@@ -87,7 +87,7 @@ Prop types live in `data/props/props.json`:
   `"interaction"`):
   - `"read"` shows the instance's `title` and `text`;
   - `"container"` opens it on the inventory screen (`items`, `gold`, `locked`, `lock_dc`,
-    `key`; see [ITEMS.md](ITEMS.md));
+    `key`, `trap`; see [ITEMS.md](ITEMS.md#trapped-containers));
   - `"enter"` takes the party into the instance's `interior` map, arriving at its `entry`;
   - `"exit"` takes the party to the instance's `map`, arriving at its `entry`.
 - `door_pixel`: where the door is drawn in the texture. The door hex is the footprint hex

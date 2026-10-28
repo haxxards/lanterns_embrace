@@ -463,3 +463,81 @@ func test_wenna_names_items_for_gold() -> void:
 	check_eq(InventoryOps.unidentified(w).size(), 1, "couldn't afford the second")
 	var d := Data.dialogue("res://data/dialogue/wenna.json")
 	check(d.nodes.has("identify"), "Wenna offers it")
+
+
+# --- traps -------------------------------------------------------------------------------
+
+func _needle(find_dc: int = 13, disarm_dc: int = 13) -> Dictionary:
+	return {"name": "poison needle", "find_dc": find_dc, "disarm": {"dc": disarm_dc, "ability": "dex",
+			"tool": "thieves_tools"}, "save": "con", "save_dc": 12, "damage": "2d6", "damage_type": "poison",
+			"half_on_save": true, "state": Traps.ARMED}
+
+
+func test_noticing_a_trap() -> void:
+	var party: Array[CharacterSheet] = [_sheet("garrick"), _sheet("elowen"), _sheet("odran"), _sheet("wren")]
+	check_eq(Traps.passive_perception(party[3]), 13, "Wren: 10 + Wis 1 + Perception 2")
+	check_eq(Traps.passive_perception(party[1]), 11, "Elowen: untrained")
+	var hidden := _needle(15)
+	check(Traps.notice(hidden, party) == null, "DC 15 goes unnoticed")
+	check_eq(hidden["state"], Traps.ARMED, "still armed")
+	var plain := _needle(13)
+	var who := Traps.notice(plain, party)
+	check(who != null and Traps.passive_perception(who) >= 13, "DC 13 is noticed")
+	check(Traps.is_found(plain) and Traps.is_live(plain), "found, and still dangerous")
+	check(Traps.notice(plain, party) == null, "noticed only once")
+
+
+func test_who_can_disarm_a_trap() -> void:
+	var party: Array[CharacterSheet] = [_sheet("garrick"), _sheet("elowen"), _sheet("wren")]
+	var needle := _needle()
+	check_eq(Traps.disarm_bonus(needle, party[0]), -1000, "Garrick has no thieves' tools")
+	check_eq(Traps.disarm_bonus(needle, party[2]), 3 + 2 * 2, "Wren: Dex 3 + proficiency twice (Expertise)")
+	check(Traps.best_disarmer(needle, party) == party[2], "so Wren tries")
+	var glyph := {"name": "fire glyph", "disarm": {"dc": 14, "ability": "int", "skill": "arcana"}}
+	check_eq(Traps.disarm_bonus(glyph, party[1]), 3 + 2, "Elowen: Int 3 + Arcana 2")
+	check(Traps.best_disarmer(glyph, party) == party[1], "a glyph is Elowen's to undo")
+	check_eq(Traps.disarm_means(needle), "thieves' tools", "named for the dialog")
+	check_eq(Traps.disarm_means(glyph), "Arcana", "and the glyph")
+
+
+func test_disarming_succeeds_fails_or_sets_it_off() -> void:
+	var w := _sheet("wren")
+	var easy := _needle(13, 1)
+	check(Traps.try_disarm(easy, w)["ok"], "DC 1: disarmed")
+	check_eq(easy["state"], Traps.DISARMED, "and stays so")
+	check(not Traps.is_live(easy), "no longer a danger")
+	# Fail by less than 5: nothing happens. Pre-roll the d20 with the same seed.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	var d20 := Rules.roll(1, 20, rng)
+	rng.seed = 77
+	var close := _needle(13, d20 + Traps.disarm_bonus(_needle(), w) + 2)
+	var r := Traps.try_disarm(close, w, rng)
+	check(not r["ok"] and not r["sprung"], "missed by 2: try again later (%s)" % r["text"])
+	check(Traps.is_live(close), "still armed")
+	var hp := w.hp_current
+	var hard := _needle(13, 60)
+	r = Traps.try_disarm(hard, w)
+	check(r["sprung"], "missed by 5 or more: it goes off (%s)" % r["text"])
+	check(w.hp_current < hp or w.hp_current == hp and str(r["text"]).contains("takes 0"), "Wren is hurt")
+	check_eq(hard["state"], Traps.SPRUNG, "spent")
+
+
+func test_a_sprung_trap_hurts_and_resistance_helps() -> void:
+	var e := _sheet("elowen")
+	e.hp_max = 100
+	e.hp_current = 100
+	var glyph := {"name": "fire glyph", "save": "dex", "save_dc": 99, "damage": "10", "damage_type": "fire"}
+	var text := Traps.spring(glyph, e)
+	check_eq(e.hp_current, 90, "10 fire damage on a failed save: %s" % text)
+	check(text.contains("Dexterity save") and text.contains("failed"), "the save is shown")
+	_wear(e, "ring_1", "ring_of_fire_resistance")
+	glyph["state"] = Traps.ARMED
+	text = Traps.spring(glyph, e)
+	check_eq(e.hp_current, 85, "the ring halves it: %s" % text)
+	check(text.contains("resisted"), "and says so")
+	var box := ContainerState.from_placement({"items": [], "trap": _needle()})
+	box.trap["state"] = Traps.FOUND
+	var again := ContainerState.from_dict(box.to_dict())
+	check_eq(again.trap["state"], Traps.FOUND, "a found trap is saved as found")
+	check(ContainerState.from_placement({"items": []}).trap.is_empty(), "no trap by default")

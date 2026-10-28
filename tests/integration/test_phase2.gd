@@ -362,3 +362,66 @@ func test_shift_drop_asks_how_many() -> void:
 	check_eq(world.party.members[1].sheet.inventory.count("arrows"), had, "cancel moves nothing")
 	hud._inventory.close()
 
+
+## A chest on the current map with `trap` set, and the party member next to it.
+func _trapped_chest(trap: Dictionary) -> Prop:
+	var chest: Prop = null
+	for p in world.props:
+		if p.container != null and not p.container.locked:
+			chest = p
+			break
+	chest.container.trap = trap
+	return chest
+
+
+func test_a_found_trap_asks_what_to_do() -> void:
+	_load("res://data/maps/millbrook_miller.json")
+	var chest := _trapped_chest({"name": "poison needle", "find_dc": 5, "disarm": {"dc": 1, "ability": "dex",
+			"tool": "thieves_tools"}, "save": "con", "save_dc": 12, "damage": "2d6", "damage_type": "poison",
+			"state": "armed"})
+	var opener := world.party.members[0].sheet
+	chest.interact(world.party.members[0])
+	check(chest.trap_dialog != null, "the party notices it and is asked")
+	check(runner.get_tree().paused, "the game waits for an answer")
+	check(opened.is_empty(), "the chest stays shut meanwhile")
+	chest.trap_dialog.choose(2)  # leave it
+	check(not runner.get_tree().paused, "unpaused again")
+	check(opened.is_empty() and Traps.is_found(chest.container.trap), "left alone, still trapped")
+	chest.trap_dialog = null
+	chest.interact(world.party.members[0])
+	check(chest.trap_dialog != null, "asked again next time")
+	chest.trap_dialog.choose(0)  # Wren disarms it (DC 1)
+	check_eq(chest.container.trap["state"], Traps.DISARMED, "disarmed")
+	check_eq(opened.size(), 1, "and the chest opens")
+	check_eq(opener.hp_current, opener.hp_max, "nobody hurt")
+	hud._inventory.close()
+
+
+func test_an_unnoticed_trap_goes_off_on_the_opener() -> void:
+	_load("res://data/maps/millbrook_miller.json")
+	var chest := _trapped_chest({"name": "fire glyph", "find_dc": 40, "save": "dex", "save_dc": 99,
+			"damage": "4", "damage_type": "fire", "state": "armed"})
+	var opener := world.party.members[0].sheet
+	var hp := opener.hp_current
+	chest.interact(world.party.members[0])
+	check(chest.trap_dialog == null, "no warning")
+	check_eq(opener.hp_current, hp - 4, "the opener is burned")
+	check(toasts.any(func(t: String) -> bool: return t.contains("fire glyph")), "with a message: %s" % [toasts])
+	check_eq(opened.size(), 1, "the chest opens all the same")
+	check_eq(chest.container.trap["state"], Traps.SPRUNG, "spent")
+	hud._inventory.close()
+
+
+func test_open_it_anyway() -> void:
+	_load("res://data/maps/millbrook_miller.json")
+	var chest := _trapped_chest({"name": "poison needle", "find_dc": 5, "save": "con", "save_dc": 99,
+			"damage": "3", "damage_type": "poison", "disarm": {"dc": 10, "ability": "dex", "tool": "thieves_tools"},
+			"state": "armed"})
+	var m := world.party.members[1]
+	var hp := m.sheet.hp_current
+	chest.interact(m)
+	chest.trap_dialog.choose(1)  # open it anyway
+	check_eq(m.sheet.hp_current, hp - 3, "the needle pricks %s" % m.sheet.display_name)
+	check_eq(opened.size(), 1, "the chest opens")
+	hud._inventory.close()
+

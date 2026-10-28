@@ -168,6 +168,9 @@ that overrides its type's interaction) holds items:
  "items": [{"item": "ring_of_protection", "qty": 1}], "gold": 60}
 ```
 
+Magic in a placement's `items` starts unidentified unless the entry says
+`"identified": true` ([below](#unidentified-magic-items)).
+
 `id` must be unique within the map: the contents live in `GameState` under the map id
 and this id, so they persist when the party leaves the map and in save games. The map
 file only provides the starting contents.
@@ -175,3 +178,38 @@ file only provides the starting contents.
 Dropped items are containers too: each pile is stored as `ground_<q>_<r>` (its hex) and
 drawn with the `item_pile` prop while it holds anything. Empty piles vanish and are not
 saved. `World.ground_pile(hex, create)` returns the pile on a hex.
+
+## Trapped containers
+
+A container placement can carry a `trap` (rules in `scripts/items/traps.gd`):
+
+```json
+"trap": {"name": "poison needle", "find_dc": 13,
+         "disarm": {"dc": 13, "ability": "dex", "tool": "thieves_tools"},
+         "save": "con", "save_dc": 12, "damage": "2d6", "damage_type": "poison",
+         "half_on_save": true}
+```
+
+When someone goes to open it:
+
+1. **Noticing:** the party's best **passive Perception** (10 + Wis modifier, + proficiency
+   with the Perception skill) against `find_dc`. Noticed, the game pauses on a dialog:
+   "Garrick Thorne notices a poison needle on the bandits' strongbox."
+   - **Disarm it:** the member best at it tries, d20 + `disarm.ability` modifier + proficiency.
+     With `"tool": "thieves_tools"` they must carry a lockpick (proficiency from
+     `proficiencies.tools`, doubled by Expertise); with `"skill": "arcana"` anyone may try
+     (proficiency from `proficiencies.skills`). Success disarms it and the container opens;
+     failing by 5 or more sets it off on them; a smaller miss can be tried again.
+   - **Open it anyway:** it goes off on the opener, then the container opens.
+   - **Leave it alone:** nothing happens; it is still there next time (no second notice).
+2. **Unnoticed,** it goes off on whoever opens it, and the container opens.
+3. **Going off:** a `save` against `save_dc` (half damage on a success with
+   `half_on_save`, else none), then `damage` of `damage_type`, after resistances (a Ring of
+   Fire Resistance halves a fire glyph). The trap is then spent.
+
+The trap is checked before the lock. Its state (`armed`, `found`, `disarmed`, `sprung`) is
+saved with the container. Two are placed on the old temple road: a poison needle on the
+bandits' strongbox (found by the starting party's passive Perception of 13; Wren disarms
+it with thieves' tools) and a fire glyph on the ruin's mouldering chest (DC 15 to notice,
+so it usually goes off; Elowen can undo it with Arcana once it is found).
+

@@ -18,6 +18,8 @@ var cells: Array[Vector2i] = []
 var extra: Dictionary = {}
 ## Contents, for containers (set by World when the prop is spawned).
 var container: ContainerState
+## The dialog asking about a trap the party found (the last one; for tests).
+var trap_dialog: ChoiceDialog = null
 var highlighted: bool = false:
 	set(value):
 		highlighted = value
@@ -198,12 +200,24 @@ func interact(actor: PartyMember) -> void:
 			push_warning("Prop %s has unknown interaction '%s'" % [name, interaction()])
 
 
-## Opens a container, dealing with its lock first: a key anywhere in the party
-## opens it; otherwise someone with thieves' tools can try to pick it
-## (d20 + Dex, + proficiency if trained, against the lock's DC).
+## Opens a container, dealing with a trap first (Traps: the party's best
+## passive Perception may notice it, and then a dialog asks what to do;
+## unnoticed, it goes off on the opener), then its lock: a key anywhere in
+## the party opens it; otherwise someone with thieves' tools can try to pick
+## it (d20 + Dex, + proficiency if trained, against the lock's DC).
 func _open_container(opener: CharacterSheet) -> void:
 	if container == null:
 		return
+	if Traps.is_live(container.trap):
+		var spotter := Traps.notice(container.trap, GameState.party)
+		if Traps.is_found(container.trap):
+			_ask_about_trap(opener, spotter)
+			return
+		var hurt := Traps.spring(container.trap, opener)
+		Audio.play_sfx("hit")
+		Events.toast_requested.emit("A %s! %s" % [container.trap.get("name", "trap"), hurt])
+		if not opener.is_alive():
+			return
 	if container.locked:
 		var key_def: ItemDef = Data.items.get(container.key_id)
 		var has_key := false
@@ -230,3 +244,45 @@ func _open_container(opener: CharacterSheet) -> void:
 			return
 	Audio.play_sfx("chest_open")
 	Events.container_opened.emit(container, display_name(), opener)
+
+
+
+## A found trap: disarm it (the party's best at it tries), open it anyway (it
+## goes off on `opener`), or leave the container alone. `spotter` is who just
+## noticed it (null if it was found before).
+func _ask_about_trap(opener: CharacterSheet, spotter: CharacterSheet) -> void:
+	var trap := container.trap
+	var name := str(trap.get("name", "trap"))
+	var text := ("%s notices a %s on the %s." % [spotter.display_name, name, display_name().to_lower()]) \
+			if spotter != null else "The %s on the %s is still there." % [name, display_name().to_lower()]
+	var answers := PackedStringArray()
+	var who := Traps.best_disarmer(trap, GameState.party)
+	if who != null:
+		answers.append("Disarm it: %s, %s %s vs DC %d" % [who.display_name, Traps.disarm_means(trap),
+				Rules.format_modifier(Traps.disarm_bonus(trap, who)),
+				int((trap.get("disarm", {}) as Dictionary).get("dc", 10))])
+	else:
+		text += " Disarming it needs %s, and no one has them." % Traps.disarm_means(trap)
+	answers.append("Open it anyway (%s sets it off)" % opener.display_name)
+	answers.append("Leave it alone")
+	trap_dialog = ChoiceDialog.ask(self, "A trap!", text, answers)
+	trap_dialog.chosen.connect(_on_trap_answer.bind(opener, who))
+
+
+## The answer to the trap dialog: 0 disarm (`who` tries), 1 open it anyway,
+## 2 leave it. Without anyone to disarm it, the answers start at "open".
+func _on_trap_answer(index: int, opener: CharacterSheet, who: CharacterSheet) -> void:
+	var trap := container.trap
+	var choice := index if who != null else index + 1
+	if choice == 0:
+		var r := Traps.try_disarm(trap, who)
+		Audio.play_sfx("unlock" if r["ok"] else ("hit" if r["sprung"] else "locked"))
+		Events.toast_requested.emit(str(r["text"]))
+		if r["ok"] or (r["sprung"] and opener.is_alive()):
+			_open_container(opener)
+	elif choice == 1:
+		var hurt := Traps.spring(trap, opener)
+		Audio.play_sfx("hit")
+		Events.toast_requested.emit("%s opens it anyway. %s" % [opener.display_name, hurt])
+		if opener.is_alive():
+			_open_container(opener)

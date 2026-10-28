@@ -197,9 +197,10 @@ gaps, done now.
 - Identifying them: study one on a short rest, or pay Wenna - **COMPLETE**
 
 ### Trapped containers
-- Traps on chests: noticed by passive Perception, disarmed with thieves' tools, or set
-  off (a saving throw and damage) - **PENDING**
-- Traps on the bandits' strongbox and the ruined temple's chest - **PENDING**
+- Traps on chests: noticed by passive Perception, disarmed with thieves' tools (or Arcana
+  for a glyph), or set off (a saving throw and damage), with a choice dialog - **COMPLETE**
+- Traps on the bandits' strongbox (poison needle) and the ruined temple's chest (fire
+  glyph) - **COMPLETE**
 
 ---
 
