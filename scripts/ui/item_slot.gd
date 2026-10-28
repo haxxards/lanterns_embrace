@@ -6,6 +6,7 @@ extends Control
 ##   _get_drag_data   -> starts a drag (returns what is being dragged)
 ##   _can_drop_data   -> asked while hovering: may this be dropped here?
 ##   _drop_data       -> the drop itself
+## Holding Shift while dropping a stack asks how many to move (QuantityDialog).
 ## The actual rules are in InventoryOps.
 
 signal used(slot: ItemSlot)
@@ -120,11 +121,49 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	_drop_ok = null
-	var err := InventoryOps.move(data["ref"], ref)
+	queue_redraw()
+	if Input.is_key_pressed(KEY_SHIFT) and ask_split(self, data["ref"], ref) != null:
+		return
+	_report(InventoryOps.move(data["ref"], ref))
+
+
+static func _report(err: String) -> void:
 	if not err.is_empty():
 		Audio.play_sfx("error")
 		Events.toast_requested.emit(err)
-	queue_redraw()
+
+
+## A Shift-drop of the stack at `from` onto `to` (a slot ref), or onto a
+## party member's portrait (`give_to`): asks how many, then moves, gives, buys
+## or sells that many. Returns the open dialog, or null if there is nothing to
+## split (a single item, or an equipment slot, which holds one), so the caller
+## moves it whole.
+@warning_ignore("integer_division")
+static func ask_split(near: Node, from: Dictionary, to: Dictionary, give_to: CharacterSheet = null) -> QuantityDialog:
+	var st := InventoryOps.stack_at(from)
+	if st == null or st.def == null or st.qty < 2 or to.get("kind") == "equip":
+		return null
+	var verb := "Move"
+	var title := "Move how many %s?" % st.def.display_name
+	var limit := st.qty
+	if from.has("trade") and not to.has("trade"):
+		var unit := InventoryOps.buy_price(st.def, from["trade"])
+		limit = mini(st.qty, maxi(1, GameState.gold / maxi(1, unit)))
+		verb = "Buy"
+		title = "Buy how many %s? (%d gp each)" % [st.def.display_name, unit]
+	elif to.has("trade") and not from.has("trade"):
+		verb = "Sell"
+		title = "Sell how many %s? (%d gp each)" % [st.def.display_name, InventoryOps.sell_price(st.def, to["trade"])]
+	elif give_to != null:
+		verb = "Give"
+		title = "Give %s how many %s?" % [give_to.display_name, st.def.display_name]
+	var d := QuantityDialog.ask(near, title, verb, limit)
+	d.chosen.connect(func(n: int) -> void:
+		if give_to != null:
+			_report(InventoryOps.give(from, give_to, n))
+		else:
+			_report(InventoryOps.move_some(from, to, n)))
+	return d
 
 
 func _notification(what: int) -> void:

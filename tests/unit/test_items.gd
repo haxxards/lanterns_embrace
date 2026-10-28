@@ -328,3 +328,75 @@ func test_holy_water_waits_for_a_fight() -> void:
 	var card := (Data.items["holy_water"] as ItemDef).describe()
 	check(card.contains("thrown in a fight (20 ft): 2d6 radiant damage to undead and fiends only"), card)
 
+
+
+# --- splitting stacks ----------------------------------------------------------------
+
+func _slot_of(sheet: CharacterSheet, id: String) -> int:
+	for i in sheet.inventory.capacity():
+		var st := sheet.inventory.get_at(i)
+		if st != null and st.id == id:
+			return i
+	return -1
+
+
+func test_moving_part_of_a_stack() -> void:
+	var w := _sheet("wren")
+	w.inventory.add_item("arrows", 20)
+	var from := InventoryOps.backpack(w, _slot_of(w, "arrows"))
+	var empty := w.inventory.first_free()
+	check_eq(InventoryOps.move_some(from, InventoryOps.backpack(w, empty), 7), "", "split off 7")
+	check_eq(w.inventory.get_at(empty).qty, 7, "7 in the new slot")
+	check_eq(InventoryOps.stack_at(from).qty, 13, "13 left behind")
+	check_eq(InventoryOps.move_some(from, InventoryOps.backpack(w, empty), 3), "", "top up with 3 more")
+	check_eq(w.inventory.get_at(empty).qty, 10, "10 there now")
+	check_eq(w.inventory.count("arrows"), 20, "none lost")
+	var other := _slot_of(w, "dagger")
+	check(not InventoryOps.move_some(from, InventoryOps.backpack(w, other), 2).is_empty(), "not onto another item")
+	check_eq(InventoryOps.move_some(from, InventoryOps.backpack(w, empty), 99), "", "more than the stack: all of it")
+	check(InventoryOps.stack_at(from) == null, "source emptied")
+	check_eq(w.inventory.get_at(empty).qty, 20, "all 20 together")
+	var box := ContainerState.from_placement({"items": []})
+	check_eq(InventoryOps.move_some(InventoryOps.backpack(w, empty), InventoryOps.container_slot(box, 0), 5), "",
+			"put 5 in a chest")
+	check_eq(box.inventory.count("arrows"), 5, "the chest has 5")
+	check_eq(w.inventory.count("arrows"), 15, "Wren keeps 15")
+
+
+func test_an_equipment_slot_takes_one_from_a_split() -> void:
+	var w := _sheet("wren")
+	w.inventory.add_item("dagger", 1)
+	w.unequip("off_hand")
+	var from := InventoryOps.backpack(w, _slot_of(w, "dagger"))
+	var had := InventoryOps.stack_at(from).qty
+	check_eq(InventoryOps.move_some(from, InventoryOps.equip_slot(w, "off_hand"), 2), "", "equipped")
+	check_eq(w.equipped("off_hand").qty, 1, "a hand holds one")
+	check_eq(InventoryOps.stack_at(from).qty, had - 1, "the rest stay")
+
+
+func test_giving_buying_and_selling_part_of_a_stack() -> void:
+	GameState.start_new_game()
+	var g: CharacterSheet = GameState.member("garrick")
+	var e: CharacterSheet = GameState.member("elowen")
+	g.inventory.add_item("torch", 6)
+	var from := InventoryOps.backpack(g, _slot_of(g, "torch"))
+	var torches := InventoryOps.stack_at(from).qty
+	var e_had := e.inventory.count("torch")
+	check_eq(InventoryOps.give(from, e, 2), "", "gave 2")
+	check_eq(e.inventory.count("torch"), e_had + 2, "Elowen has 2 more")
+	check_eq(g.inventory.count("torch"), torches - 2, "Garrick 2 fewer")
+	var terms := {"markup": 1.0, "buy_rate": 0.5, "vendor": "Tobin"}
+	var stock := ContainerState.from_placement({"items": [{"item": "arrows", "qty": 40}]})
+	var gold := GameState.gold
+	var price := InventoryOps.buy_price(Data.items["arrows"], terms)
+	check_eq(InventoryOps.move_some(InventoryOps.shop_slot(stock, 0, terms),
+			InventoryOps.backpack(g, g.inventory.first_free()), 10), "", "bought 10")
+	check_eq(stock.inventory.count("arrows"), 30, "30 left in the shop")
+	check_eq(GameState.gold, gold - 10 * price, "paid for 10")
+	gold = GameState.gold
+	var arrows := InventoryOps.backpack(g, _slot_of(g, "arrows"))
+	var sell_each := InventoryOps.sell_price(Data.items["arrows"], terms)
+	check_eq(InventoryOps.move_some(arrows, InventoryOps.shop_slot(stock, 5, terms), 4), "", "sold 4")
+	check_eq(GameState.gold, gold + 4 * sell_each, "paid for 4")
+	check_eq(stock.inventory.count("arrows"), 34, "the shop has them")
+	check_eq(g.inventory.count("arrows"), 6, "6 kept")

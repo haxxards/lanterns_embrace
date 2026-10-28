@@ -189,7 +189,7 @@ gaps, done now.
   button on the combat bar) - **COMPLETE**
 
 ### Splitting stacks
-- Shift-drop a stack to choose how many to move, give, drop, buy or sell - **PENDING**
+- Shift-drop a stack to choose how many to move, give, drop, buy or sell - **COMPLETE**
 
 ### Unidentified magic items
 - Magic items found in chests and loot start unidentified ("Unidentified ring"), and

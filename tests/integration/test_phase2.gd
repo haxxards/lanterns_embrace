@@ -329,3 +329,36 @@ func test_drop_and_pick_up_items() -> void:
 	hud._inventory.close()
 	check(not GameState.to_dict()["maps"].get("millbrook_miller", {}).get("containers", {}).has(
 			"ground_%d_%d" % [m.hex.x, m.hex.y]), "empty piles are not saved")
+
+
+func test_shift_drop_asks_how_many() -> void:
+	var sheet := world.party.members[0].sheet
+	sheet.inventory.add_item("arrows", 12)
+	hud.open_inventory()
+	var from := -1
+	for i in sheet.inventory.capacity():
+		if sheet.inventory.get_at(i) != null and sheet.inventory.get_at(i).id == "arrows":
+			from = i
+	var to := sheet.inventory.first_free()
+	var d := ItemSlot.ask_split(hud, InventoryOps.backpack(sheet, from), InventoryOps.backpack(sheet, to))
+	check(d != null, "a stack of 12 asks how many")
+	await runner.get_tree().process_frame
+	check_eq(d.count(), 6, "starting at half")
+	d.set_count(5)
+	d.confirm()
+	await runner.get_tree().process_frame
+	check_eq(sheet.inventory.get_at(to).qty, 5, "5 moved")
+	check_eq(sheet.inventory.get_at(from).qty, 7, "7 stayed")
+	check(not is_instance_valid(d) or d.is_queued_for_deletion() or not d.is_inside_tree(), "the dialog closes")
+	var one := sheet.inventory.first_free()
+	sheet.inventory.set_at(one, ItemStack.create("apple", 1))
+	check(ItemSlot.ask_split(hud, InventoryOps.backpack(sheet, one), InventoryOps.backpack(sheet, 0)) == null,
+			"a single item doesn't ask")
+	var c := ItemSlot.ask_split(hud, InventoryOps.backpack(sheet, from), {}, world.party.members[1].sheet)
+	var had := world.party.members[1].sheet.inventory.count("arrows")
+	c.set_count(2)
+	c.cancel()
+	await runner.get_tree().process_frame
+	check_eq(world.party.members[1].sheet.inventory.count("arrows"), had, "cancel moves nothing")
+	hud._inventory.close()
+

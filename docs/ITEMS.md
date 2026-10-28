@@ -120,6 +120,11 @@ game pauses while it is open.
 - Drag items between backpack slots, equipment slots and the open container. Dropping on
   an occupied slot swaps, or tops up a stack of the same item.
 - Drop an item on a sidebar portrait to give it to that character.
+- **Shift-drop** a stack to split it: a dialog asks how many (a slider and a number box,
+  starting at half; Enter or Esc) and moves, gives, drops, buys or sells just that many.
+  Onto an empty slot or more of the same item; an equipment slot always takes one.
+  (`InventoryOps.move_some`, `give(..., count)`, `sell(..., count)`, and
+  `scripts/ui/quantity_dialog.gd`.)
 - With no chest open, the bottom panel shows **the ground** where the character stands.
   Drag items there to drop them; a pile appears on the map. Click a pile later to open it
   like a chest, or right-click its items to pick them up.

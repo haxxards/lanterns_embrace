@@ -115,6 +115,8 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	if Input.is_key_pressed(KEY_SHIFT) and ItemSlot.ask_split(self, data["ref"], {}, member.sheet) != null:
+		return
 	var err := InventoryOps.give(data["ref"], member.sheet)
 	if not err.is_empty():
 		Audio.play_sfx("error")

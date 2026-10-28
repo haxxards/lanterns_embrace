@@ -149,17 +149,75 @@ static func move(from: Dictionary, to: Dictionary) -> String:
 	return ""
 
 
-## Moves the stack at `from` into another character's backpack (wherever it fits).
-static func give(from: Dictionary, to_sheet: CharacterSheet) -> String:
+## Moves `count` items of the stack at `from` onto `to` (a split stack: a
+## Shift-drop): onto an empty slot, or topping up the same item; from or to a
+## shop it buys or sells that many. All of it, or an equipment slot (which
+## holds one), is an ordinary move().
+static func move_some(from: Dictionary, to: Dictionary, count: int) -> String:
+	var moving := stack_at(from)
+	if moving == null or same_slot(from, to):
+		return ""
+	if count <= 0 or count >= moving.qty or to.get("kind") == "equip":
+		return move(from, to)
+	if from.has("trade") or to.has("trade"):
+		if from.has("trade") and to.has("trade"):
+			return ""
+		if from.has("trade"):
+			return buy(from, to["sheet"] if to.has("sheet") else null, count)
+		return sell(from, to, count)
+	if moving.def != null and moving.def.is_currency() and to.get("kind") != "container":
+		GameState.add_gold(count)
+		moving.qty -= count
+		_put(from, moving)
+		Audio.play_sfx("coins")
+		return ""
+	var target := stack_at(to)
+	if target == null:
+		var err := can_place(to, moving)
+		if not err.is_empty():
+			return err
+		_take(from, moving, count)
+		_put(to, ItemStack.create(moving.id, count))
+		Audio.play_sfx("item_drop")
+		return ""
+	if not target.can_merge(moving):
+		return "Put part of a stack on an empty slot or on more of the same."
+	var n := mini(target.max_stack() - target.qty, count)
+	if n <= 0:
+		return "That stack is full."
+	target.qty += n
+	_put(to, target)
+	_take(from, moving, n)
+	Audio.play_sfx("item_drop")
+	return ""
+
+
+## Takes `n` (fewer than all) off `stack`, which sits at `ref`.
+static func _take(ref: Dictionary, stack: ItemStack, n: int) -> void:
+	stack.qty -= n
+	_put(ref, stack if stack.qty > 0 else null)  # re-set so listeners hear about it
+
+
+## Moves the stack at `from` into another character's backpack (wherever it
+## fits), or just `count` of it.
+static func give(from: Dictionary, to_sheet: CharacterSheet, count: int = -1) -> String:
 	var moving := stack_at(from)
 	if moving == null:
 		return ""
 	if from.has("trade"):
-		return buy(from, to_sheet, 1)  # a right-click buys one at a time
+		return buy(from, to_sheet, count if count > 0 else 1)  # a right-click buys one at a time
 	if from.get("kind") != "container" and from.get("sheet") == to_sheet and from.get("kind") == "backpack":
 		return ""
 	if moving.def != null and moving.def.is_currency():
 		return move(from, backpack(to_sheet, 0))
+	if count > 0 and count < moving.qty:
+		var part := ItemStack.create(moving.id, count)
+		if not to_sheet.inventory.can_fit(part):
+			return "%s's backpack is full." % to_sheet.display_name
+		_take(from, moving, count)
+		to_sheet.inventory.add(part)
+		Audio.play_sfx("item_drop")
+		return ""
 	if not to_sheet.inventory.can_fit(moving):
 		return "%s's backpack is full." % to_sheet.display_name
 	_put(from, null)
@@ -214,10 +272,21 @@ static func buy(from: Dictionary, buyer: CharacterSheet, limit: int = -1) -> Str
 	return ""
 
 
-## Sells the stack at `from` to the shop whose stock is `to`.
-static func sell(from: Dictionary, to: Dictionary) -> String:
+## Sells the stack at `from` to the shop whose stock is `to` (or `count` of it).
+static func sell(from: Dictionary, to: Dictionary, count: int = -1) -> String:
 	var st := stack_at(from)
 	if st == null:
+		return ""
+	if count > 0 and count < st.qty:
+		if not can_sell(st.def):
+			return "%s doesn't want that." % str((to["trade"] as Dictionary).get("vendor", "The trader"))
+		var part := ItemStack.create(st.id, count)
+		if not (to["container"] as ContainerState).inventory.can_fit(part):
+			return "%s has no room for more." % str((to["trade"] as Dictionary).get("vendor", "The trader"))
+		_take(from, st, count)
+		(to["container"] as ContainerState).inventory.add(part)
+		GameState.add_gold(sell_price(st.def, to["trade"]) * count)
+		Audio.play_sfx("coins")
 		return ""
 	var terms: Dictionary = to["trade"]
 	if not can_sell(st.def):

@@ -19,7 +19,7 @@ const HAND_SLOTS := ["main_hand", "off_hand"]
 const PACK_COLUMNS := 4
 ## Numbers that magic raised, in the stats panel.
 const MAGIC_TEXT := Color(0.56, 0.72, 1.0)
-const HINT := "Drag to move, equip or drop on the ground  ·  right-click to use, equip or take  ·  drop on a portrait to give"
+const HINT := "Drag to move, equip or drop on the ground  ·  Shift-drag to split a stack  ·  right-click to use, equip or take  ·  drop on a portrait to give"
 const HINT_SHOP := "Drag from the stock to buy the stack, into it to sell  ·  right-click buys one or sells  ·  prices in gold pieces"
 const CONTAINER_COLUMNS := 8
 
