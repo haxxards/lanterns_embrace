@@ -11,6 +11,7 @@
 			"options": [
 				{"text": "We'll take your remedy to her.", "do": [{"give_item": "wenna_remedy"}, {"quest": "wennas_remedy", "stage": "started"}], "goto": "thanks"},
 				{"text": "What do you sell?", "shop": true},
+				{"text": "Can you tell us what these trinkets are?", "if": {"unidentified": true}, "goto": "identify"},
 				{"text": "Odran: \"Your feverfew did wonders at the old temple last winter.\"", "if": {"member": "odran"}, "goto": "odran"},
 				{"text": "Not now.", "end": true}
 			]
@@ -19,6 +20,7 @@
 			"text": "Bless you. Three drops in warm milk, morning and night. And tell Hob none of it is for him, the old goat.",
 			"options": [
 				{"text": "What else do you sell?", "shop": true},
+				{"text": "Can you tell us what these trinkets are?", "if": {"unidentified": true}, "goto": "identify"},
 				{"text": "We'll go now.", "end": true}
 			]
 		},
@@ -30,13 +32,33 @@
 			"text": "Has Hob had the draught yet? The thatched cottage, west of the square.",
 			"options": [
 				{"text": "We're on our way.", "end": true},
-				{"text": "Can we buy some remedies?", "shop": true}
+				{"text": "Can we buy some remedies?", "shop": true},
+				{"text": "Can you tell us what these trinkets are?", "if": {"unidentified": true}, "goto": "identify"}
+			]
+		},
+		"identify": {
+			"text": "Let me see. Ah, there's old magic in that, and old magic talks if you know how to listen. Twenty-five gold a piece, and I'll tell you what each one does.",
+			"options": [
+				{"text": "Yes, name them. (25 gold each)", "if": {"gold": 25}, "do": [{"identify": "all", "cost_each": 25}], "goto": "identified"},
+				{"text": "We'll find out for ourselves.", "goto": "after_identify"}
+			]
+		},
+		"identified": {
+			"text": "There. Use them well, and don't go poking anything else that hums.",
+			"next": "after_identify"
+		},
+		"after_identify": {
+			"text": "Anything else, dears?",
+			"options": [
+				{"text": "Let's see your remedies.", "shop": true},
+				{"text": "Farewell.", "end": true}
 			]
 		},
 		"after": {
 			"text": "Hob says Merra's fever broke in the night. You did a kind thing. Now, what can I do for you?",
 			"options": [
 				{"text": "Let's see your remedies.", "shop": true},
+				{"text": "Can you tell us what these trinkets are?", "if": {"unidentified": true}, "goto": "identify"},
 				{"text": "Farewell.", "end": true}
 			]
 		}

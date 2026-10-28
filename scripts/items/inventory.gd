@@ -57,6 +57,7 @@ func add(stack: ItemStack) -> int:
 			break
 		var put := mini(left, stack.max_stack())
 		slots[i] = ItemStack.create(stack.id, put)
+		slots[i].identified = stack.identified
 		left -= put
 	if left != stack.qty:
 		changed.emit()

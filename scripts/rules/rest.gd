@@ -56,6 +56,10 @@ static func short_rest(party: Array[CharacterSheet], rng: RandomNumberGenerator 
 		var recovered := _arcane_recovery(s)
 		if not recovered.is_empty():
 			out.append(recovered)
+		# An hour with a magic item in hand is enough to learn what it is (one each).
+		var unknown := InventoryOps.unidentified(s)
+		if not unknown.is_empty():
+			out.append("%s studies %s." % [s.display_name, InventoryOps.identify(unknown[0])])
 		s.changed.emit()
 	if out.is_empty():
 		out.append("The party rests for an hour.")

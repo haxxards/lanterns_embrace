@@ -428,7 +428,7 @@ func _drop_loot(cr: Creature) -> void:
 		var qty_v: Variant = e.get("qty", 1)
 		var qty := Rules.roll_expr(str(qty_v), combat.rng) if qty_v is String else int(qty_v)
 		if qty > 0 and Data.items.has(str(e["item"])):
-			drops.append(ItemStack.create(str(e["item"]), qty))
+			drops.append(ItemStack.create(str(e["item"]), qty).as_found())
 	if drops.is_empty():
 		return
 	var pile := ground_pile(cr.hex, true)

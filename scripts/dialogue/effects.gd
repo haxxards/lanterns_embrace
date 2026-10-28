@@ -12,6 +12,8 @@ extends RefCounted
 ##   {"heal_party": true}                 everyone not dead is healed to full (the unconscious wake)
 ##   {"long_rest": true}                  a night's sleep: hit points, spell slots, features (Rest.long_rest)
 ##   {"revive": true}                     the dead (and the unconscious) rise with 1 hit point
+##   {"identify": "all", "cost_each": 25} name the party's unidentified items, paying for each
+##                                        (as many as the purse allows)
 ##   {"toast": "text"}
 ##
 ## Returns a list of short messages describing what happened (for toasts).
@@ -83,6 +85,21 @@ static func _apply_one(e: Dictionary, speaker: CharacterSheet) -> String:
 				raised.append(s.display_name)
 		if not raised.is_empty():
 			return "%s %s raised." % [", ".join(raised), "is" if raised.size() == 1 else "are"]
+	if e.has("identify"):
+		var cost := int(e.get("cost_each", 0))
+		var named := PackedStringArray()
+		for s in GameState.party:
+			for st in InventoryOps.unidentified(s):
+				if GameState.gold < cost:
+					break
+				GameState.add_gold(-cost)
+				InventoryOps.identify(st, s)
+				named.append(st.def.display_name)
+		if named.is_empty():
+			return "Nothing was named."
+		if cost > 0:
+			Audio.play_sfx("coins")
+		return "Named for %d gold: %s." % [cost * named.size(), ", ".join(named)]
 	if e.has("toast"):
 		return str(e["toast"])
 	return ""

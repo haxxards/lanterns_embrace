@@ -193,8 +193,8 @@ gaps, done now.
 
 ### Unidentified magic items
 - Magic items found in chests and loot start unidentified ("Unidentified ring"), and
-  sell for less until known - **PENDING**
-- Identifying them: study one on a short rest, or pay Wenna - **PENDING**
+  sell for less until known - **COMPLETE**
+- Identifying them: study one on a short rest, or pay Wenna - **COMPLETE**
 
 ### Trapped containers
 - Traps on chests: noticed by passive Perception, disarmed with thieves' tools, or set

@@ -14,13 +14,18 @@ var key_id: String = ""
 
 
 ## Initial state from a map placement: {"items": [...], "gold": n, "locked": true,
-## "lock_dc": 15, "key": "reeve_key"}.
+## "lock_dc": 15, "key": "reeve_key"}. Magic found this way starts
+## unidentified, unless its entry says "identified": true.
 static func from_placement(extra: Dictionary) -> ContainerState:
 	var c := ContainerState.new()
 	var list: Array = (extra.get("items", []) as Array).duplicate()
 	if int(extra.get("gold", 0)) > 0:
 		list.append({"item": "gold", "qty": int(extra["gold"])})
 	c.inventory = Inventory.from_array(list, maxi(MIN_SLOTS, list.size()))
+	for i in list.size():
+		var st := c.inventory.get_at(i)
+		if st != null and not (list[i] is Dictionary and bool(list[i].get("identified", false))):
+			st.as_found()
 	c.locked = bool(extra.get("locked", false))
 	c.lock_dc = int(extra.get("lock_dc", 0))
 	c.key_id = str(extra.get("key", ""))

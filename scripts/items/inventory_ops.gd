@@ -41,6 +41,14 @@ static func sell_price(def: ItemDef, terms: Dictionary) -> int:
 	return floori(def.value * float(terms.get("buy_rate", 0.5)))
 
 
+## What a trader pays per item of `stack`: an unidentified item fetches a
+## fifth (a trader won't pay for magic nobody can name), at least 1 gp.
+@warning_ignore("integer_division")
+static func stack_sell_price(stack: ItemStack, terms: Dictionary) -> int:
+	var full := sell_price(stack.def, terms)
+	return full if stack.identified else maxi(1, full / 5) if full > 0 else 0
+
+
 static func can_sell(def: ItemDef) -> bool:
 	return def != null and def.value > 0.0 and not def.is_currency() and not def.quest
 
@@ -120,7 +128,9 @@ static func move(from: Dictionary, to: Dictionary) -> String:
 			_put(home, target)
 		moving.qty -= 1
 		_put(from, moving)  # re-set so listeners hear about the change
-		_put(to, ItemStack.create(moving.id, 1))
+		var one := ItemStack.create(moving.id, 1)
+		one.identified = moving.identified
+		_put(to, one)
 		_equip_sound(to)
 		return ""
 	if target != null and target.can_merge(moving):
@@ -176,8 +186,10 @@ static func move_some(from: Dictionary, to: Dictionary, count: int) -> String:
 		var err := can_place(to, moving)
 		if not err.is_empty():
 			return err
+		var part := ItemStack.create(moving.id, count)
+		part.identified = moving.identified
 		_take(from, moving, count)
-		_put(to, ItemStack.create(moving.id, count))
+		_put(to, part)
 		Audio.play_sfx("item_drop")
 		return ""
 	if not target.can_merge(moving):
@@ -212,6 +224,7 @@ static func give(from: Dictionary, to_sheet: CharacterSheet, count: int = -1) ->
 		return move(from, backpack(to_sheet, 0))
 	if count > 0 and count < moving.qty:
 		var part := ItemStack.create(moving.id, count)
+		part.identified = moving.identified
 		if not to_sheet.inventory.can_fit(part):
 			return "%s's backpack is full." % to_sheet.display_name
 		_take(from, moving, count)
@@ -261,7 +274,9 @@ static func buy(from: Dictionary, buyer: CharacterSheet, limit: int = -1) -> Str
 	var n := mini(st.qty if limit < 0 else mini(limit, st.qty), GameState.gold / unit)
 	if n <= 0:
 		return "You can't afford the %s (%d gp)." % [st.def.display_name, unit]
-	var left := buyer.inventory.add(ItemStack.create(st.id, n))
+	var bought_stack := ItemStack.create(st.id, n)
+	bought_stack.identified = st.identified
+	var left := buyer.inventory.add(bought_stack)
 	var bought := n - left
 	if bought <= 0:
 		return "%s's backpack is full." % buyer.display_name
@@ -283,9 +298,10 @@ static func sell(from: Dictionary, to: Dictionary, count: int = -1) -> String:
 		var part := ItemStack.create(st.id, count)
 		if not (to["container"] as ContainerState).inventory.can_fit(part):
 			return "%s has no room for more." % str((to["trade"] as Dictionary).get("vendor", "The trader"))
+		part.identified = st.identified
 		_take(from, st, count)
 		(to["container"] as ContainerState).inventory.add(part)
-		GameState.add_gold(sell_price(st.def, to["trade"]) * count)
+		GameState.add_gold(stack_sell_price(st, to["trade"]) * count)
 		Audio.play_sfx("coins")
 		return ""
 	var terms: Dictionary = to["trade"]
@@ -294,12 +310,34 @@ static func sell(from: Dictionary, to: Dictionary, count: int = -1) -> String:
 	var stock: ContainerState = to["container"]
 	if not stock.inventory.can_fit(st):
 		return "%s has no room for more." % str(terms.get("vendor", "The trader"))
-	var price := sell_price(st.def, terms) * st.qty
+	var price := stack_sell_price(st, terms) * st.qty
 	_put(from, null)
 	stock.inventory.add(st)
 	GameState.add_gold(price)
 	Audio.play_sfx("coins")
 	return ""
+
+
+# --- identifying magic items ----------------------------------------------------------
+
+## The unidentified stacks `sheet` carries, worn first.
+static func unidentified(sheet: CharacterSheet) -> Array[ItemStack]:
+	var out: Array[ItemStack] = []
+	for st in sheet.all_items():
+		if not st.identified:
+			out.append(st)
+	return out
+
+
+## Names one item: from now on it shows its real name, card and price.
+## Returns "the unidentified ring: a Ring of Fire Resistance".
+static func identify(stack: ItemStack, owner: CharacterSheet = null) -> String:
+	var was := stack.item_name().to_lower()
+	stack.identified = true
+	if owner != null:
+		owner.changed.emit()
+	return "the %s: %s %s" % [was, "an" if stack.def.display_name.substr(0, 1).to_lower() in
+			["a", "e", "i", "o", "u"] else "a", stack.def.display_name]
 
 
 ## Uses a consumable (drinks a potion, eats an apple). Returns what happened.
@@ -308,7 +346,7 @@ static func use(ref: Dictionary, sheet: CharacterSheet) -> String:
 	if st == null or st.def == null:
 		return ""
 	if not st.def.is_usable():
-		return "%s can't be used like that." % st.def.display_name
+		return "%s can't be used like that." % st.item_name()
 	if sheet.dead:
 		return "%s is beyond a potion's help." % sheet.display_name
 	if st.def.use.has("cast"):

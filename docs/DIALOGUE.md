@@ -113,6 +113,7 @@ of them.
 | `{"dead": true}` | Someone is dead |
 | `{"defeated": "group"}` | Every creature of that encounter group has been killed (see [COMBAT.md](COMBAT.md)) |
 | `{"visited": "node"}` | That node of this dialogue was shown before |
+| `{"unidentified": true}` | Someone carries an unidentified magic item ([ITEMS.md](ITEMS.md#unidentified-magic-items)) |
 | `{"all": [...]}`, `{"any": [...]}`, `{"not": {...}}` | Combinations |
 
 The same conditions are used by dialogue starts and options, and by quest stages that
@@ -133,6 +134,7 @@ the HUD shows as a toast ("Received 20 gold.").
 | `{"xp": 50}` | Every living member gains it |
 | `{"heal_party": true}` | Everyone who isn't dead is healed to full (the unconscious wake) |
 | `{"revive": true}` | The dead (and the unconscious) get up with 1 hit point |
+| `{"identify": "all", "cost_each": 25}` | Names the party's unidentified items, paying for each, as many as the purse allows (Wenna) |
 | `{"toast": "text"}` | Just a message |
 
 Paid services are an option gated on gold, with a `take_gold` effect. The temple does it

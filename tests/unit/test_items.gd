@@ -400,3 +400,66 @@ func test_giving_buying_and_selling_part_of_a_stack() -> void:
 	check_eq(GameState.gold, gold + 4 * sell_each, "paid for 4")
 	check_eq(stock.inventory.count("arrows"), 34, "the shop has them")
 	check_eq(g.inventory.count("arrows"), 6, "6 kept")
+
+
+# --- unidentified magic items ----------------------------------------------------------
+
+func test_magic_found_in_a_chest_is_unidentified() -> void:
+	var box := ContainerState.from_placement({"items": [{"item": "ring_of_fire_resistance", "qty": 1},
+			{"item": "potion_of_hill_giant_strength", "qty": 1}, {"item": "longsword", "qty": 1},
+			{"item": "amulet_of_health", "qty": 1, "identified": true}]})
+	var ring := box.inventory.get_at(0)
+	check(not ring.identified, "the ring is unknown")
+	check(box.inventory.get_at(1).identified, "potions are known on sight")
+	check(box.inventory.get_at(2).identified, "so is plain steel")
+	check(box.inventory.get_at(3).identified, "a placement can say it is known")
+	check_eq(ring.item_name(), "Unidentified ring", "masked name")
+	check(not ring.describe().contains("fire"), "the card hides the magic: %s" % ring.describe())
+	check(ring.describe().contains("Value unknown"), "and the price")
+	var again := ContainerState.from_dict(box.to_dict())
+	check(not again.inventory.get_at(0).identified, "saved as unidentified")
+	check(again.inventory.get_at(3).identified, "and the known one as known")
+	var known := ItemStack.create("ring_of_fire_resistance")
+	check(not known.can_merge(ring), "known and unknown don't stack")
+	var terms := {"buy_rate": 0.5}
+	check_eq(InventoryOps.stack_sell_price(known, terms), 300, "known: half its value")
+	check_eq(InventoryOps.stack_sell_price(ring, terms), 60, "unknown: a fifth of that")
+	var e := _sheet("elowen")
+	e.equip("ring_1", ring)
+	check(e.resistances().has("fire"), "it works while unknown")
+
+
+func test_a_short_rest_names_one_item_each() -> void:
+	var e := _sheet("elowen")
+	var g := _sheet("garrick")
+	for id in ["ring_of_fire_resistance", "gauntlets_of_ogre_power"]:
+		var st := ItemStack.create(id).as_found()
+		e.inventory.add(st)
+	var sword := ItemStack.create("longsword_plus_one").as_found()
+	g.equip("main_hand", sword)
+	check(g.attack_summary().begins_with("Unidentified weapon"), "the stats call it what it looks like: %s"
+			% g.attack_summary())
+	check(CombatRules.weapon_attacks(g)[0].name.begins_with("Unidentified weapon"), "and so does the fight log")
+	var lines := Rest.short_rest([e, g] as Array[CharacterSheet])
+	var text := "\n".join(lines)
+	check(text.contains("Garrick Thorne studies the unidentified weapon: a +1 Longsword"), text)
+	check(sword.identified, "the sword is known now")
+	check_eq(InventoryOps.unidentified(e).size(), 1, "Elowen learned one of her two")
+	Rest.short_rest([e] as Array[CharacterSheet])
+	check(InventoryOps.unidentified(e).is_empty(), "and the other on the next rest")
+
+
+func test_wenna_names_items_for_gold() -> void:
+	GameState.start_new_game()
+	var w: CharacterSheet = GameState.member("wren")
+	check(not Conditions.check({"unidentified": true}), "nothing unknown yet")
+	w.inventory.add(ItemStack.create("amulet_of_health").as_found())
+	w.inventory.add(ItemStack.create("ring_of_fire_resistance").as_found())
+	check(Conditions.check({"unidentified": true}), "now there is")
+	GameState.gold = 30
+	var msgs := Effects.apply({"identify": "all", "cost_each": 25}, w)
+	check_eq(GameState.gold, 5, "paid for one")
+	check(msgs[0].contains("Amulet of Health"), "named the first: %s" % msgs)
+	check_eq(InventoryOps.unidentified(w).size(), 1, "couldn't afford the second")
+	var d := Data.dialogue("res://data/dialogue/wenna.json")
+	check(d.nodes.has("identify"), "Wenna offers it")

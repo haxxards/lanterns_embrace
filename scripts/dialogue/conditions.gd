@@ -14,6 +14,7 @@ extends RefCounted
 ##   {"fallen": true}                               someone is at 0 hit points (down or dead)
 ##   {"dead": true}                                 someone is dead
 ##   {"defeated": "group"}                          that encounter group has been beaten
+##   {"unidentified": true}                         someone carries an unidentified magic item
 ##   {"visited": "node"}                            this dialogue node was seen before
 ##   {"all": [...]}  {"any": [...]}  {"not": {...}}
 ##
@@ -73,6 +74,12 @@ static func _check_key(key: String, value: Variant, d: Dictionary, speaker: Char
 			return GameState.anyone_dead() == bool(value)
 		"defeated":
 			return bool(GameState.flags.get("defeated:%s" % value, false))
+		"unidentified":
+			var any := false
+			for s in GameState.party:
+				if not InventoryOps.unidentified(s).is_empty():
+					any = true
+			return any == bool(value)
 		"visited":
 			return bool(GameState.flags.get("seen:%s:%s" % [dialogue_id, value], false))
 		"all":

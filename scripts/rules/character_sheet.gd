@@ -267,6 +267,16 @@ func add_buff(buff: Dictionary) -> String:
 	return ", ".join(changes)
 
 
+## What the party calls the worn item `def` ("Unidentified weapon" until
+## it is known).
+func known_name(def: ItemDef) -> String:
+	for slot in ItemDef.EQUIP_SLOTS:
+		var st: ItemStack = equipment.get(slot)
+		if st != null and st.def == def:
+			return st.item_name()
+	return def.display_name
+
+
 ## The ItemDefs in the equipment slots (worn or held), in slot order.
 func worn_defs() -> Array[ItemDef]:
 	var out: Array[ItemDef] = []
@@ -351,7 +361,7 @@ func can_equip(slot: String, stack: ItemStack) -> String:
 			if main != null and not main.has_property("light"):
 				return "Fighting with two weapons needs a light weapon in the main hand too."
 	if slot == "main_hand" and def.has_property("two_handed") and off != null:
-		return "Free the off hand first: the %s needs both hands." % def.display_name
+		return "Free the off hand first: the %s needs both hands." % stack.item_name()
 	if slot == "main_hand" and off != null and off.is_weapon() and not def.has_property("light"):
 		return "With a weapon in the off hand, the main-hand weapon must be light."
 	return ""
@@ -558,7 +568,7 @@ func attack_summary() -> String:
 	var magic := w.weapon_bonus()
 	var bonus := ability_mod(ability) + (proficiency_bonus() if is_proficient_with(w) else 0) + magic
 	var dmg := "%s%s" % [w.weapon.get("damage", "1"), Rules.format_modifier(ability_mod(ability) + magic)]
-	return "%s  %s to hit, %s %s" % [w.display_name, Rules.format_modifier(bonus), dmg,
+	return "%s  %s to hit, %s %s" % [known_name(w), Rules.format_modifier(bonus), dmg,
 			w.weapon.get("damage_type", "")]
 
 

@@ -38,7 +38,7 @@ static func _thrown_attack(sheet: CharacterSheet, w: ItemDef, slot: String) -> A
 	var a := _weapon_attack(sheet, w, false, false)
 	var feet := maxi(1, GameConfig.feet_per_hex)
 	var r: Array = w.weapon["range"]
-	a.name = "%s (thrown)" % w.display_name
+	a.name = "%s (thrown)" % sheet.known_name(w)
 	a.range_normal = maxi(1, int(r[0]) / feet)
 	a.range_long = maxi(a.range_normal, int(r[1]) / feet)
 	a.reach = 0
@@ -51,7 +51,7 @@ static func _thrown_attack(sheet: CharacterSheet, w: ItemDef, slot: String) -> A
 static func _weapon_attack(sheet: CharacterSheet, w: ItemDef, off_hand: bool, both_hands: bool) -> Attack:
 	var a := Attack.new()
 	a.weapon = w
-	a.name = w.display_name + (" (off hand)" if off_hand else "")
+	a.name = sheet.known_name(w) + (" (off hand)" if off_hand else "")
 	var mod := sheet.ability_mod(Rules.weapon_ability(sheet, w))
 	var magic := w.weapon_bonus()  # a +1 weapon: +1 to hit and to damage
 	a.to_hit = mod + (sheet.proficiency_bonus() if sheet.is_proficient_with(w) else 0) + magic

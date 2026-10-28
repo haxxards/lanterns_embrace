@@ -88,6 +88,29 @@ func is_throwable() -> bool:
 	return use.get("throw") is Dictionary
 
 
+## Whether this item is unknown when found in a chest or on a body: worn magic
+## and magic weapons. Potions and scrolls are recognised on sight.
+func starts_unidentified() -> bool:
+	return magic and not kind in ["potion", "scroll"]
+
+
+## "Unidentified ring", "Unidentified weapon"...
+func unknown_name() -> String:
+	return "Unidentified %s" % {"armor": "armour", "helmet": "helm"}.get(kind, kind)
+
+
+## The card of an unidentified item: what anyone can see (a weapon's
+## damage, armour's protection) but not its magic.
+func describe_unknown() -> String:
+	var lines := PackedStringArray([unknown_name() + "  (magic)"])
+	if is_weapon():
+		lines.append("Damage: %s %s" % [weapon.get("damage", "1"), weapon.get("damage_type", "")])
+	lines.append("It has a magical feel, but what it does is unknown. Study it during a short rest, "
+			+ "or ask someone who knows such things.")
+	lines.append("Weight %s   Value unknown" % format_weight(weight))
+	return "\n".join(lines)
+
+
 ## A magic weapon's bonus to attack and damage rolls (`weapon.bonus`, +1).
 func weapon_bonus() -> int:
 	return int(weapon.get("bonus", 0)) if is_weapon() else 0

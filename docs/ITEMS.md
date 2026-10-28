@@ -82,6 +82,27 @@ The magic items so far:
 | +1 Longsword | +1 to hit and damage | Mouldering chest in the ruin |
 | Amulet of Health | Con 19 | Mouldering chest in the ruin |
 
+## Unidentified magic items
+
+Worn magic and magic weapons found in a chest, a drawer or on a body start **unidentified**
+(`ItemDef.starts_unidentified()`: `magic`, and not a potion or scroll, which are known on
+sight). A map placement can say `{"item": "...", "identified": true}` to skip that, and
+shop stock is always known.
+
+- The stack shows as "Unidentified ring" (or weapon, amulet, boots...) with a blue **?** in
+  its corner. Its card shows only what anyone can see (a weapon's damage) and "Value
+  unknown". The attack line and the fight log use the same name.
+- It works all the same when worn: the bonuses apply, as in 5e. Only the knowledge is
+  missing.
+- A trader pays a fifth of the usual price for it (`InventoryOps.stack_sell_price`).
+- Known and unknown stacks of the same item don't merge.
+- **Identifying:** on a **short rest**, each member names one unidentified item they carry
+  (worn first), "Elowen studies the unidentified ring: a Ring of Fire Resistance". Or
+  **Wenna** names them all for 25 gold each (the `identify` dialogue effect, offered when
+  the `unidentified` condition holds).
+- Saved as `{"item": "...", "qty": 1, "unidentified": true}`; the key is left out when the
+  item is known, so older saves load as before.
+
 ## Potions with a lasting effect
 
 `use.buff` keeps its effect in the sheet's `effects` (as `"abilities": {"str": 21}`) until

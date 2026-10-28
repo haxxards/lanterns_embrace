@@ -46,12 +46,13 @@ func stack() -> ItemStack:
 
 func refresh() -> void:
 	var st := stack()
-	tooltip_text = st.def.describe() if st != null and st.def != null else (placeholder if not placeholder.is_empty() else "")
+	tooltip_text = st.describe() if st != null and st.def != null else (placeholder if not placeholder.is_empty() else "")
 	if st != null and st.def != null and not trade.is_empty():
 		if ref.has("trade"):
 			tooltip_text += "\nPrice: %d gp each" % InventoryOps.buy_price(st.def, trade)
 		elif InventoryOps.can_sell(st.def):
-			tooltip_text += "\nSells for %d gp each" % InventoryOps.sell_price(st.def, trade)
+			tooltip_text += "\nSells for %d gp each%s" % [InventoryOps.stack_sell_price(st, trade),
+					"" if st.identified else " (unidentified)"]
 		else:
 			tooltip_text += "\nCan't be sold"
 	queue_redraw()
@@ -82,6 +83,9 @@ func _draw() -> void:
 	draw_texture_rect(icon, Rect2(inner.position + (inner.size - draw_size) * 0.5, draw_size), false)
 	if st.def != null and st.def.magic:
 		draw_rect(r.grow(-2), Color(0.45, 0.6, 1.0, 0.5), false, 1.0)
+	if not st.identified:  # a "?" in the corner until someone names it
+		draw_string_outline(font, Vector2(0, 15), "?", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 5, 15, 3, Color.BLACK)
+		draw_string(font, Vector2(0, 15), "?", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 5, 15, Color(0.6, 0.75, 1.0))
 	if ref.has("trade") and st.def != null:
 		var price := "%dg" % InventoryOps.buy_price(st.def, ref["trade"])
 		draw_string_outline(font, Vector2(3, 13), price, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 3, Color.BLACK)
@@ -144,19 +148,19 @@ static func ask_split(near: Node, from: Dictionary, to: Dictionary, give_to: Cha
 	if st == null or st.def == null or st.qty < 2 or to.get("kind") == "equip":
 		return null
 	var verb := "Move"
-	var title := "Move how many %s?" % st.def.display_name
+	var title := "Move how many %s?" % st.item_name()
 	var limit := st.qty
 	if from.has("trade") and not to.has("trade"):
 		var unit := InventoryOps.buy_price(st.def, from["trade"])
 		limit = mini(st.qty, maxi(1, GameState.gold / maxi(1, unit)))
 		verb = "Buy"
-		title = "Buy how many %s? (%d gp each)" % [st.def.display_name, unit]
+		title = "Buy how many %s? (%d gp each)" % [st.item_name(), unit]
 	elif to.has("trade") and not from.has("trade"):
 		verb = "Sell"
-		title = "Sell how many %s? (%d gp each)" % [st.def.display_name, InventoryOps.sell_price(st.def, to["trade"])]
+		title = "Sell how many %s? (%d gp each)" % [st.item_name(), InventoryOps.stack_sell_price(st, to["trade"])]
 	elif give_to != null:
 		verb = "Give"
-		title = "Give %s how many %s?" % [give_to.display_name, st.def.display_name]
+		title = "Give %s how many %s?" % [give_to.display_name, st.item_name()]
 	var d := QuantityDialog.ask(near, title, verb, limit)
 	d.chosen.connect(func(n: int) -> void:
 		if give_to != null:
