@@ -27,7 +27,7 @@
 		{"type": "cupboard", "at": [0, 0], "id": "pantry", "name": "Pantry", "items": [{"item": "rations", "qty": 4}, {"item": "torch", "qty": 5}, {"item": "lantern", "qty": 1}]},
 		{"type": "chest", "at": [1, 0], "id": "cashbox", "name": "Cash Box", "locked": true, "lock_dc": 12, "items": [{"item": "garnet", "qty": 1}], "gold": 35},
 		{"type": "rug", "at": [9, 1]},
-		{"type": "chest", "at": [11, 7], "id": "sea_chest", "name": "Traveller's Chest", "items": [{"item": "cloak_of_protection", "qty": 1}, {"item": "studded_leather", "qty": 1}]},
+		{"type": "chest", "at": [11, 7], "id": "sea_chest", "name": "Traveller's Chest", "items": [{"item": "cloak_of_protection", "qty": 1}, {"item": "studded_leather", "qty": 1}, {"item": "boots_of_striding_and_springing", "qty": 1}]},
 		{"type": "dresser", "at": [0, 7], "id": "linen", "name": "Linen Drawers", "items": [{"item": "rations", "qty": 2}], "gold": 3},
 		{"type": "bar_back", "at": [4, 0]},
 		{"type": "bar_counter", "at": [4, 2]},

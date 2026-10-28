@@ -212,19 +212,30 @@ def lathe(name, profile, mat, parent, sides=32, loc=(0, 0, 0)):
 # Weapons
 # --------------------------------------------------------------------------
 
-def sword(name, blade_len, guard_w, grip_len, blade_w=0.05):
+def sword(name, blade_len, guard_w, grip_len, blade_w=0.05, blade_mat=steel, fittings=brass, pommel=None):
+    """Material arguments are functions, called once the scene is set up."""
     root = setup()
-    st = steel()
-    blade(name + "Blade", blade_len, blade_w, 0.012, st, root)
-    lib.box("Guard", (0.035, guard_w, 0.03), (-0.01, 0, 0), mat=brass(), parent=root, bevel=0.008)
+    blade(name + "Blade", blade_len, blade_w, 0.012, blade_mat(), root)
+    fit = fittings()
+    lib.box("Guard", (0.035, guard_w, 0.03), (-0.01, 0, 0), mat=fit, parent=root, bevel=0.008)
     grip("Grip", -0.02, -grip_len, 0.016, leather("Wrap", "#3b2616"), root)
-    sphere("Pommel", (-grip_len - 0.02, 0, 0), 0.027, brass(), root)
+    sphere("Pommel", (-grip_len - 0.02, 0, 0), 0.027, pommel() if pommel else fit, root)
     diagonal(root)
     finish(name, elevation=72)
 
 
 def longsword():
     sword("longsword", 0.85, 0.2, 0.2)
+
+
+def longsword_plus_one():
+    """The longsword with a faint blue shine in the steel, gilt fittings and a
+    sapphire pommel."""
+    def shine():
+        return lib.material("MagicSteel", lib.lin("#cdd6e6"), rough=0.22, metallic=1.0, noise_var=0.1,
+                            noise_scale=30, bump=0.05, emission=lib.lin("#4f86ff"), emission_strength=0.35)
+    sword("longsword_plus_one", 0.85, 0.2, 0.2, blade_mat=shine, fittings=gold_mat,
+          pommel=lambda: liquid("Sapphire", "#2a5ad8", glow=0.8))
 
 
 def shortsword():
@@ -448,31 +459,58 @@ def cloak_of_protection():
     finish("cloak_of_protection", elevation=15)
 
 
-def ring_of_protection():
+def ring(name, band, gem_mat):
+    """`band` and `gem_mat` are functions making the materials."""
     root = setup()
-    torus("Band", (0, 0, 0), 0.1, 0.022, steel("Silver", "#d6d8dc", 0.2), root, rot=(math.radians(70), 0, 0))
-    gem = lib.primitive("ico_sphere", "Gem", mat=liquid("Sapphire", "#2a5ad8", glow=0.6), parent=root,
+    band, gem_mat = band(), gem_mat()
+    torus("Band", (0, 0, 0), 0.1, 0.022, band, root, rot=(math.radians(70), 0, 0))
+    gem = lib.primitive("ico_sphere", "Gem", mat=gem_mat, parent=root,
                         radius=0.04, subdivisions=1, location=(0, -0.03, 0.12))
     gem.scale = (1, 1, 0.7)
-    cyl("Setting", (0, -0.025, 0.1), 0.03, 0.03, steel("Silver2", "#d6d8dc", 0.2), root, verts=16)
-    finish("ring_of_protection", elevation=30)
+    cyl("Setting", (0, -0.025, 0.1), 0.03, 0.03, band, root, verts=16)
+    finish(name, elevation=30)
 
 
-def silver_amulet():
+def ring_of_protection():
+    ring("ring_of_protection", lambda: steel("Silver", "#d6d8dc", 0.2), lambda: liquid("Sapphire", "#2a5ad8", glow=0.6))
+
+
+def ring_of_fire_resistance():
+    ring("ring_of_fire_resistance", gold_mat, lambda: liquid("FireOpal", "#e2541c", glow=0.9))
+
+
+def amulet(name, mats, centre_r=0.03):
+    """`mats` is a function returning the disc, ray, centre and chain materials."""
     root = setup()
-    silver = steel("Silver", "#d6d8dc", 0.22)
-    cyl("Disc", (0, 0, 0), 0.08, 0.015, silver, root, rot=(math.radians(90), 0, 0), verts=40)
+    disc, rays, centre, chain_mat = mats()
+    cyl("Disc", (0, 0, 0), 0.08, 0.015, disc, root, rot=(math.radians(90), 0, 0), verts=40)
     for i in range(12):
         a = math.tau * i / 12
-        lib.box(f"Ray{i}", (0.012, 0.012, 0.05), (math.cos(a) * 0.1, 0, math.sin(a) * 0.1), mat=gold_mat(),
+        lib.box(f"Ray{i}", (0.012, 0.012, 0.05), (math.cos(a) * 0.1, 0, math.sin(a) * 0.1), mat=rays,
                 parent=root, rotation=(0, -a + math.pi / 2, 0))
-    sphere("Centre", (0, -0.012, 0), 0.03, gold_mat(), root, scale=(1, 0.4, 1))
+    sphere("Centre", (0, -0.012, 0), centre_r, centre, root, scale=(1, 0.4, 1))
     chain = [(math.cos(a) * 0.15, 0, 0.12 + math.sin(a) * 0.15)
              for a in (math.pi * (0.08 + 0.84 * i / 15) for i in range(16))]
     for i in range(len(chain) - 1):
-        lib.cylinder_between(f"Chain{i}", chain[i], chain[i + 1], 0.005, mat=silver, parent=root, sides=6)
-    lib.cylinder_between("Drop", (0, 0, 0.08), chain[8], 0.005, mat=silver, parent=root, sides=6)
-    finish("silver_amulet", elevation=12)
+        lib.cylinder_between(f"Chain{i}", chain[i], chain[i + 1], 0.005, mat=chain_mat, parent=root, sides=6)
+    lib.cylinder_between("Drop", (0, 0, 0.08), chain[8], 0.005, mat=chain_mat, parent=root, sides=6)
+    finish(name, elevation=12)
+
+
+def silver_amulet():
+    def mats():
+        silver = steel("Silver", "#d6d8dc", 0.22)
+        return silver, gold_mat(), gold_mat(), silver
+    amulet("silver_amulet", mats)
+
+
+def amulet_of_health():
+    """A gold sun with a large glowing ruby on a red enamel disc."""
+    def mats():
+        enamel = lib.material("Enamel", lib.lin("#7a1420"), rough=0.25, spec=0.6, noise_var=0.1, noise_scale=30)
+        gilt = gold_mat()
+        return enamel, gilt, liquid("Ruby", "#c8142a", glow=0.9), gilt
+    amulet("amulet_of_health", mats, centre_r=0.05)
 
 
 def boot(name, x, mat, parent, turn=0.0):
@@ -496,14 +534,28 @@ def leather_boots():
     finish("leather_boots", elevation=22)
 
 
-def glove(name, x, mat, parent, angle):
+def boots_of_striding_and_springing():
+    """Pale green boots with little gilt wings on the outer side of each shaft."""
+    root = setup()
+    mat = leather("Boot", "#4f6a3a")
+    gilt = gold_mat()
+    for name, x, turn, side in (("L", -0.07, 0.1, -1), ("R", 0.08, -0.05, 1)):
+        boot(name, x, mat, root, turn)
+        for k, (z, ln) in enumerate(((0.27, 0.11), (0.235, 0.09), (0.2, 0.07))):
+            sphere(f"{name}Wing{k}", (x + side * (0.065 + ln * 0.4), 0.02, z + ln * 0.25), 0.03, gilt, root,
+                   scale=(ln / 0.03 * 0.55, 0.25, 0.4))
+    root.rotation_euler = (0, 0, math.radians(20))
+    finish("boots_of_striding_and_springing", elevation=22)
+
+
+def glove(name, x, mat, parent, angle, cuff=None):
     g = bpy.data.objects.new(name, None)
     bpy.context.scene.collection.objects.link(g)
     g.parent = parent
     g.location = (x, 0, 0)
     g.rotation_euler = (0, 0, angle)
     lib.box(name + "Palm", (0.09, 0.1, 0.025), (0, 0, 0.015), mat=mat, parent=g, bevel=0.012)
-    lib.box(name + "Cuff", (0.11, 0.08, 0.035), (0, -0.09, 0.02), mat=leather("GCuff", "#3a2414"), parent=g,
+    lib.box(name + "Cuff", (0.11, 0.08, 0.035), (0, -0.09, 0.02), mat=cuff or leather("GCuff", "#3a2414"), parent=g,
             bevel=0.012)
     for i, (fx, fl) in enumerate(((-0.033, 0.07), (-0.011, 0.085), (0.011, 0.08), (0.032, 0.065))):
         lib.cylinder_between(f"{name}F{i}", (fx, 0.05, 0.015), (fx, 0.05 + fl, 0.015), 0.011, mat=mat, parent=g,
@@ -518,6 +570,18 @@ def leather_gloves():
     glove("L", -0.07, mat, root, math.radians(20))
     glove("R", 0.08, mat, root, math.radians(-15))
     finish("leather_gloves", elevation=65)
+
+
+def gauntlets_of_ogre_power():
+    """Iron gauntlets with brass cuffs and a row of brass knuckle studs."""
+    root = setup()
+    mat = steel("Plate", "#8d9298", 0.35)
+    for name, x, angle in (("L", -0.07, math.radians(20)), ("R", 0.08, math.radians(-15))):
+        glove(name, x, mat, root, angle, cuff=brass())
+        g = bpy.data.objects[name]
+        for i, fx in enumerate((-0.033, -0.011, 0.011, 0.032)):
+            sphere(f"{name}Stud{i}", (fx, 0.05, 0.032), 0.012, brass(), g, scale=(1, 1, 0.7))
+    finish("gauntlets_of_ogre_power", elevation=65)
 
 
 # --------------------------------------------------------------------------
@@ -734,6 +798,9 @@ ALL = {
     "chain_mail": chain_mail, "shield": shield, "iron_helm": iron_helm,
     "cloak_of_protection": cloak_of_protection, "ring_of_protection": ring_of_protection,
     "silver_amulet": silver_amulet, "leather_boots": leather_boots, "leather_gloves": leather_gloves,
+    "longsword_plus_one": longsword_plus_one, "ring_of_fire_resistance": ring_of_fire_resistance,
+    "amulet_of_health": amulet_of_health, "boots_of_striding_and_springing": boots_of_striding_and_springing,
+    "gauntlets_of_ogre_power": gauntlets_of_ogre_power,
     "potion_of_healing": potion_of_healing, "potion_of_greater_healing": potion_of_greater_healing,
     "remedy": remedy,
     "rations": rations, "apple": apple, "torch": torch, "lantern": lantern, "holy_symbol": holy_symbol,

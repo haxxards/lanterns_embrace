@@ -22,6 +22,10 @@ var xp: int = 0
 var abilities: Dictionary = {}
 var hp_max: int = 1
 var hp_current: int = 1
+## The part of hp_max that worn magic's Constitution adds (an Amulet of
+## Health): the raised modifier counts at every level, as in 5e. Saves store
+## hp_max without it; recalculate() keeps it in step with what is worn.
+var con_hp: int = 0
 ## At 0 hit points a character is unconscious ("down"). Three failed death
 ## saves, or one blow that leaves as much damage again as their maximum,
 ## kills them: then only a temple can raise them.
@@ -114,6 +118,8 @@ static func from_dict(d: Dictionary, path: String = "") -> CharacterSheet:
 	s.effects = (d.get("effects", {}) as Dictionary).duplicate() if d.get("effects") is Dictionary else {}
 	Classes.grant(s)  # catch up with the class table (features and spells by level)
 	s.recalculate()
+	# Current hit points may include those an amulet adds (now in hp_max).
+	s.hp_current = clampi(int(hp.get("current", s.hp_max)), 0, s.hp_max)
 	var art: Dictionary = d.get("art", {})
 	s.portrait_path = str(art.get("portrait", ""))
 	s.sprite_path = str(art.get("sprite", ""))
@@ -144,7 +150,7 @@ func to_dict() -> Dictionary:
 	d["level"] = level
 	d["xp"] = xp
 	d["abilities"] = abilities.duplicate()
-	d["hit_points"] = {"max": hp_max, "current": hp_current}
+	d["hit_points"] = {"max": hp_max - con_hp, "current": hp_current}
 	d["dead"] = dead
 	d["stable"] = stable
 	d["death_saves"] = {"successes": death_successes, "failures": death_failures}
@@ -173,7 +179,21 @@ func is_valid() -> bool:
 
 
 func ability_mod(ability: String) -> int:
-	return Rules.ability_modifier(int(abilities.get(ability, 10)))
+	return Rules.ability_modifier(ability_score(ability))
+
+
+## An ability score after magic: worn items that make it at least a number
+## (`bonuses.abilities`, Gauntlets of Ogre Power: Strength 19) and potions
+## that do the same until a long rest (effects "abilities"). A score already
+## higher is kept. Everything the score decides reads this, not `abilities`.
+func ability_score(ability: String) -> int:
+	var score := int(abilities.get(ability, 10))
+	for def in worn_defs():
+		score = maxi(score, int((def.bonuses.get("abilities", {}) as Dictionary).get(ability, 0)))
+	var boosted: Variant = effects.get("abilities")
+	if boosted is Dictionary:
+		score = maxi(score, int((boosted as Dictionary).get(ability, 0)))
+	return score
 
 
 func proficiency_bonus() -> int:
@@ -204,10 +224,10 @@ func is_down() -> bool:
 
 
 ## Bonus to a saving throw: the ability modifier, plus proficiency for the
-## saves the class is proficient in.
+## saves the class is proficient in, plus worn items' `bonuses.saves`.
 func saving_throw_bonus(ability: String) -> int:
 	var prof := (proficiencies.get("saving_throws", []) as Array).has(ability)
-	return ability_mod(ability) + (proficiency_bonus() if prof else 0)
+	return ability_mod(ability) + (proficiency_bonus() if prof else 0) + item_bonus("saves")
 
 
 ## Combat movement per turn, in hexes.
@@ -226,6 +246,35 @@ func equipped(slot: String) -> ItemStack:
 func equipped_def(slot: String) -> ItemDef:
 	var st: ItemStack = equipment.get(slot)
 	return st.def if st != null else null
+
+
+## The ItemDefs in the equipment slots (worn or held), in slot order.
+func worn_defs() -> Array[ItemDef]:
+	var out: Array[ItemDef] = []
+	for slot in ItemDef.EQUIP_SLOTS:
+		var def := equipped_def(slot)
+		if def != null:
+			out.append(def)
+	return out
+
+
+## The sum of a number bonus over everything worn ("ac", "saves").
+func item_bonus(key: String) -> int:
+	var total := 0
+	for def in worn_defs():
+		total += int(def.bonuses.get(key, 0))
+	return total
+
+
+## Damage types the character takes half damage from: worn items'
+## `bonuses.resist` (a Ring of Fire Resistance).
+func resistances() -> PackedStringArray:
+	var out := PackedStringArray()
+	for def in worn_defs():
+		for t in def.bonuses.get("resist", []):
+			if not out.has(str(t)):
+				out.append(str(t))
+	return out
 
 
 ## Every stack the character carries, worn or in the backpack.
@@ -303,6 +352,19 @@ func unequip(slot: String) -> ItemStack:
 
 func recalculate() -> void:
 	armor_class = Rules.armor_class(self)
+	_sync_con_hp()
+
+
+## Puts the hit points from a raised Constitution into hp_max, or takes them
+## out. Putting the item on doesn't heal (rest fills the new hit points);
+## taking it off lowers current hit points only as far as the new maximum.
+func _sync_con_hp() -> void:
+	var want := maxi(0, ability_mod("con") - Rules.ability_modifier(int(abilities.get("con", 10)))) * level
+	if want == con_hp:
+		return
+	hp_max = maxi(1, hp_max + want - con_hp)
+	hp_current = mini(hp_current, hp_max)
+	con_hp = want
 
 
 func carried_weight() -> float:
@@ -313,7 +375,7 @@ func carried_weight() -> float:
 
 
 func carrying_capacity() -> float:
-	return Rules.carrying_capacity(int(abilities.get("str", 10)))
+	return Rules.carrying_capacity(ability_score("str"))
 
 
 func is_overloaded() -> bool:
@@ -322,12 +384,18 @@ func is_overloaded() -> bool:
 
 ## Walking speed after armour and load penalties (5e: heavy armour without
 ## the Strength for it costs 10 ft; here, carrying more than the capacity
-## halves speed).
+## halves speed). Worn `bonuses.speed_ft` (Boots of Striding and Springing)
+## makes the speed at least that, and then armour and load don't slow it.
 @warning_ignore("integer_division")
 func effective_speed_ft() -> int:
 	var speed := speed_ft
+	var steady := 0
+	for def in worn_defs():
+		steady = maxi(steady, int(def.bonuses.get("speed_ft", 0)))
+	if steady > 0:
+		return maxi(speed, steady)
 	var armor := equipped_def("armor")
-	if armor != null and int(abilities.get("str", 10)) < int(armor.armor.get("strength", 0)):
+	if armor != null and ability_score("str") < int(armor.armor.get("strength", 0)):
 		speed -= 10
 	if is_overloaded():
 		speed = speed / 2
@@ -346,8 +414,9 @@ func add_xp(amount: int) -> int:
 	while level < Rules.MAX_LEVEL and xp >= Rules.XP_THRESHOLDS[level]:
 		level += 1
 		gained += 1
-		# 5e fixed hit points per level: half the hit die + 1, plus Con.
-		var hp := maxi(1, Classes.hit_die(self) / 2 + 1 + ability_mod("con"))
+		# 5e fixed hit points per level: half the hit die + 1, plus Con (an
+		# amulet's share is added by recalculate, below).
+		var hp := maxi(1, Classes.hit_die(self) / 2 + 1 + Rules.ability_modifier(int(abilities.get("con", 10))))
 		hp_max += hp
 		if is_alive():
 			hp_current += hp
@@ -355,7 +424,10 @@ func add_xp(amount: int) -> int:
 		var slots := Spellcasting.slots_text(self)
 		if not slots.is_empty() and Spellcasting.is_caster(self):
 			level_up_gains.append("spell slots %s" % slots)
+	var had := con_hp
 	recalculate()
+	if is_alive():
+		hp_current = mini(hp_max, hp_current + con_hp - had)
 	changed.emit()
 	return gained
 
@@ -425,17 +497,19 @@ func add_death_failures(n: int) -> void:
 	changed.emit()
 
 
-## One death saving throw (d20, no modifiers): 10 or more succeeds, a 1 counts
-## as two failures, and a 20 brings the character round with 1 hit point.
-## Three successes and they are stable. Returns what happened.
+## One death saving throw (d20, plus worn items' `bonuses.saves`): 10 or
+## more succeeds, a natural 1 counts as two failures, and a natural 20 brings
+## the character round with 1 hit point. Three successes and they are stable.
+## Returns what happened.
 func roll_death_save(rng: RandomNumberGenerator = null) -> String:
 	var d := Rules.roll(1, 20, rng)
 	if d == 20:
 		heal(1)
 		return "rallies"
+	var total := d + item_bonus("saves")
 	if d == 1:
 		add_death_failures(2)
-	elif d < 10:
+	elif total < 10:
 		add_death_failures(1)
 	else:
 		death_successes += 1
@@ -446,7 +520,7 @@ func roll_death_save(rng: RandomNumberGenerator = null) -> String:
 		return "dies"
 	if stable:
 		return "stable"
-	return "success" if d >= 10 else "failure"
+	return "success" if total >= 10 else "failure"
 
 
 func _clear_death_saves() -> void:
@@ -462,8 +536,9 @@ func attack_summary() -> String:
 		return "Unarmed  %s to hit, 1 + Str damage" % Rules.format_modifier(
 				ability_mod("str") + proficiency_bonus())
 	var ability := Rules.weapon_ability(self, w)
-	var bonus := ability_mod(ability) + (proficiency_bonus() if is_proficient_with(w) else 0)
-	var dmg := "%s%s" % [w.weapon.get("damage", "1"), Rules.format_modifier(ability_mod(ability))]
+	var magic := w.weapon_bonus()
+	var bonus := ability_mod(ability) + (proficiency_bonus() if is_proficient_with(w) else 0) + magic
+	var dmg := "%s%s" % [w.weapon.get("damage", "1"), Rules.format_modifier(ability_mod(ability) + magic)]
 	return "%s  %s to hit, %s %s" % [w.display_name, Rules.format_modifier(bonus), dmg,
 			w.weapon.get("damage_type", "")]
 

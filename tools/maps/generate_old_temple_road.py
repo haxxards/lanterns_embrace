@@ -127,7 +127,7 @@ one("crates", (25, 19))
 one("barrels", (13, 21))
 one("chest", (18, 18), id="bandit_chest", name="Bandits' Strongbox", locked=True, lock_dc=13,
     items=[{"item": "potion_of_healing", "qty": 2}, {"item": "garnet", "qty": 1}, {"item": "arrows", "qty": 20},
-           {"item": "scroll_of_burning_hands", "qty": 1}], gold=45)
+           {"item": "scroll_of_burning_hands", "qty": 1}, {"item": "gauntlets_of_ogre_power", "qty": 1}], gold=45)
 
 # Ruin: broken walls along the back, columns down the sides, an open front.
 place("ruined_wall", rect_cells((36, 3), 3, 1), (36, 3), variant=0)
@@ -143,7 +143,8 @@ one("standing_stone", (44, 6), title="Carved Stone",
          "while one who keeps it still walks...\"\n\nThe rest is worn smooth.")
 one("chest", (37, 5), id="ruin_chest", name="Mouldering Chest", variant=1,
     items=[{"item": "potion_of_greater_healing", "qty": 1}, {"item": "silver_amulet", "qty": 1},
-           {"item": "garnet", "qty": 2}, {"item": "scroll_of_magic_missile", "qty": 1}], gold=60)
+           {"item": "garnet", "qty": 2}, {"item": "scroll_of_magic_missile", "qty": 1},
+           {"item": "longsword_plus_one", "qty": 1}, {"item": "amulet_of_health", "qty": 1}], gold=60)
 for cell in ((38, 8), (43, 10), (45, 8), (39, 11)):
     one("rubble", cell)
 

@@ -53,12 +53,14 @@ static func _weapon_attack(sheet: CharacterSheet, w: ItemDef, off_hand: bool, bo
 	a.weapon = w
 	a.name = w.display_name + (" (off hand)" if off_hand else "")
 	var mod := sheet.ability_mod(Rules.weapon_ability(sheet, w))
-	a.to_hit = mod + (sheet.proficiency_bonus() if sheet.is_proficient_with(w) else 0)
+	var magic := w.weapon_bonus()  # a +1 weapon: +1 to hit and to damage
+	a.to_hit = mod + (sheet.proficiency_bonus() if sheet.is_proficient_with(w) else 0) + magic
 	var dice := str(w.weapon.get("damage", "1"))
 	if both_hands and w.weapon.has("versatile"):
 		dice = str(w.weapon["versatile"])
-	# The off-hand attack adds no ability modifier to damage (unless negative).
-	var dmg_mod := mod if (not off_hand or mod < 0) else 0
+	# The off-hand attack adds no ability modifier to damage (unless negative),
+	# but a magic weapon's bonus still counts.
+	var dmg_mod := (mod if (not off_hand or mod < 0) else 0) + magic
 	a.damage = dice + (Rules.format_modifier(dmg_mod) if dmg_mod != 0 else "")
 	a.damage_type = str(w.weapon.get("damage_type", ""))
 	a.finesse = w.has_property("finesse")
@@ -109,10 +111,14 @@ static func roll_damage(expr: String, crit: bool, rng: RandomNumberGenerator = n
 	return maxi(0, Rules.roll(count, d["sides"], rng) + int(d["bonus"]))
 
 
-## Damage after the target's vulnerabilities, resistances and immunities.
+## Damage after the target's vulnerabilities, resistances and immunities: a
+## creature's from its stat block, a party member's from what they wear
+## (CharacterSheet.resistances).
 static func adjust_for_type(sheet: CharacterSheet, amount: int, damage_type: String) -> int:
-	if not sheet is CreatureSheet or damage_type.is_empty():
+	if damage_type.is_empty():
 		return amount
+	if not sheet is CreatureSheet:
+		return floori(amount / 2.0) if sheet.resistances().has(damage_type) else amount
 	var def := (sheet as CreatureSheet).def
 	if def.immune.has(damage_type):
 		return 0

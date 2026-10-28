@@ -17,9 +17,9 @@ containers and saves only ever store **stacks**: an item id and a quantity,
 | `stack` | int | Maximum stack size (default 1). |
 | `description` | string | Shown in the tooltip. |
 | `magic` | bool | Draws a blue frame in the inventory. |
-| `weapon` | object | `category` (`simple`/`martial`), `damage` (dice, e.g. `"1d8"`), `damage_type`, optional `versatile` dice, `properties` (`finesse`, `light`, `thrown`, `two_handed`, `ammunition`), `range` `[normal, long]` in feet, `ammo` item id. |
+| `weapon` | object | `category` (`simple`/`martial`), `damage` (dice, e.g. `"1d8"`), `damage_type`, optional `versatile` dice, `properties` (`finesse`, `light`, `thrown`, `two_handed`, `ammunition`), `range` `[normal, long]` in feet, `ammo` item id, and `bonus` for a magic weapon (`1` on a +1 Longsword: +1 to attack and damage rolls, off-hand and thrown attacks included). |
 | `armor` | object | Body armour: `type` (`light`/`medium`/`heavy`), `base_ac`, `dex_cap` (medium), `strength` (heavy: below it, speed −10 ft), `stealth_disadvantage`. Shields: `type: "shield"`, `ac_bonus`. |
-| `bonuses` | object | Passive bonuses while worn. `{"ac": 1}` is implemented. |
+| `bonuses` | object | Passive bonuses while worn (in any equipment slot); see [Passive bonuses](#passive-bonuses-magic-items). |
 | `use` | object | What using it does: `{"heal": "2d4+2"}` (potions, food), or `{"cast": "<spell id>"}` for a spell scroll (kind `scroll`): read by anyone whose class has the spell, cast at the spell's level with no slot, used up. See [SPELLS.md](SPELLS.md#spell-scrolls). |
 | `tool` | string | `lockpick` lets the holder try locks. |
 
@@ -40,9 +40,47 @@ All in `scripts/rules/rules.gd` and `scripts/rules/character_sheet.gd`:
   weapon must be light too (two-weapon fighting). Weapons without proficiency can be
   wielded; the attack line simply leaves out the proficiency bonus.
 - **Carrying:** capacity is Strength × 15 lb. Going over it halves walking speed.
+- **Ability scores:** everything a score decides (modifiers, attacks, saves, carrying,
+  the Strength that heavy armour asks for) reads `CharacterSheet.ability_score()`, which
+  applies worn items and potions that raise a score. The sheet's own `abilities` stay as
+  written.
 - **Locks:** a container can be `locked`. A `key` item anywhere in the party opens it.
   Otherwise someone carrying a `lockpick` tool rolls d20 + Dex (+ proficiency with
   `"tools": ["thieves_tools"]`) against `lock_dc` each time they try.
+
+## Passive bonuses (magic items)
+
+`bonuses` on an item applies while it is in any equipment slot. Several worn items add up
+(two Rings of Protection give +2), except scores and speed, where the best one counts.
+
+| Key | Example | Effect |
+|---|---|---|
+| `ac` | `{"ac": 1}` | + to armour class (Rules.armor_class). |
+| `saves` | `{"saves": 1}` | + to every saving throw, and to death saves (a natural 1 and 20 still count as rolled). |
+| `abilities` | `{"abilities": {"str": 19}}` | The score becomes at least this while worn (5e Gauntlets of Ogre Power, Amulet of Health). A higher score is kept. |
+| `speed_ft` | `{"speed_ft": 30}` | Walking speed at least this, and heavy armour or a heavy load no longer slow the wearer (Boots of Striding and Springing). |
+| `resist` | `{"resist": ["fire"]}` | Half damage of these types, rounded down (CombatRules.adjust_for_type, which also handles creatures' resistances). |
+
+A raised **Constitution** raises maximum hit points by the new modifier's gain at every
+level, as in 5e: an Amulet of Health on a level 3 wizard with Con 13 adds 9. Putting it on
+doesn't heal; rest fills the new hit points. Taking it off lowers current hit points only
+as far as the new maximum. Saves store the sheet's own maximum (`con_hp` is added back
+when the sheet loads with the amulet on).
+
+The item card lists each bonus (`ItemDef.bonus_lines()`), and the inventory's stats panel
+shows all six scores, raised ones in blue, with any save bonus and resistances under them.
+
+The magic items so far:
+
+| Item | Bonus | Where |
+|---|---|---|
+| Ring of Protection | +1 AC, +1 saves | Reeve's strongbox (Millbrook) |
+| Cloak of Protection | +1 AC, +1 saves | Traveller's chest at the inn |
+| Boots of Striding and Springing | speed at least 30 ft, never slowed | Traveller's chest at the inn |
+| Ring of Fire Resistance | resist fire | Wenna's shop |
+| Gauntlets of Ogre Power | Str 19 | Bandits' strongbox (old temple road) |
+| +1 Longsword | +1 to hit and damage | Mouldering chest in the ruin |
+| Amulet of Health | Con 19 | Mouldering chest in the ruin |
 
 ## The inventory screen
 

@@ -17,6 +17,8 @@ const LEFT_SLOTS := ["helmet", "armor", "cloak", "gloves", "ring_1"]
 const RIGHT_SLOTS := ["amulet", "ring_2", "boots"]
 const HAND_SLOTS := ["main_hand", "off_hand"]
 const PACK_COLUMNS := 4
+## Numbers that magic raised, in the stats panel.
+const MAGIC_TEXT := Color(0.56, 0.72, 1.0)
 const HINT := "Drag to move, equip or drop on the ground  ·  right-click to use, equip or take  ·  drop on a portrait to give"
 const HINT_SHOP := "Drag from the stock to buy the stack, into it to sell  ·  right-click buys one or sells  ·  prices in gold pieces"
 const CONTAINER_COLUMNS := 8
@@ -151,10 +153,31 @@ func _refresh() -> void:
 	var weight_text := "%s / %s" % [ItemDef.format_weight(weight).trim_suffix(" lb"), ItemDef.format_weight(cap)]
 	if sheet.is_overloaded():
 		weight_text = "[color=#e05a4a]%s  (overloaded)[/color]" % weight_text
-	_stats.text = "[b]AC %d[/b]      HP %d / %d      Speed %d ft\n%s\nCarrying %s" % [
+	_stats.text = "[b]AC %d[/b]      HP %d / %d      Speed %d ft\n%s\n%s\nCarrying %s" % [
 		sheet.armor_class, sheet.hp_current, sheet.hp_max, sheet.effective_speed_ft(),
-		sheet.attack_summary(), weight_text]
+		_scores_text(), sheet.attack_summary(), weight_text]
 	_gold_label.text = "Party gold: %d" % GameState.gold
+
+
+## "Str 19  Dex 12 ...": scores raised by magic (gauntlets, a potion) in blue;
+## then any save bonus and resistances from worn items.
+func _scores_text() -> String:
+	var parts := PackedStringArray()
+	for ab in Rules.ABILITIES:
+		var score := sheet.ability_score(ab)
+		var text := "%s %d" % [ab.capitalize(), score]
+		if score > int(sheet.abilities.get(ab, 10)):
+			text = "[color=%s]%s[/color]" % [MAGIC_TEXT.to_html(false), text]
+		parts.append(text)
+	var line := "  ".join(parts)
+	var extras := PackedStringArray()
+	if sheet.item_bonus("saves") != 0:
+		extras.append("Saves %s" % Rules.format_modifier(sheet.item_bonus("saves")))
+	if not sheet.resistances().is_empty():
+		extras.append("Resists %s" % ", ".join(sheet.resistances()))
+	if not extras.is_empty():
+		line += "\n[color=%s]%s[/color]" % [MAGIC_TEXT.to_html(false), "      ".join(extras)]
+	return line
 
 
 func _all_slots() -> Array[ItemSlot]:

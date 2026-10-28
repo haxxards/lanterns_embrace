@@ -14,6 +14,7 @@ This file is updated as each item is finished, so it always shows where the proj
 [Phase 1](#phase-1-foundation) · [Phase 2](#phase-2-items-and-places) ·
 [Phase 3](#phase-3-people) · [Phase 4, part 1](#phase-4-part-1-combat) ·
 [Phase 4, part 2](#phase-4-part-2-spells-rests-class-features) ·
+[Phase 2, part 2](#phase-2-part-2-the-rest-of-the-item-system) ·
 [Requests along the way](#requests-along-the-way) ·
 [Added without being asked](#added-without-being-asked) ·
 [Changed from the proposal](#changed-from-the-original-proposal) ·
@@ -26,9 +27,7 @@ This file is updated as each item is finished, so it always shows where the proj
 - Phase 3, People - **COMPLETE**
 - Phase 4, part 1, Combat - **COMPLETE**
 - Phase 4, part 2, Spells, rests, class features and the rest of combat - **COMPLETE**
-
-Nothing is **PENDING** at the moment: every planned item is either complete or listed
-under [Not started](#not-started-ideas-and-gaps).
+- Phase 2, part 2, The rest of the item system (revisited) - **PENDING** (in progress)
 
 ---
 
@@ -85,8 +84,8 @@ under [Not started](#not-started-ideas-and-gaps).
 - Bar and table add-ons for a house (your request) - **COMPLETE**
 - Dropping and picking up items (your request) - **COMPLETE**
 - Spell scrolls - moved to Phase 4, part 2 (your request) - **COMPLETE** there
-- "The rest of Phase 2", to revisit later - **NOT STARTED**: you didn't name items. The
-  item system's known gaps are listed under [Not started](#not-started-ideas-and-gaps).
+- "The rest of Phase 2", to revisit later - **PENDING**: being done now, as the item
+  system's known gaps; see [Phase 2, part 2](#phase-2-part-2-the-rest-of-the-item-system).
 
 ## Phase 3: People
 
@@ -162,6 +161,44 @@ under [Not started](#not-started-ideas-and-gaps).
 - Thrown weapons (daggers) - **COMPLETE**
 - Fleeing a fight (getting out of the enemies' sight or reach ends it) - **COMPLETE**
 - Saving and loading in the middle of a fight (on a party member's turn) - **COMPLETE**
+
+---
+
+## Phase 2, part 2: the rest of the item system
+
+Phase 2 was left with "the rest to revisit later". These are the item system's known
+gaps, done now.
+
+### Passive bonuses on worn items
+- Ability scores raised by worn items (Gauntlets of Ogre Power: Strength 19; Amulet of
+  Health: Constitution 19, with the hit points that brings at every level) - **COMPLETE**
+- Saving-throw bonuses (Ring and Cloak of Protection: +1 AC and +1 to every save, death
+  saves included, as in 5e) - **COMPLETE**
+- Magic weapons: +1 to attack and damage rolls (a +1 Longsword) - **COMPLETE**
+- Speed (Boots of Striding and Springing: walking speed at least 30 ft, not slowed by
+  armour or load) - **COMPLETE**
+- Damage resistance (Ring of Fire Resistance) - **COMPLETE**
+- Bonuses shown on the item's card and in the character's stats - **COMPLETE**
+- The five new items with icons in both art styles, placed in chests and Wenna's shop
+  ([ITEMS.md](ITEMS.md#passive-bonuses-magic-items)) - **COMPLETE**
+
+### Items with uses beyond healing
+- Potions with a lasting effect (Potion of Hill Giant Strength: Strength 21 until a long
+  rest) - **PENDING**
+- Flasks thrown in a fight (Holy Water: 2d6 radiant, only hurts undead and fiends) - **PENDING**
+
+### Splitting stacks
+- Shift-drop a stack to choose how many to move, give, drop, buy or sell - **PENDING**
+
+### Unidentified magic items
+- Magic items found in chests and loot start unidentified ("Unidentified ring"), and
+  sell for less until known - **PENDING**
+- Identifying them: study one on a short rest, or pay Wenna - **PENDING**
+
+### Trapped containers
+- Traps on chests: noticed by passive Perception, disarmed with thieves' tools, or set
+  off (a saving throw and damage) - **PENDING**
+- Traps on the bandits' strongbox and the ruined temple's chest - **PENDING**
 
 ---
 
@@ -275,10 +312,8 @@ None of these were promised; they are the known limits, listed so nothing is for
 - Concentration spells other than Bless, and more spells beyond 2nd level - **NOT STARTED**
 - Other classes' features and spell lists (only fighter, rogue, wizard and Life cleric
   have class tables) - **NOT STARTED**
-- Items whose use does more than heal or cast a scroll's spell (healing, scrolls and
-  lock-picking today) - **NOT STARTED**
-- Passive bonuses on worn items other than armour class - **NOT STARTED**
-- Splitting a stack by a chosen amount - **NOT STARTED**
-- Unidentified magic items; trapped containers - **NOT STARTED**
+- Items whose use does more than heal or cast a scroll's spell; passive bonuses on worn
+  items; splitting stacks; unidentified items and trapped containers - moved to
+  [Phase 2, part 2](#phase-2-part-2-the-rest-of-the-item-system)
 - The painted art style for characters and the world (needs larger sprites or a closer
   camera; see [PAINTED_STYLE.md](PAINTED_STYLE.md), section 10) - **NOT STARTED**

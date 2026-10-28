@@ -1,6 +1,6 @@
 """Inventory icons in the "painted" style.
 
-The same 38 items as render_items.py, re-modelled with more detail (fullered
+The same 43 items as render_items.py, re-modelled with more detail (fullered
 blades, wrapped grips, riveted rims, mail rings, buckles...) and rendered with
 the painted materials, lighting and finishing pass from painted.py. Which set
 the game shows is chosen by "art_style" in data/config/game_config.json.
@@ -250,10 +250,18 @@ def radius_at(profile, z):
 # --------------------------------------------------------------------------
 
 @item("longsword", 72)
-def longsword(root):
-    steel = painted.metal("Blade", "#9aa1aa")
+def longsword(root, magic=False):
+    if magic:  # +1: a cooler, brighter steel with a line of blue runes in the fuller
+        steel = painted.metal("Blade", "#8ea6cc", edge="#e2eeff", rough=0.3)
+    else:
+        steel = painted.metal("Blade", "#9aa1aa")
     gold = painted.gold("Brass")
     blade_mesh("Blade", 0.9, 0.09, 0.022, steel, root)
+    if magic:
+        runes = painted.glow("Runes", "#3a7aff", 2.5, "#cfe4ff", gloss=False)
+        for k in range(7):
+            lib.box(f"Rune{k}", (0.035 if k % 2 else 0.05, 0.02, 0.006), (0.07 + k * 0.058, 0, 0.009),
+                    mat=runes, parent=root)
     # Quillons swept towards the blade, ending in knobs.
     arc = [(0.05 * ((k / 12) * 2 - 1) ** 2, 0.17 * ((k / 12) * 2 - 1), 0.0) for k in range(13)]
     tube("Guard", arc, [0.016 + 0.006 * abs((k / 12) * 2 - 1) for k in range(13)], gold, root)
@@ -269,9 +277,15 @@ def longsword(root):
     pom = ri.cyl("Pommel", (-0.25, 0, 0), 0.045, 0.03, gold, root, verts=32)
     bevel(pom, 0.006, 3)
     ri.torus("PommelRim", (-0.25, 0, 0.0), 0.045, 0.008, gold, root)
-    ball("PommelGem", (-0.25, 0, 0.016), 0.02, painted.glow("PommelGem", "#b0141a", 0.8, "#ff7a5a"), root,
+    gem = ("#1f4ad0", "#a8c8ff") if magic else ("#b0141a", "#ff7a5a")
+    ball("PommelGem", (-0.25, 0, 0.016), 0.02, painted.glow("PommelGem", gem[0], 0.8, gem[1]), root,
          (1, 1, 0.55))
     ri.diagonal(root, 40)
+
+
+@item("longsword_plus_one", 72)
+def longsword_plus_one(root):
+    longsword(root, magic=True)
 
 
 @item("shortsword", 72)
@@ -701,8 +715,8 @@ def cloak_of_protection(root):
 
 
 @item("ring_of_protection", 30)
-def ring_of_protection(root):
-    silver = painted.metal("Silver", "#c4c7cc", edge="#ffffff", rough=0.28, metallic=0.85, scratches=False)
+def ring_of_protection(root, silver=None, gem=("#1f4ad0", "#a8c8ff")):
+    silver = silver or painted.metal("Silver", "#c4c7cc", edge="#ffffff", rough=0.28, metallic=0.85, scratches=False)
     g = group("Ring", root, rot=(math.radians(70), 0, 0))
     ri.torus("Band", (0, 0, 0), 0.1, 0.02, silver, g)
     # The setting sits on top of the band (local +y), facing out.
@@ -711,20 +725,29 @@ def ring_of_protection(root):
         a = math.tau * k / 4 + math.pi / 4
         tube(f"Prong{k}", [(math.cos(a) * 0.034, 0.128, math.sin(a) * 0.034),
                            (math.cos(a) * 0.03, 0.15, math.sin(a) * 0.03)], 0.006, silver, g, sides=6)
-    gem = lib.primitive("ico_sphere", "Gem", mat=painted.glow("Sapphire", "#1f4ad0", 0.8, "#a8c8ff"), parent=g,
-                        radius=0.036, subdivisions=1, location=(0, 0.148, 0))
-    gem.scale = (1, 0.7, 1)
+    stone = lib.primitive("ico_sphere", "Gem", mat=painted.glow("Gem", gem[0], 0.8, gem[1]), parent=g,
+                          radius=0.036, subdivisions=1, location=(0, 0.148, 0))
+    stone.scale = (1, 0.7, 1)
     for s in (-1, 1):  # shoulders of the band, flaring to hold the setting
         ball(f"Shoulder{s}", (s * 0.03, 0.098, 0), 0.016, silver, g, scale=(1.4, 1, 0.8))
 
 
+@item("ring_of_fire_resistance", 30)
+def ring_of_fire_resistance(root):
+    """A gold band with a fire opal."""
+    ring_of_protection(root, painted.gold("Band"), ("#d8481a", "#ffd08a"))
+
+
 @item("silver_amulet", 12)
-def silver_amulet(root):
+def silver_amulet(root, health=False):
     silver = painted.metal("Silver", "#c4c7cc", edge="#ffffff", rough=0.3, metallic=0.85, scratches=False)
     gold = painted.gold("Gold")
-    d = ri.cyl("Disc", (0, 0, 0), 0.08, 0.015, silver, root, rot=(math.radians(90), 0, 0), verts=40)
+    disc = painted.metal("Enamel", "#8a1824", edge="#e8a0a0", rough=0.25, metallic=0.1, scratches=False) \
+        if health else silver
+    chain = gold if health else silver
+    d = ri.cyl("Disc", (0, 0, 0), 0.08, 0.015, disc, root, rot=(math.radians(90), 0, 0), verts=40)
     bevel(d, 0.004, 2)
-    ri.torus("Rim", (0, -0.003, 0), 0.08, 0.009, silver, root, rot=(math.radians(90), 0, 0))
+    ri.torus("Rim", (0, -0.003, 0), 0.08, 0.009, chain, root, rot=(math.radians(90), 0, 0))
     for i in range(12):
         a = math.tau * i / 12
         ln = 0.055 if i % 2 == 0 else 0.035
@@ -733,9 +756,11 @@ def silver_amulet(root):
                               (math.cos(a + 0.11) * 0.085, math.sin(a + 0.11) * 0.085)], 0.01, gold, root,
                   plane="XZ", bevel_w=0.002)
         p.name = f"Ray{i}"
-    ball("Moonstone", (0, -0.014, 0), 0.032, painted.glow("Moonstone", "#5a8ad8", 0.7, "#e8f2ff"), root,
-         scale=(1, 0.45, 1))
-    ri.torus("Setting", (0, -0.01, 0), 0.034, 0.006, gold, root, rot=(math.radians(90), 0, 0))
+    stone = painted.glow("Ruby", "#c0102a", 0.9, "#ffb0a0") if health \
+        else painted.glow("Moonstone", "#5a8ad8", 0.7, "#e8f2ff")
+    r = 0.046 if health else 0.032
+    ball("Stone", (0, -0.014, 0), r, stone, root, scale=(1, 0.45, 1))
+    ri.torus("Setting", (0, -0.01, 0), r + 0.002, 0.006, gold, root, rot=(math.radians(90), 0, 0))
     # A loop of chain hanging from the bail: small links, alternately flat and edge-on.
     links = 30
     for k in range(links):
@@ -743,13 +768,26 @@ def silver_amulet(root):
         p = Vector((0.16 * math.sin(th), 0, 0.158 + 0.1 * (1 - math.cos(th))))
         tangent = Vector((0.16 * math.cos(th), 0, 0.1 * math.sin(th))).normalized()
         axis = Vector((0, 1, 0)) if k % 2 else tangent.cross(Vector((0, 1, 0)))
-        oriented_torus(f"Link{k}", p, 0.011, 0.003, silver, root, tangent, axis, stretch=1.4)
-    oriented_torus("Bail", (0, 0, 0.142), 0.016, 0.005, silver, root, (0, 0, 1), (1, 0, 0), stretch=1.2)
+        oriented_torus(f"Link{k}", p, 0.011, 0.003, chain, root, tangent, axis, stretch=1.4)
+    oriented_torus("Bail", (0, 0, 0.142), 0.016, 0.005, chain, root, (0, 0, 1), (1, 0, 0), stretch=1.2)
 
 
-def boot(name, x, turn, root):
-    leather = painted.leather(name + "Boot", "#5a3a20")
+@item("amulet_of_health", 12)
+def amulet_of_health(root):
+    """A gold sun on red enamel round a large ruby, on a gold chain."""
+    silver_amulet(root, health=True)
+
+
+def boot(name, x, turn, root, color="#5a3a20", wings=0):
+    leather = painted.leather(name + "Boot", color)
     g = group(name, root, (x, 0, 0), (0, 0, turn))
+    if wings:  # three gilt feathers swept back from the outer side of the shaft
+        gold = painted.gold(name + "Wing")
+        for k, (z, ln) in enumerate(((0.27, 0.12), (0.235, 0.1), (0.2, 0.075))):
+            w = plate(f"{name}Wing{k}", [(0.0, -0.012), (ln * 0.55, -0.02), (ln, 0.0), (ln * 0.55, 0.016),
+                                         (0.0, 0.012)], 0.008, gold, g, plane="XZ")
+            w.location = (wings * 0.056, 0.01, z)
+            w.rotation_euler = (0, math.radians(-25), 0 if wings > 0 else math.pi)
     lathe(name + "Shaft", [(0.056, 0.31), (0.058, 0.25), (0.054, 0.16), (0.05, 0.09), (0.056, 0.03)], leather, g)
     cuff = ri.torus(name + "Cuff", (0, 0, 0.315), 0.06, 0.017, painted.leather(name + "Cuff", "#7a5232"), g)
     cuff.scale = (1.0, 1.0, 1.6)
@@ -770,8 +808,16 @@ def leather_boots(root):
     root.rotation_euler = (0, 0, math.radians(20))
 
 
-def glove(name, x, angle, root):
-    mat = painted.leather(name + "Glove", "#6b4528")
+@item("boots_of_striding_and_springing", 22)
+def boots_of_striding_and_springing(root):
+    """Pale green boots with little gilt wings."""
+    boot("L", -0.075, 0.1, root, "#4f6a3a", wings=-1)
+    boot("R", 0.085, -0.05, root, "#4f6a3a", wings=1)
+    root.rotation_euler = (0, 0, math.radians(20))
+
+
+def glove(name, x, angle, root, plate_mat=None):
+    mat = plate_mat or painted.leather(name + "Glove", "#6b4528")
     g = group(name, root, (x, 0, 0), (0, 0, angle))
     bevel(lib.box(name + "Palm", (0.095, 0.105, 0.03), (0, 0, 0.016), mat=mat, parent=g), 0.013)
     for i, (fx, fl) in enumerate(((-0.034, 0.068), (-0.011, 0.084), (0.012, 0.08), (0.034, 0.064))):
@@ -779,8 +825,11 @@ def glove(name, x, angle, root):
              [0.0115, 0.011, 0.0095], mat, g, sides=10)
     tube(name + "Thumb", [(0.045, 0.0, 0.016), (0.07, 0.025, 0.017), (0.088, 0.055, 0.014)], [0.013, 0.012, 0.0105],
          mat, g, sides=10)
-    cuff = painted.leather(name + "Cuff", "#7a5232")
+    cuff = painted.gold(name + "Cuff") if plate_mat else painted.leather(name + "Cuff", "#7a5232")
     bevel(lib.box(name + "Cuff", (0.118, 0.085, 0.036), (0, -0.095, 0.02), mat=cuff, parent=g), 0.014)
+    if plate_mat:  # brass knuckle studs
+        for i, fx in enumerate((-0.034, -0.011, 0.012, 0.034)):
+            ball(f"{name}Stud{i}", (fx, 0.048, 0.034), 0.012, painted.gold(f"{name}Stud{i}"), g, scale=(1, 1, 0.7))
     bevel(lib.box(name + "Strap", (0.12, 0.018, 0.04), (0, -0.065, 0.022), mat=painted.leather(name + "S", "#3a2414"),
                   parent=g), 0.004)
     bevel(lib.box(name + "Buckle", (0.025, 0.024, 0.044), (0.03, -0.065, 0.026), mat=painted.gold(name + "B"),
@@ -791,6 +840,13 @@ def glove(name, x, angle, root):
 def leather_gloves(root):
     glove("L", -0.07, math.radians(20), root)
     glove("R", 0.08, math.radians(-15), root)
+
+
+@item("gauntlets_of_ogre_power", 65)
+def gauntlets_of_ogre_power(root):
+    """Iron gauntlets with brass cuffs and knuckle studs."""
+    for name, x, angle in (("L", -0.07, math.radians(20)), ("R", 0.08, math.radians(-15))):
+        glove(name, x, angle, root, painted.metal(name + "Plate", "#80868e", rough=0.4))
 
 
 # --------------------------------------------------------------------------

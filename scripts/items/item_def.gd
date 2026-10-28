@@ -83,6 +83,11 @@ func is_usable() -> bool:
 	return not use.is_empty()
 
 
+## A magic weapon's bonus to attack and damage rolls (`weapon.bonus`, +1).
+func weapon_bonus() -> int:
+	return int(weapon.get("bonus", 0)) if is_weapon() else 0
+
+
 func has_property(property: String) -> bool:
 	return (weapon.get("properties", []) as Array).has(property)
 
@@ -134,6 +139,8 @@ func describe() -> String:
 		if weapon.has("range"):
 			var r: Array = weapon["range"]
 			lines.append("Range: %d/%d ft" % [int(r[0]), int(r[1])])
+		if weapon_bonus() != 0:
+			lines.append("%s to attack and damage rolls" % Rules.format_modifier(weapon_bonus()))
 	if is_body_armor():
 		var a := "AC %d" % int(armor.get("base_ac", 10))
 		match str(armor.get("type", "")):
@@ -144,8 +151,7 @@ func describe() -> String:
 		lines.append("Armour: %s (%s)" % [a, armor.get("type", "")])
 	elif is_shield():
 		lines.append("Shield: +%d AC" % int(armor.get("ac_bonus", 2)))
-	if bonuses.has("ac"):
-		lines.append("+%d AC while worn" % int(bonuses["ac"]))
+	lines.append_array(bonus_lines())
 	if use.has("heal"):
 		lines.append("Use: heals %s" % use["heal"])
 	if use.has("cast"):
@@ -157,3 +163,23 @@ func describe() -> String:
 		lines.append(description)
 	lines.append("Weight %s   Value %s" % [format_weight(weight), format_value(value)])
 	return "\n".join(lines)
+
+
+## One line per passive bonus in `bonuses` (see docs/ITEMS.md), for the
+## item card: "+1 AC while worn", "Strength 19 while worn (if lower)"...
+func bonus_lines() -> PackedStringArray:
+	var out := PackedStringArray()
+	if bonuses.has("ac"):
+		out.append("%s AC while worn" % Rules.format_modifier(int(bonuses["ac"])))
+	if bonuses.has("saves"):
+		out.append("%s to saving throws while worn" % Rules.format_modifier(int(bonuses["saves"])))
+	var scores: Dictionary = bonuses.get("abilities", {})
+	for ab in Rules.ABILITIES:
+		if scores.has(ab):
+			out.append("%s %d while worn (if lower)" % [Rules.ABILITY_NAMES[ab], int(scores[ab])])
+	if bonuses.has("speed_ft"):
+		out.append("Walking speed at least %d ft; armour and load don't slow you" % int(bonuses["speed_ft"]))
+	var resist: Array = bonuses.get("resist", [])
+	if not resist.is_empty():
+		out.append("Resistance to %s damage while worn" % " and ".join(PackedStringArray(resist)))
+	return out

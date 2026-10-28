@@ -153,3 +153,136 @@ func test_carrying_too_much_slows_down() -> void:
 	e.inventory.add_item("chain_mail")
 	check(e.is_overloaded(), "three coats of mail is too much")
 	check_eq(e.effective_speed_ft(), int(e.speed_ft / 2.0), "speed halved")
+
+
+# --- passive magic item bonuses ---------------------------------------------------
+
+## Puts item `id` on `sheet` in `slot` (straight onto the sheet, as the
+## paper doll would after its checks).
+func _wear(sheet: CharacterSheet, slot: String, id: String) -> void:
+	sheet.equip(slot, ItemStack.create(id))
+
+
+func test_gauntlets_raise_strength_to_19() -> void:
+	var e := _sheet("elowen")  # Str 8
+	var before := e.carrying_capacity()
+	_wear(e, "gloves", "gauntlets_of_ogre_power")
+	check_eq(e.ability_score("str"), 19, "Strength 19 while worn")
+	check_eq(e.ability_mod("str"), 4, "and the modifier with it")
+	check_eq(int(e.abilities["str"]), 8, "the sheet's own score is unchanged")
+	check_eq(e.carrying_capacity(), 19 * 15.0, "carries like Str 19 (was %s)" % before)
+	var g := _sheet("garrick")
+	g.abilities["str"] = 20
+	_wear(g, "gloves", "gauntlets_of_ogre_power")
+	check_eq(g.ability_score("str"), 20, "a higher score is kept")
+	e.unequip("gloves")
+	check_eq(e.ability_score("str"), 8, "back to 8 when taken off")
+
+
+func test_heavy_armour_strength_counts_the_gauntlets() -> void:
+	var e := _sheet("elowen")
+	e.equip("armor", ItemStack.create("chain_mail"))  # needs Str 13
+	var slowed := e.effective_speed_ft()
+	_wear(e, "gloves", "gauntlets_of_ogre_power")
+	check_eq(e.effective_speed_ft(), slowed + 10, "strong enough for chain mail now")
+
+
+func test_protection_items_add_to_saving_throws() -> void:
+	var g := _sheet("garrick")
+	var wis := g.saving_throw_bonus("wis")
+	var con := g.saving_throw_bonus("con")
+	_wear(g, "ring_1", "ring_of_protection")
+	check_eq(g.saving_throw_bonus("wis"), wis + 1, "ring: +1 to Wisdom saves")
+	check_eq(g.saving_throw_bonus("con"), con + 1, "and to the proficient ones")
+	_wear(g, "cloak", "cloak_of_protection")
+	check_eq(g.saving_throw_bonus("wis"), wis + 2, "ring and cloak stack")
+	check_eq(g.item_bonus("saves"), 2, "item_bonus sums what is worn")
+
+
+func test_protection_helps_death_saves() -> void:
+	var g := _sheet("garrick")
+	_wear(g, "ring_1", "ring_of_protection")
+	g.hp_current = 0
+	# Find a seed whose first d20 is a 9: a failure bare, a success with the ring.
+	var rng := RandomNumberGenerator.new()
+	var seed_found := -1
+	for s in 500:
+		rng.seed = s
+		if Rules.roll(1, 20, rng) == 9:
+			seed_found = s
+			break
+	check(seed_found >= 0, "found a seed that rolls 9")
+	rng.seed = seed_found
+	check_eq(g.roll_death_save(rng), "success", "9 + 1 = 10 succeeds")
+	check_eq(g.death_successes, 1, "counted as a success")
+
+
+func test_magic_weapon_adds_to_attack_and_damage() -> void:
+	var g := _sheet("garrick")
+	var plain: Attack = CombatRules.weapon_attacks(g)[0]
+	g.equip("main_hand", ItemStack.create("longsword_plus_one"))
+	var magic: Attack = CombatRules.weapon_attacks(g)[0]
+	check_eq(magic.to_hit, plain.to_hit + 1, "+1 to hit")
+	var p := Rules.parse_dice(plain.damage)
+	var m := Rules.parse_dice(magic.damage)
+	check_eq(m["bonus"], int(p["bonus"]) + 1, "+1 damage (%s vs %s)" % [magic.damage, plain.damage])
+	check(g.attack_summary().contains(Rules.format_modifier(plain.to_hit + 1)), "the stats line shows it: %s"
+			% g.attack_summary())
+	check(Data.items["longsword_plus_one"].describe().contains("+1 to attack and damage rolls"), "item card")
+
+
+func test_boots_keep_walking_speed() -> void:
+	var g := _sheet("garrick")
+	g.speed_ft = 25
+	_wear(g, "boots", "boots_of_striding_and_springing")
+	check_eq(g.effective_speed_ft(), 30, "at least 30 ft")
+	for i in 4:
+		g.inventory.add_item("chain_mail")
+	check(g.is_overloaded(), "overloaded")
+	check_eq(g.effective_speed_ft(), 30, "but not slowed")
+	g.speed_ft = 35
+	check_eq(g.effective_speed_ft(), 35, "a faster walker keeps their speed")
+	g.unequip("boots")
+	check_eq(g.effective_speed_ft(), 17, "halved again without them")
+
+
+func test_ring_of_fire_resistance_halves_fire_damage() -> void:
+	var e := _sheet("elowen")
+	check_eq(CombatRules.adjust_for_type(e, 9, "fire"), 9, "no resistance bare")
+	_wear(e, "ring_2", "ring_of_fire_resistance")
+	check_eq(e.resistances(), PackedStringArray(["fire"]), "resists fire")
+	check_eq(CombatRules.adjust_for_type(e, 9, "fire"), 4, "half, rounded down")
+	check_eq(CombatRules.adjust_for_type(e, 9, "cold"), 9, "other types in full")
+
+
+func test_amulet_of_health_raises_hit_points_by_level() -> void:
+	var e := _sheet("elowen")  # Con 13 (+1)
+	e.add_xp(Rules.XP_THRESHOLDS[2])  # level 3
+	var base_max := e.hp_max
+	var hp := e.hp_current
+	_wear(e, "amulet", "amulet_of_health")
+	check_eq(e.ability_score("con"), 19, "Con 19")
+	check_eq(e.hp_max, base_max + 3 * 3, "+3 per level (Con +1 -> +4)")
+	check_eq(e.hp_current, hp, "putting it on doesn't heal")
+	e.hp_current = e.hp_max
+	var saved := e.to_dict()
+	check_eq(int(saved["hit_points"]["max"]), base_max, "saves keep the sheet's own maximum")
+	var loaded := CharacterSheet.from_dict(saved)
+	check_eq(loaded.hp_max, base_max + 9, "loaded with the amulet on")
+	check_eq(loaded.hp_current, base_max + 9, "current hit points kept")
+	e.add_xp(Rules.XP_THRESHOLDS[3] - e.xp)  # level 4
+	check_eq(e.con_hp, 4 * 3, "the amulet's share grows with level")
+	check_eq(e.hp_current, e.hp_max, "and a level-up brings it")
+	e.unequip("amulet")
+	check_eq(e.con_hp, 0, "taken off")
+	check_eq(e.hp_current, e.hp_max, "current capped at the new maximum")
+
+
+func test_item_cards_list_the_bonuses() -> void:
+	var lines := (Data.items["ring_of_protection"] as ItemDef).describe()
+	check(lines.contains("+1 AC while worn"), "AC line")
+	check(lines.contains("+1 to saving throws while worn"), "saves line")
+	check((Data.items["gauntlets_of_ogre_power"] as ItemDef).describe().contains("Strength 19 while worn"), "Str line")
+	check((Data.items["amulet_of_health"] as ItemDef).describe().contains("Constitution 19"), "Con line")
+	check((Data.items["boots_of_striding_and_springing"] as ItemDef).describe().contains("at least 30 ft"), "speed")
+	check((Data.items["ring_of_fire_resistance"] as ItemDef).describe().contains("Resistance to fire damage"), "resist")
