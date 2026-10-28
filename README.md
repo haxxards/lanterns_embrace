@@ -25,7 +25,31 @@ the code and data in order and has a "where do I find..." table. It leans on
 **[docs/GODOT_GUIDE.md](docs/GODOT_GUIDE.md)**, which explains how everything works, with
 Godot explained along the way.
 
-## Status: Phase 4 complete (combat, spells and abilities)
+## Status: Phase 4 complete (combat, spells and abilities), and the item system finished
+
+### Phase 2, part 2: the rest of the item system
+
+- **Magic items with passive bonuses:** Gauntlets of Ogre Power (Strength 19), an Amulet
+  of Health (Constitution 19, with the extra hit points at every level), Rings and Cloaks
+  of Protection (+1 AC and +1 to every save, death saves included), a +1 Longsword, Boots
+  of Striding and Springing (never slowed below 30 ft) and a Ring of Fire Resistance. The
+  item card lists each bonus; the inventory shows all six scores, raised ones in blue.
+- **Potions with a lasting effect and flasks to throw:** a Potion of Hill Giant Strength
+  (Strength 21 until a long rest), and Holy Water, thrown from the combat bar at undead
+  and fiends (2d6 radiant; the preview refuses anything else).
+- **Splitting stacks:** Shift-drop a stack to say how many to move, give, drop, buy or sell.
+- **Unidentified magic:** worn magic and magic weapons found in chests and on bodies show
+  as "Unidentified ring" with a **?** until someone studies one on a short rest, or Wenna
+  names them for 25 gold each. They work all the same, but sell for a fifth.
+- **Trapped containers:** the bandits' strongbox has a poison needle and the ruin's chest a
+  fire glyph. The party's passive Perception may spot a trap; then you choose to disarm it
+  (thieves' tools, or Arcana for the glyph), open it anyway, or leave it. Unnoticed, it
+  goes off on whoever opens it.
+- Seven new item icons, in both art styles. See [docs/ITEMS.md](docs/ITEMS.md).
+
+![Magic items worn: Strength 19 in blue, a save bonus, fire resistance and the +1 sword; an unidentified amulet in the pack](docs/images/phase2b_magic_items.jpg)
+![Shift-dropping a stack of arrows on a portrait: how many to give](docs/images/phase2b_split.jpg)
+![A poison needle found on the bandits' strongbox](docs/images/phase2b_trap.jpg)
 
 ### Attack animations (samples to build on)
 
@@ -318,6 +342,12 @@ Godot explained along the way.
 - After a fight, press **R** for a short rest, or **B** to cast Cure Wounds. Take a room at
   Tobin's for a long rest to get the spell slots back.
 - Save in the middle of a fight on one of your turns, and load it back.
+- Open the **Traveller's Chest** at the inn (an unidentified cloak and boots), take a short
+  rest (R) to learn what they are, or ask **Wenna** to name them. She also sells Holy
+  Water and a Potion of Hill Giant Strength.
+- Shift-drag the arrows from Wren's pack onto Garrick's portrait to give him some.
+- On the Old Temple Road, let Wren disarm the **poison needle** on the bandits' strongbox,
+  and throw **Holy Water** at the skeletons. Mind the ruin's chest.
 
 All the feel-related numbers are in [`data/config/game_config.json`](data/config/game_config.json):
 
@@ -443,7 +473,11 @@ attacking, Dash, Dodge and Disengage, opportunity attacks, the wolf and archer A
 with XP and loot, death saves, potions mid-fight, defeat, and the road to the old temple.
 Its second half adds the spell rules (slots, dice, healing, level-up grants, features,
 rests) and spells, features, scrolls, thrown weapons, getting away and saving mid-fight on
-the real map. Any engine or script error raised during a test fails that test.
+the real map. The rest of the item system adds passive bonuses (scores, saves, magic
+weapons, speed, resistance, Constitution hit points through saves and level-ups), lasting
+potions, Holy Water in a fight, splitting stacks (and the dialog), identification, and
+traps (noticing, disarming, setting them off, and the dialog on the real map). Any engine
+or script error raised during a test fails that test.
 
 ## Roadmap
 
@@ -463,6 +497,8 @@ and 4 were added.
    XP and levelling.~~
    - ~~First half: turns, movement, attacks, enemies and AI, XP from fights, death saves.~~
    - ~~Second half: spells and cantrips, spell slots, spell scrolls, resting, class features.~~
+5. ~~**The rest of Phase 2's item system:** passive magic-item bonuses, lasting potions and
+   throwable flasks, splitting stacks, unidentified items, trapped containers.~~
 
 Out of scope for now: character creation and cutscenes.
 

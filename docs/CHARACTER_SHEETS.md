@@ -61,7 +61,7 @@ keys).
 | `xp` | int | Experience points (thresholds in `scripts/rules/rules.gd`). |
 | `alignment` | string | Free text. |
 | `abilities` ● | object | `str dex con int wis cha`, each 1–30. |
-| `hit_points` ● | object | `{ "max": int, "current": int }` |
+| `hit_points` ● | object | `{ "max": int, "current": int }`. `max` is the sheet's own maximum: hit points a worn Amulet of Health adds are put back when the sheet loads ([ITEMS.md](ITEMS.md#passive-bonuses-magic-items)). |
 | `hit_die` | string | e.g. `"d10"`: hit points gained per level are half the die + 1 + Con modifier. |
 | `dead` | bool | Killed (three failed death saves, or massive damage): only a temple can raise them. Saved with the game. |
 | `stable` | bool | At 0 HP but no longer making death saves. |
@@ -78,7 +78,7 @@ keys).
 | `slots_used` | object | Spell slots spent since the last long rest, by level: `{"1": 1}`. Written by the game. |
 | `feature_uses` | object | Uses spent of limited features, by feature: `{"second_wind": 1}`. Written by the game. |
 | `hit_dice_used` | int | Hit dice spent on short rests (half come back on a long rest). Written by the game. |
-| `effects` | object | Effects lasting until a long rest: `{"mage_armor": true, "aid": 5, "guidance": true}`. Written by the game. |
+| `effects` | object | Effects lasting until a long rest: `{"mage_armor": true, "aid": 5, "guidance": true}`, and scores raised by a potion, `{"abilities": {"str": 21}}`. Written by the game. |
 
 **The class table fills in the rest.** On loading, `Classes.grant` adds every feature
 and spell the character's class gives by their level (from `data/classes/classes.json`),

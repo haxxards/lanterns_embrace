@@ -27,7 +27,12 @@ This file is updated as each item is finished, so it always shows where the proj
 - Phase 3, People - **COMPLETE**
 - Phase 4, part 1, Combat - **COMPLETE**
 - Phase 4, part 2, Spells, rests, class features and the rest of combat - **COMPLETE**
-- Phase 2, part 2, The rest of the item system (revisited) - **PENDING** (in progress)
+- Phase 2, part 2, The rest of the item system (revisited) - **COMPLETE**
+
+Nothing is **PENDING** at the moment: every planned item is either complete or listed
+under [Not started](#not-started-ideas-and-gaps). Strike frames for the attack
+animations wait on your decision after seeing the samples (see
+[Requests along the way](#requests-along-the-way)).
 
 ---
 
@@ -73,7 +78,8 @@ This file is updated as each item is finished, so it always shows where the proj
 
 ## Phase 2: Items and places
 
-- Item and equipment data (34 items with SRD numbers; 37 with Phase 4's scrolls) - **COMPLETE**
+- Item and equipment data (34 items with SRD numbers; 45 with Phase 4's scrolls and the
+  magic items of Phase 2, part 2) - **COMPLETE**
 - Inventory and equipment screen (paper doll, backpack, drag and drop) - **COMPLETE**
 - Chests and drawers (plus cupboards and a crate) - **COMPLETE**
 - Gold, as a shared party purse - **COMPLETE**
@@ -84,8 +90,8 @@ This file is updated as each item is finished, so it always shows where the proj
 - Bar and table add-ons for a house (your request) - **COMPLETE**
 - Dropping and picking up items (your request) - **COMPLETE**
 - Spell scrolls - moved to Phase 4, part 2 (your request) - **COMPLETE** there
-- "The rest of Phase 2", to revisit later - **PENDING**: being done now, as the item
-  system's known gaps; see [Phase 2, part 2](#phase-2-part-2-the-rest-of-the-item-system).
+- "The rest of Phase 2", to revisit later - **COMPLETE**: done as the item system's known
+  gaps; see [Phase 2, part 2](#phase-2-part-2-the-rest-of-the-item-system).
 
 ## Phase 3: People
 
@@ -316,6 +322,11 @@ None of these were promised; they are the known limits, listed so nothing is for
   have class tables) - **NOT STARTED**
 - Items whose use does more than heal or cast a scroll's spell; passive bonuses on worn
   items; splitting stacks; unidentified items and trapped containers - moved to
-  [Phase 2, part 2](#phase-2-part-2-the-rest-of-the-item-system)
+  [Phase 2, part 2](#phase-2-part-2-the-rest-of-the-item-system), **COMPLETE** there
+- Attunement (5e's limit of three attuned magic items; here everything worn just works) - **NOT STARTED**
+- An Identify spell, and Detect Magic (only short-rest study and Wenna name items) - **NOT STARTED**
+- Searching for traps on purpose (an Investigation check); traps on doors and floors
+  (only containers have them) - **NOT STARTED**
+- Flasks that splash the hexes around the target, and enemies that throw them - **NOT STARTED**
 - The painted art style for characters and the world (needs larger sprites or a closer
   camera; see [PAINTED_STYLE.md](PAINTED_STYLE.md), section 10) - **NOT STARTED**

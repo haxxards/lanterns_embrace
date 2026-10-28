@@ -382,7 +382,10 @@ failure, then remove it.
 | Change attack, damage or death-save rules | `scripts/combat/combat_rules.gd`, `scripts/rules/character_sheet.gd` |
 | Change what a turn allows (actions, opportunity attacks) | `scripts/combat/combat_manager.gd`, `scripts/combat/combatant.gd` |
 | Change armour class or other 5e numbers | `scripts/rules/rules.gd` |
-| Change how dragging items works | `scripts/items/inventory_ops.gd` (`move`) |
+| Change how dragging items works | `scripts/items/inventory_ops.gd` (`move`, and `move_some` for a Shift-drop split) |
+| Change what magic items do when worn | `"bonuses"` in `data/items/items.json`; the rules in `CharacterSheet.ability_score`, `item_bonus`, `resistances`, `effective_speed_ft` ([ITEMS.md](ITEMS.md#passive-bonuses-magic-items)) |
+| Change unidentified items or how they are named | `ItemStack.identified`, `ItemDef.starts_unidentified`; `scripts/rules/rest.gd` (short rest), the `identify` effect |
+| Change or add a trap on a chest | `"trap"` on the container in the map data; the rules in `scripts/items/traps.gd`, the dialog in `Prop._ask_about_trap` |
 | Change how the party walks or picks spots | `scripts/world/actor.gd`, `scripts/world/party_controller.gd` |
 | Change what clicking does | `scripts/world/world.gd` (`_on_click`, `_on_combat_click`) |
 | Change the fog of war | `scripts/world/fog_of_war.gd` and `fog_of_war.gdshader` |
@@ -403,7 +406,7 @@ failure, then remove it.
 | **START_HERE.md** (this file) | The order to study things in, and where things live |
 | [GODOT_GUIDE.md](GODOT_GUIDE.md) | How it all works, with Godot explained along the way |
 | [MAPS.md](MAPS.md) | The map format, props, doors and exits, interiors, generators |
-| [ITEMS.md](ITEMS.md) | Items, equipment rules, the inventory screen, containers |
+| [ITEMS.md](ITEMS.md) | Items, equipment rules, magic bonuses, unidentified items, the inventory screen, containers and traps |
 | [CHARACTER_SHEETS.md](CHARACTER_SHEETS.md) | Party member JSON and `make_character.py` |
 | [DIALOGUE.md](DIALOGUE.md) | Conversation files, conditions and effects |
 | [NPCS_AND_QUESTS.md](NPCS_AND_QUESTS.md) | Townsfolk, quests, shops, the temple |
